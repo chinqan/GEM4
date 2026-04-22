@@ -133,73 +133,73 @@
 
 ## 第五階段：事件與狀態管理
 
-- [ ] 16. Event Bus（events.ts）
-  - [ ] 16.1 實作 EventBusImpl（emit、on、once）
-  - [ ] 16.2 實作事件物件池化
-  - [ ] 16.3 定義完整 GameEvent 聯集型別
-  - [ ] 16.4 撰寫單元測試
+- [x] 16. Event Bus（events.ts）
+  - [x] 16.1 實作 EventBusImpl（emit、on、once）
+  - [x] 16.2 實作事件物件池化
+  - [x] 16.3 定義完整 GameEvent 聯集型別
+  - [x] 16.4 撰寫單元測試
 
-- [ ] 17. 狀態機（state-machine.ts）
-  - [ ] 17.1 實作 AppState 聯集型別
-  - [ ] 17.2 實作 transition(from, to) 函式與合法轉換表
-  - [ ] 17.3 實作不變式檢查（pause.previous、settings.returnTo）
-  - [ ] 17.4 撰寫單元測試
-  - [ ] 17.5 撰寫 CP-7 property test：狀態機轉換合法性
+- [x] 17. 狀態機（state-machine.ts）
+  - [x] 17.1 實作 AppState 聯集型別
+  - [x] 17.2 實作 transition(from, to) 函式與合法轉換表
+  - [x] 17.3 實作不變式檢查（pause.previous、settings.returnTo）
+  - [x] 17.4 撰寫單元測試
+  - [x] 17.5 撰寫 CP-7 property test：狀態機轉換合法性
 
-- [ ] 18. 存檔系統（save-state.ts + migrations.ts）
-  - [ ] 18.1 實作 SaveState 型別與 defaultSaveState()
-  - [ ] 18.2 實作 SaveManager（load、save、debounce、flush）
-  - [ ] 18.3 實作 migrate() 版本遷移函式
-  - [ ] 18.4 實作 export/import JSON 功能
-  - [ ] 18.5 實作 reset 功能（二次確認）
-  - [ ] 18.6 撰寫單元測試：讀寫、遷移、降級、escrow
+- [x] 18. 存檔系統（save-state.ts + migrations.ts）
+  - [x] 18.1 實作 SaveState 型別與 defaultSaveState()
+  - [x] 18.2 實作 SaveManager（load、save、debounce、flush）
+  - [x] 18.3 實作 migrate() 版本遷移函式
+  - [x] 18.4 實作 export/import JSON 功能
+  - [x] 18.5 實作 reset 功能（二次確認）
+  - [x] 18.6 撰寫單元測試：讀寫、遷移、降級、escrow
 
 ## 第六階段：渲染層
 
-- [ ] 19. PixiJS 初始化（app.ts）
-  - [ ] 19.1 實作 Application bootstrap：偵測 WebGPU/WebGL 後端
-  - [ ] 19.2 實作 canvas 建立與 resize 處理
-  - [ ] 19.3 實作圖層階層建立（app-layers.ts）
+- [x] 19. PixiJS 初始化（app.ts）
+  - [x] 19.1 實作 Application bootstrap：偵測 WebGPU/WebGL 後端
+  - [x] 19.2 實作 canvas 建立與 resize 處理
+  - [x] 19.3 實作圖層階層建立（app-layers.ts）
 
-- [ ] 20. Viewport 與縮放（viewport.ts）
-  - [ ] 20.1 實作 calculateViewport 函式（letterbox 縮放）
-  - [ ] 20.2 實作 resize 事件監聽與重新計算
+- [x] 20. Viewport 與縮放（viewport.ts）
+  - [x] 20.1 實作 calculateViewport 函式（letterbox 縮放）
+  - [x] 20.2 實作 resize 事件監聽與重新計算
 
-- [ ] 21. 寶石渲染（gem-sprites.ts + board-renderer.ts）
-  - [ ] 21.1 實作 GemSpriteFactory：依顏色與特殊類型建立 sprite
-  - [ ] 21.2 實作 BoardRenderer：同步 Board 狀態到 Pixi 顯示
-  - [ ] 21.3 實作寶石選取視覺（脈衝 + 發光環）
-  - [ ] 21.4 實作 idle shimmer 動畫（High preset）
+- [x] 21. 寶石渲染（gem-sprites.ts + board-renderer.ts）
+  - [x] 21.1 實作 GemSpriteFactory：依顏色與特殊類型建立 sprite
+  - [x] 21.2 實作 BoardRenderer：同步 Board 狀態到 Pixi 顯示
+  - [x] 21.3 實作寶石選取視覺（脈衝 + 發光環）
+  - [x] 21.4 實作 idle shimmer 動畫（High preset）
 
-- [ ] 22. 動畫系統
-  - [ ] 22.1 實作 swap 動畫（200ms）
-  - [ ] 22.2 實作 invalid shake 動畫（240ms、4px 橫向）
-  - [ ] 22.3 實作 match 消除動畫（200ms 縮放至 0）
-  - [ ] 22.4 實作 cascade 掉落動畫（120ms/行）
-  - [ ] 22.5 實作特殊寶石 spawn 震波（600ms）
-  - [ ] 22.6 實作特殊寶石啟動效果（800ms）
-  - [ ] 22.7 實作 chain ≥3 飽和脈衝（300ms ColorMatrix）
+- [x] 22. 動畫系統
+  - [x] 22.1 實作 swap 動畫（200ms）
+  - [x] 22.2 實作 invalid shake 動畫（240ms、4px 橫向）
+  - [x] 22.3 實作 match 消除動畫（200ms 縮放至 0）
+  - [x] 22.4 實作 cascade 掉落動畫（120ms/行）
+  - [x] 22.5 實作特殊寶石 spawn 震波（600ms）
+  - [x] 22.6 實作特殊寶石啟動效果（800ms）
+  - [x] 22.7 實作 chain ≥3 飽和脈衝（300ms ColorMatrix）
 
-- [ ] 23. 粒子系統（particles.ts）
-  - [ ] 23.1 實作 ParticlePool（物件池、上限依 preset）
-  - [ ] 23.2 實作 match 爆破粒子（彩色 ×8）
-  - [ ] 23.3 實作 chain 大型光效粒子
-  - [ ] 23.4 實作 special spawn 環形衝擊波
+- [x] 23. 粒子系統（particles.ts）
+  - [x] 23.1 實作 ParticlePool（物件池、上限依 preset）
+  - [x] 23.2 實作 match 爆破粒子（彩色 ×8）
+  - [x] 23.3 實作 chain 大型光效粒子
+  - [x] 23.4 實作 special spawn 環形衝擊波
 
-- [ ] 24. 特效層（filters.ts）
-  - [ ] 24.1 實作 BlurFilter 套用於 Glow Layer
-  - [ ] 24.2 實作 Bloom 效果（Medium+ preset）
-  - [ ] 24.3 實作 Shockwave 效果（special 啟動時）
-  - [ ] 24.4 實作 ColorMatrix 飽和脈衝（chain ≥3）
+- [x] 24. 特效層（filters.ts）
+  - [x] 24.1 實作 BlurFilter 套用於 Glow Layer
+  - [x] 24.2 實作 Bloom 效果（Medium+ preset）
+  - [x] 24.3 實作 Shockwave 效果（special 啟動時）
+  - [x] 24.4 實作 ColorMatrix 飽和脈衝（chain ≥3）
 
-- [ ] 25. Design Tokens（design-tokens.ts）
-  - [ ] 25.1 定義 7 色寶石的色彩常數
-  - [ ] 25.2 定義格子尺寸、間距、透明度常數
-  - [ ] 25.3 定義 3 種圖形預設參數
+- [x] 25. Design Tokens（design-tokens.ts）
+  - [x] 25.1 定義 7 色寶石的色彩常數
+  - [x] 25.2 定義格子尺寸、間距、透明度常數
+  - [x] 25.3 定義 3 種圖形預設參數
 
 ## 第七階段：音訊
 
-- [ ] 26. 音訊系統（audio-system.ts）
+- [-] 26. 音訊系統（audio-system.ts）
   - [ ] 26.1 實作 Howler 包裝與 autoplay unlock
   - [ ] 26.2 實作 SFX 事件映射（sfx-catalog.ts）
   - [ ] 26.3 實作音量控制（master/music/sfx）與靜音切換

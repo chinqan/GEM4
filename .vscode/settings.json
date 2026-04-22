@@ -4,6 +4,9 @@
         "npx *",
         "touch *",
         "mkdir *",
-        "grep *"
+        "grep *",
+        "node *",
+        "ls *",
+        "head *"
     ]
 }
