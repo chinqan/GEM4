@@ -1,0 +1,12 @@
+'use strict';
+
+function cleanup(element) {
+  if (!element) return;
+  if (element.parent) {
+    element.parent.removeChild(element);
+  }
+  element.destroy();
+}
+
+exports.cleanup = cleanup;
+//# sourceMappingURL=cleanup.js.map

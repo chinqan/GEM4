@@ -1,0 +1,9 @@
+{
+    "kiroAgent.trustedCommands": [
+        "npm *",
+        "npx *",
+        "touch *",
+        "mkdir *",
+        "grep *"
+    ]
+}

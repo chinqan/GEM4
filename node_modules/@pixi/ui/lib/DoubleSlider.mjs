@@ -1,0 +1,210 @@
+import { Signal } from 'typed-signals';
+import { SliderBase } from './SliderBase.mjs';
+
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+class DoubleSlider extends SliderBase {
+  constructor(options) {
+    super(options);
+    __publicField(this, "sliderOptions");
+    __publicField(this, "activeValue");
+    /** Signal that fires when value have changed. */
+    __publicField(this, "onChange", new Signal());
+    /** Signal that fires when value is changing. */
+    __publicField(this, "onUpdate", new Signal());
+    this.sliderOptions = options;
+    this.setInitialState();
+  }
+  setInitialState() {
+    this.validateValues();
+    const { value1, value2 } = this.sliderOptions;
+    this.updateProgress(value1, value2);
+    this.value2 = value2 ?? 0;
+    this.value1 = value1 ?? 0;
+  }
+  updateProgress(value1 = this.value1, value2 = this.value2) {
+    this.progressStart = (value1 - this.min) / (this.max - this.min) * 100;
+    this.progress = (value2 - this.min) / (this.max - this.min) * 100;
+  }
+  validateValues() {
+    const min = this.sliderOptions.min ?? this.min;
+    const max = this.sliderOptions.max ?? this.max;
+    if (!this.sliderOptions.value1) {
+      this.sliderOptions.value1 = min;
+    }
+    if (!this.sliderOptions.value2) {
+      this.sliderOptions.value2 = max;
+    }
+    let value1 = this.sliderOptions.value1 ?? min;
+    let value2 = this.sliderOptions.value2 ?? max;
+    if (value2 < value1) {
+      value2 = value1;
+    }
+    if (value1 < min) {
+      value1 = min;
+    }
+    if (value1 > max) {
+      value1 = max;
+    }
+    if (value2 > max) {
+      value2 = max;
+    }
+    this.sliderOptions.value1 = value1;
+    this.sliderOptions.value2 = value2;
+  }
+  /** Returns left value. */
+  get value1() {
+    return this._value1;
+  }
+  /** Sets left value. */
+  set value1(value1) {
+    if (value1 === this._value1) return;
+    if (value1 < this.min) value1 = this.min;
+    if (value1 > this._value2) value1 = this._value2;
+    this._value1 = value1;
+    this.updateSlider1();
+    this.onUpdate?.emit(this.value1, this.value2);
+  }
+  /** Returns right value. */
+  get value2() {
+    return this._value2;
+  }
+  /** Sets right value. */
+  set value2(value2) {
+    if (value2 === this._value2) return;
+    if (value2 < this._value1) value2 = this._value1;
+    if (value2 > this.max) value2 = this.max;
+    this._value2 = value2;
+    this.updateSlider2();
+    this.onUpdate?.emit(this.value1, this.value2);
+  }
+  update(event) {
+    super.update(event);
+    if (!this.dragging) return;
+    const obj = event.currentTarget;
+    const { x } = obj.parent.worldTransform.applyInverse(event.global);
+    const slider1Dist = this._slider1 ? Math.abs(x - this._slider1.x - this._slider1.width) : Infinity;
+    const slider2Dist = this._slider2 ? Math.abs(x - this._slider2.x) : Infinity;
+    if (!this.activeValue) {
+      if (this.slider1 && x < this.slider1.x) {
+        this.activeValue = "value1";
+      } else if (this.slider2 && x > this.slider2.x) {
+        this.activeValue = "value2";
+      } else {
+        this.activeValue = slider1Dist < slider2Dist ? "value1" : "value2";
+      }
+    }
+    const progress = this.validate(x / this.bg?.width * 100);
+    if (this.activeValue === "value1") {
+      this.progressStart = progress;
+      this.value1 = this.min + (this.max - this.min) / 100 * progress;
+      this.updateProgress(this.value1, this.value2);
+    } else {
+      this.progress = progress;
+      this.value2 = this.min + (this.max - this.min) / 100 * progress;
+      this.updateProgress(this.value1, this.value2);
+    }
+  }
+  endUpdate() {
+    super.endUpdate();
+    this.activeValue = void 0;
+  }
+  change() {
+    this.onChange?.emit(this.value1, this.value2);
+  }
+  /**
+   * Set Slider1 instance.
+   * @param value - Container or string with texture name.
+   */
+  set slider1(value) {
+    super.slider1 = value;
+    this.updateSlider1();
+  }
+  /** Get Slider1 instance. */
+  get slider1() {
+    return this._slider1;
+  }
+  /**
+   * Sets Slider instance.
+   * @param value - Container or string with texture name.
+   */
+  set slider2(value) {
+    super.slider2 = value;
+    this.updateSlider2();
+  }
+  /** Get Slider2 instance. */
+  get slider2() {
+    return this._slider2;
+  }
+  updateSlider1() {
+    if (!this._slider1) return;
+    this.updateProgress(this.value1, this.value2);
+    this._slider1.x = (this.bg?.width ?? 0) / 100 * this.progressStart - this._slider1.width / 2;
+    this._slider1.y = (this.bg?.height ?? 0) / 2;
+    if (this._slider2 && this._slider1.x > this._slider2.x) {
+      this._slider1.x = this._slider2.x;
+    }
+    if (this.sliderOptions?.showValue && this.value1Text && this._slider1) {
+      this.value1Text.text = `${Math.round(this.value1)}`;
+      const sliderPosX = this._slider1.x + this._slider1.width / 2;
+      const sliderPosY = this._slider1.y;
+      this.value1Text.x = sliderPosX + (this.sliderOptions.valueTextOffset?.x ?? 0);
+      this.value1Text.y = sliderPosY + (this.sliderOptions.valueTextOffset?.y ?? 0);
+    }
+  }
+  updateSlider2() {
+    if (!this._slider2) return;
+    this.updateProgress(this.value1, this.value2);
+    this._slider2.x = (this.bg?.width ?? 0) / 100 * this.progress - this._slider2.width / 2;
+    this._slider2.y = (this.bg?.height ?? 0) / 2;
+    if (this._slider1 && this._slider2.x < this._slider1.x) {
+      this._slider2.x = this._slider1.x;
+    }
+    if (this.sliderOptions?.showValue && this.value2Text && this._slider2) {
+      this.value2Text.text = `${Math.round(this.value2)}`;
+      const sliderPosX = this._slider2.x + this._slider2.width / 2;
+      const sliderPosY = this._slider2.y;
+      this.value2Text.x = sliderPosX + (this.sliderOptions.valueTextOffset?.x ?? 0);
+      this.value2Text.y = sliderPosY + (this.sliderOptions.valueTextOffset?.y ?? 0);
+    }
+  }
+  /**
+   * Sets width of a Sliders background and fill.
+   * If nineSliceSprite is set, then width will be set to nineSliceSprite.
+   * If nineSliceSprite is not set, then width will control components width as Container.
+   * @param value - Width value.
+   */
+  set width(value) {
+    super.width = value;
+    this.updateSlider1();
+    this.updateSlider2();
+  }
+  /** Gets width of a Slider. */
+  get width() {
+    return super.width;
+  }
+  /**
+   * Sets height of a Sliders background and fill.
+   * If nineSliceSprite is set, then height will be set to nineSliceSprite.
+   * If nineSliceSprite is not set, then height will control components height as Container.
+   * @param value - Height value.
+   */
+  set height(value) {
+    super.height = value;
+    this.updateSlider1();
+    this.updateSlider2();
+  }
+  /** Gets height of a Slider. */
+  get height() {
+    return super.height;
+  }
+  setSize(value, height) {
+    super.setSize(value, height);
+    this.updateSlider1();
+    this.updateSlider2();
+  }
+}
+
+export { DoubleSlider };
+//# sourceMappingURL=DoubleSlider.mjs.map
