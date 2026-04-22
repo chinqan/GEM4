@@ -110,26 +110,26 @@
 
 ## 第四階段：遊戲執行層（game/runtime/）
 
-- [-] 13. 棋盤初始化與重洗
+- [x] 13. 棋盤初始化與重洗
   - [x] 13.1 實作 initBoard(spec, rng)：依關卡規格生成初始棋盤（保證無預存消除 + 至少 1 有效交換）
-  - [-] 13.2 實作 findValidSwaps(board)：掃描所有有效交換
-  - [~] 13.3 實作 reshuffle(board, rng)：重洗棋盤（保留特殊寶石與 blocker）
-  - [~] 13.4 撰寫單元測試與 CP-1 property test 整合
+  - [x] 13.2 實作 findValidSwaps(board)：掃描所有有效交換
+  - [x] 13.3 實作 reshuffle(board, rng)：重洗棋盤（保留特殊寶石與 blocker）
+  - [x] 13.4 撰寫單元測試與 CP-1 property test 整合
 
-- [ ] 14. 暗示系統（hint.ts）
-  - [ ] 14.1 實作 findHint(board)：找一組有效交換作為暗示
-  - [ ] 14.2 實作暗示計時器（閒置 hintDelayMs 後觸發）
-  - [ ] 14.3 emit hint.shown 事件
+- [x] 14. 暗示系統（hint.ts）
+  - [x] 14.1 實作 findHint(board)：找一組有效交換作為暗示
+  - [x] 14.2 實作暗示計時器（閒置 hintDelayMs 後觸發）
+  - [x] 14.3 emit hint.shown 事件
 
-- [ ] 15. 遊戲迴圈與指令處理（game-loop.ts）
-  - [ ] 15.1 實作 CommandQueue（FIFO、深度上限 8）
-  - [ ] 15.2 實作 RulesEngine.advance()：drain 指令、執行規則步、emit 事件
-  - [ ] 15.3 實作 swap 指令處理：驗證 → moves-- → match-detect → cascade
-  - [ ] 15.4 實作 resolving 狀態管理（resolving 期間拒絕 swap）
-  - [ ] 15.5 實作 end-of-level 時序（cascade 完成後才結算）
-  - [ ] 15.6 實作 intensity 計算公式
-  - [ ] 15.7 實作固定時間步迴圈（60Hz 累加器、250ms 上限）
-  - [ ] 15.8 撰寫確定性 CI 測試（固定種子 + 100 指令 → 3 次 bit-exact）
+- [x] 15. 遊戲迴圈與指令處理（game-loop.ts）
+  - [x] 15.1 實作 CommandQueue（FIFO、深度上限 8）
+  - [x] 15.2 實作 RulesEngine.advance()：drain 指令、執行規則步、emit 事件
+  - [x] 15.3 實作 swap 指令處理：驗證 → moves-- → match-detect → cascade
+  - [x] 15.4 實作 resolving 狀態管理（resolving 期間拒絕 swap）
+  - [x] 15.5 實作 end-of-level 時序（cascade 完成後才結算）
+  - [x] 15.6 實作 intensity 計算公式
+  - [x] 15.7 實作固定時間步迴圈（60Hz 累加器、250ms 上限）
+  - [x] 15.8 撰寫確定性 CI 測試（固定種子 + 100 指令 → 3 次 bit-exact）
 
 ## 第五階段：事件與狀態管理
 
