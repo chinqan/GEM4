@@ -1,0 +1,23 @@
+# ─── CloudFlare Pages / Netlify Headers ──────────────────────
+# Static deployment cache strategy for Gem v1
+
+# All assets: immutable cache (content-hashed filenames)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# JS/CSS bundles: immutable cache (Vite adds content hash)
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML: no cache (always fetch latest)
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# Security headers
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), notifications=()

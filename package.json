@@ -11,7 +11,13 @@
     "test:ci": "vitest run --coverage",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "generate-assets": "node build-tools/generate-placeholders.mjs",
+    "pack-atlases": "node build-tools/pack-atlases.mjs",
+    "validate-budgets": "node build-tools/validate-budgets.mjs",
+    "validate-production": "node build-tools/validate-production.mjs",
+    "perf-validation": "node build-tools/perf-validation.mjs",
+    "test:e2e": "playwright test"
   },
   "keywords": [],
   "author": "",

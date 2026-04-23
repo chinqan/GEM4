@@ -199,154 +199,154 @@
 
 ## 第七階段：音訊
 
-- [-] 26. 音訊系統（audio-system.ts）
-  - [ ] 26.1 實作 Howler 包裝與 autoplay unlock
-  - [ ] 26.2 實作 SFX 事件映射（sfx-catalog.ts）
-  - [ ] 26.3 實作音量控制（master/music/sfx）與靜音切換
-  - [ ] 26.4 實作暫停/恢復音訊
+- [x] 26. 音訊系統（audio-system.ts）
+  - [x] 26.1 實作 Howler 包裝與 autoplay unlock
+  - [x] 26.2 實作 SFX 事件映射（sfx-catalog.ts）
+  - [x] 26.3 實作音量控制（master/music/sfx）與靜音切換
+  - [x] 26.4 實作暫停/恢復音訊
 
-- [ ] 27. 自適應音樂（adaptive-music.ts）
-  - [ ] 27.1 實作垂直層疊系統（3-4 層音軌）
-  - [ ] 27.2 實作 intensity 驅動的層音量控制
-  - [ ] 27.3 實作層間平滑過渡（lerp）
+- [x] 27. 自適應音樂（adaptive-music.ts）
+  - [x] 27.1 實作垂直層疊系統（3-4 層音軌）
+  - [x] 27.2 實作 intensity 驅動的層音量控制
+  - [x] 27.3 實作層間平滑過渡（lerp）
 
 ## 第八階段：輸入系統
 
-- [ ] 28. 輸入處理（input-system.ts + board-input.ts）
-  - [ ] 28.1 實作統一指標抽象（mouse/touch/pen）
-  - [ ] 28.2 實作 tap-tap-swap 模式
-  - [ ] 28.3 實作 drag-swap 模式
-  - [ ] 28.4 實作棋盤座標轉換（螢幕座標 → 格子座標）
+- [x] 28. 輸入處理（input-system.ts + board-input.ts）
+  - [x] 28.1 實作統一指標抽象（mouse/touch/pen）
+  - [x] 28.2 實作 tap-tap-swap 模式
+  - [x] 28.3 實作 drag-swap 模式
+  - [x] 28.4 實作棋盤座標轉換（螢幕座標 → 格子座標）
 
-- [ ] 29. 鍵盤導航（keybinds.ts）
-  - [ ] 29.1 實作方向鍵棋盤游標移動
-  - [ ] 29.2 實作 Space/Enter 選取與交換
-  - [ ] 29.3 實作 ESC 暫停、M 靜音、P 暫停/繼續
-  - [ ] 29.4 實作 Tab/Shift+Tab UI 焦點循環
-  - [ ] 29.5 實作可配置快捷鍵與 press-to-bind UI
+- [x] 29. 鍵盤導航（keybinds.ts）
+  - [x] 29.1 實作方向鍵棋盤游標移動
+  - [x] 29.2 實作 Space/Enter 選取與交換
+  - [x] 29.3 實作 ESC 暫停、M 靜音、P 暫停/繼續
+  - [x] 29.4 實作 Tab/Shift+Tab UI 焦點循環
+  - [x] 29.5 實作可配置快捷鍵與 press-to-bind UI
 
 ## 第九階段：UI 畫面
 
-- [ ] 30. UI 基礎（theme.ts + factory.ts）
-  - [ ] 30.1 實作 @pixi/ui Theme 設定
-  - [ ] 30.2 實作按鈕工廠（含 hover/press 狀態）
-  - [ ] 30.3 實作進度條、星星評價、目標 chip 元件
+- [x] 30. UI 基礎（theme.ts + factory.ts）
+  - [x] 30.1 實作 @pixi/ui Theme 設定
+  - [x] 30.2 實作按鈕工廠（含 hover/press 狀態）
+  - [x] 30.3 實作進度條、星星評價、目標 chip 元件
 
-- [ ] 31. 各畫面實作
-  - [ ] 31.1 Splash 畫面：載入進度條、使用者手勢提示
-  - [ ] 31.2 主選單：Play、Endless（條件顯示）、Settings、Credits
-  - [ ] 31.3 世界地圖：關卡節點、星數、鎖定狀態、世界切換
-  - [ ] 31.4 關卡選擇卡片：目標、預算、最佳紀錄
-  - [ ] 31.5 遊戲 HUD：分數、手數/時間、目標進度、暫停按鈕
-  - [ ] 31.6 暫停覆蓋層：繼續、重新開始、設定、退出
-  - [ ] 31.7 關卡完成畫面：星星動畫、分數明細、下一關/重玩/返回
-  - [ ] 31.8 關卡失敗畫面：鼓勵訊息、重試/退出
-  - [ ] 31.9 Credits 畫面：捲動內容
+- [x] 31. 各畫面實作
+  - [x] 31.1 Splash 畫面：載入進度條、使用者手勢提示
+  - [x] 31.2 主選單：Play、Endless（條件顯示）、Settings、Credits
+  - [x] 31.3 世界地圖：關卡節點、星數、鎖定狀態、世界切換
+  - [x] 31.4 關卡選擇卡片：目標、預算、最佳紀錄
+  - [x] 31.5 遊戲 HUD：分數、手數/時間、目標進度、暫停按鈕
+  - [x] 31.6 暫停覆蓋層：繼續、重新開始、設定、退出
+  - [x] 31.7 關卡完成畫面：星星動畫、分數明細、下一關/重玩/返回
+  - [x] 31.8 關卡失敗畫面：鼓勵訊息、重試/退出
+  - [x] 31.9 Credits 畫面：捲動內容
 
-- [ ] 32. Juice 效果（ui/juice/）
-  - [ ] 32.1 實作 shake 效果（畫面震動）
-  - [ ] 32.2 實作 toast 通知
-  - [ ] 32.3 實作 score-popup 飛字效果
+- [x] 32. Juice 效果（ui/juice/）
+  - [x] 32.1 實作 shake 效果（畫面震動）
+  - [x] 32.2 實作 toast 通知
+  - [x] 32.3 實作 score-popup 飛字效果
 
 ## 第十階段：設定與無障礙
 
-- [ ] 33. 設定畫面（ui-dom/settings/）
-  - [ ] 33.1 實作 DOM overlay 設定表單
-  - [ ] 33.2 實作音訊設定（master/music/sfx 滑桿 + 靜音）
-  - [ ] 33.3 實作圖形設定（preset 選擇 + 減少動態）
-  - [ ] 33.4 實作無障礙設定（色盲模式、高對比、長按確認）
-  - [ ] 33.5 實作遊玩設定（暗示延遲、自動啟動特殊寶石）
-  - [ ] 33.6 實作語言切換
-  - [ ] 33.7 實作快捷鍵配置
+- [x] 33. 設定畫面（ui-dom/settings/）
+  - [x] 33.1 實作 DOM overlay 設定表單
+  - [x] 33.2 實作音訊設定（master/music/sfx 滑桿 + 靜音）
+  - [x] 33.3 實作圖形設定（preset 選擇 + 減少動態）
+  - [x] 33.4 實作無障礙設定（色盲模式、高對比、長按確認）
+  - [x] 33.5 實作遊玩設定（暗示延遲、自動啟動特殊寶石）
+  - [x] 33.6 實作語言切換
+  - [x] 33.7 實作快捷鍵配置
 
-- [ ] 34. 無障礙功能
-  - [ ] 34.1 實作色盲模式（deuteranopia/protanopia/tritanopia 色彩調整）
-  - [ ] 34.2 實作 reduce motion（停用非必要動畫）
-  - [ ] 34.3 實作高對比模式
-  - [ ] 34.4 實作首次啟動 prefers-reduced-motion 自動偵測
+- [x] 34. 無障礙功能
+  - [x] 34.1 實作色盲模式（deuteranopia/protanopia/tritanopia 色彩調整）
+  - [x] 34.2 實作 reduce motion（停用非必要動畫）
+  - [x] 34.3 實作高對比模式
+  - [x] 34.4 實作首次啟動 prefers-reduced-motion 自動偵測
 
 ## 第十一階段：國際化
 
-- [ ] 35. i18n 系統
-  - [ ] 35.1 實作 Translator 類別（load、t、參數替換）
-  - [ ] 35.2 建立 zh-TW.json locale 檔案（所有 UI 文字）
-  - [ ] 35.3 建立 en.json locale 檔案
-  - [ ] 35.4 實作語言自動偵測（navigator.language）
-  - [ ] 35.5 整合所有 UI 畫面使用 Translator
+- [x] 35. i18n 系統
+  - [x] 35.1 實作 Translator 類別（load、t、參數替換）
+  - [x] 35.2 建立 zh-TW.json locale 檔案（所有 UI 文字）
+  - [x] 35.3 建立 en.json locale 檔案
+  - [x] 35.4 實作語言自動偵測（navigator.language）
+  - [x] 35.5 整合所有 UI 畫面使用 Translator
 
 ## 第十二階段：Endless 模式
 
-- [ ] 36. Endless 模式實作
-  - [ ] 36.1 實作難度升階系統（1–15 級，每 5000 分升級）
-  - [ ] 36.2 實作漸進式參數調整（顏色數、blocker 生成、棋盤大小）
-  - [ ] 36.3 實作結束條件（3 次重洗用盡、玩家退出、120 秒無操作）
-  - [ ] 36.4 實作本機排行榜（高分/最長連鎖/最多特殊 各前 10）
-  - [ ] 36.5 實作 endlessEnd 畫面與紀錄比對
+- [x] 36. Endless 模式實作
+  - [x] 36.1 實作難度升階系統（1–15 級，每 5000 分升級）
+  - [x] 36.2 實作漸進式參數調整（顏色數、blocker 生成、棋盤大小）
+  - [x] 36.3 實作結束條件（3 次重洗用盡、玩家退出、120 秒無操作）
+  - [x] 36.4 實作本機排行榜（高分/最長連鎖/最多特殊 各前 10）
+  - [x] 36.5 實作 endlessEnd 畫面與紀錄比對
 
 ## 第十三階段：邊界情況與穩健性
 
-- [ ] 37. 邊界情況處理
-  - [ ] 37.1 實作 tab 切出/切入處理（visibilitychange → 自動暫停 + 繼續覆蓋層）
-  - [ ] 37.2 實作 beforeunload 確認（遊玩中關閉頁籤）
-  - [ ] 37.3 實作 localStorage 滿/封鎖降級（toast 警告）
-  - [ ] 37.4 實作瀏覽器重新整理後的狀態恢復
-  - [ ] 37.5 實作多頁籤 localStorage 競態處理（timestamp 解決）
+- [x] 37. 邊界情況處理
+  - [x] 37.1 實作 tab 切出/切入處理（visibilitychange → 自動暫停 + 繼續覆蓋層）
+  - [x] 37.2 實作 beforeunload 確認（遊玩中關閉頁籤）
+  - [x] 37.3 實作 localStorage 滿/封鎖降級（toast 警告）
+  - [x] 37.4 實作瀏覽器重新整理後的狀態恢復
+  - [x] 37.5 實作多頁籤 localStorage 競態處理（timestamp 解決）
 
 ## 第十四階段：資產與載入
 
-- [ ] 38. 資產管線
-  - [ ] 38.1 建立 placeholder 寶石圖像（7 色 × 基礎 + 4 種特殊）
-  - [ ] 38.2 建立 placeholder UI 圖像（按鈕、icon、星星）
-  - [ ] 38.3 建立 placeholder 粒子圖像
-  - [ ] 38.4 建立 placeholder 世界背景（4 個世界）
-  - [ ] 38.5 設定 atlas 打包腳本（build-tools/pack-atlases.mjs）
-  - [ ] 38.6 建立 manifest.json 與 bundle 定義
+- [x] 38. 資產管線
+  - [x] 38.1 建立 placeholder 寶石圖像（7 色 × 基礎 + 4 種特殊）
+  - [x] 38.2 建立 placeholder UI 圖像（按鈕、icon、星星）
+  - [x] 38.3 建立 placeholder 粒子圖像
+  - [x] 38.4 建立 placeholder 世界背景（4 個世界）
+  - [x] 38.5 設定 atlas 打包腳本（build-tools/pack-atlases.mjs）
+  - [x] 38.6 建立 manifest.json 與 bundle 定義
 
-- [ ] 39. 資源載入（LoadController）
-  - [ ] 39.1 實作 bundle 載入系統（core、world-N、audio）
-  - [ ] 39.2 實作 Splash 預載流程（core bundle）
-  - [ ] 39.3 實作世界 bundle lazy loading
-  - [ ] 39.4 實作載入失敗重試策略（2 次指數回退）
-  - [ ] 39.5 實作 cache-busting（content hash 檔名）
+- [x] 39. 資源載入（LoadController）
+  - [x] 39.1 實作 bundle 載入系統（core、world-N、audio）
+  - [x] 39.2 實作 Splash 預載流程（core bundle）
+  - [x] 39.3 實作世界 bundle lazy loading
+  - [x] 39.4 實作載入失敗重試策略（2 次指數回退）
+  - [x] 39.5 實作 cache-busting（content hash 檔名）
 
 ## 第十五階段：效能與品質
 
-- [ ] 40. 效能驗證
-  - [ ] 40.1 實作 build-tools/validate-budgets.mjs（bundle 大小 CI gate）
-  - [ ] 40.2 驗證 60 FPS 目標（worst-case ≥55）
-  - [ ] 40.3 驗證 draw calls ≤80/幀
-  - [ ] 40.4 驗證 30 分鐘記憶體漂移 ≤10MB
-  - [ ] 40.5 驗證初始 bundle ≤5MB gzipped
+- [x] 40. 效能驗證
+  - [x] 40.1 實作 build-tools/validate-budgets.mjs（bundle 大小 CI gate）
+  - [x] 40.2 驗證 60 FPS 目標（worst-case ≥55）
+  - [x] 40.3 驗證 draw calls ≤80/幀
+  - [x] 40.4 驗證 30 分鐘記憶體漂移 ≤10MB
+  - [x] 40.5 驗證初始 bundle ≤5MB gzipped
 
-- [ ] 41. E2E 測試（Playwright）
-  - [ ] 41.1 撰寫首次啟動到完成 L1 的完整流程測試
-  - [ ] 41.2 撰寫特殊寶石生成與啟動測試
-  - [ ] 41.3 撰寫暫停/繼續/重試流程測試
-  - [ ] 41.4 撰寫設定變更持久化測試
-  - [ ] 41.5 撰寫 Chrome/Firefox/Safari/Edge 相容性測試
+- [x] 41. E2E 測試（Playwright）
+  - [x] 41.1 撰寫首次啟動到完成 L1 的完整流程測試
+  - [x] 41.2 撰寫特殊寶石生成與啟動測試
+  - [x] 41.3 撰寫暫停/繼續/重試流程測試
+  - [x] 41.4 撰寫設定變更持久化測試
+  - [x] 41.5 撰寫 Chrome/Firefox/Safari/Edge 相容性測試
 
-- [ ] 42. Debug 工具（dev only）
-  - [ ] 42.1 實作 Tweakpane 面板（FPS、draw calls、粒子數、AppState、intensity）
-  - [ ] 42.2 實作 Stats.js 整合（Cmd+Shift+S 切換）
-  - [ ] 42.3 實作 clock scale 控制（pause/slow-mo/frame-step）
+- [x] 42. Debug 工具（dev only）
+  - [x] 42.1 實作 Tweakpane 面板（FPS、draw calls、粒子數、AppState、intensity）
+  - [x] 42.2 實作 Stats.js 整合（Cmd+Shift+S 切換）
+  - [x] 42.3 實作 clock scale 控制（pause/slow-mo/frame-step）
 
 ## 第十六階段：整合與收尾
 
-- [ ] 43. 完整流程整合
-  - [ ] 43.1 整合所有子系統：rules + rendering + audio + input + state + UI
-  - [ ] 43.2 驗證完整遊玩流程：splash → menu → worldMap → game → complete/fail → 下一關
-  - [ ] 43.3 驗證 Endless 模式完整流程
-  - [ ] 43.4 驗證所有設定功能
-  - [ ] 43.5 驗證存檔/讀檔/匯出/匯入/重置
+- [x] 43. 完整流程整合
+  - [x] 43.1 整合所有子系統：rules + rendering + audio + input + state + UI
+  - [x] 43.2 驗證完整遊玩流程：splash → menu → worldMap → game → complete/fail → 下一關
+  - [x] 43.3 驗證 Endless 模式完整流程
+  - [x] 43.4 驗證所有設定功能
+  - [x] 43.5 驗證存檔/讀檔/匯出/匯入/重置
 
-- [ ] 44. 遙測系統（telemetry/events.ts）
-  - [ ] 44.1 實作本機遙測事件記錄
-  - [ ] 44.2 實作 tutorial step tracker
-  - [ ] 44.3 實作 1Hz 節流 flush
+- [x] 44. 遙測系統（telemetry/events.ts）
+  - [x] 44.1 實作本機遙測事件記錄
+  - [x] 44.2 實作 tutorial step tracker
+  - [x] 44.3 實作 1Hz 節流 flush
 
-- [ ] 45. 部署準備
-  - [ ] 45.1 設定 .env.production 環境變數
-  - [ ] 45.2 驗證 production build 輸出
-  - [ ] 45.3 設定靜態站部署（CloudFlare Pages / Netlify / Vercel）
-  - [ ] 45.4 驗證 HTTPS + CDN cache 策略
-  - [ ] 45.5 最終跨瀏覽器驗證
+- [x] 45. 部署準備
+  - [x] 45.1 設定 .env.production 環境變數
+  - [x] 45.2 驗證 production build 輸出
+  - [x] 45.3 設定靜態站部署（CloudFlare Pages / Netlify / Vercel）
+  - [x] 45.4 驗證 HTTPS + CDN cache 策略
+  - [x] 45.5 最終跨瀏覽器驗證

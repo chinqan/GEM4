@@ -1,0 +1,274 @@
+{
+  "version": 1,
+  "buildTime": "2026-04-22T23:48:18.864Z",
+  "bundles": [
+    {
+      "name": "core",
+      "description": "Core assets loaded during splash screen",
+      "assets": [
+        {
+          "alias": "gem-b-area",
+          "src": "assets/gems/gem-b-area.svg"
+        },
+        {
+          "alias": "gem-b-base",
+          "src": "assets/gems/gem-b-base.svg"
+        },
+        {
+          "alias": "gem-b-colour",
+          "src": "assets/gems/gem-b-colour.svg"
+        },
+        {
+          "alias": "gem-b-lineH",
+          "src": "assets/gems/gem-b-lineH.svg"
+        },
+        {
+          "alias": "gem-b-lineV",
+          "src": "assets/gems/gem-b-lineV.svg"
+        },
+        {
+          "alias": "gem-g-area",
+          "src": "assets/gems/gem-g-area.svg"
+        },
+        {
+          "alias": "gem-g-base",
+          "src": "assets/gems/gem-g-base.svg"
+        },
+        {
+          "alias": "gem-g-colour",
+          "src": "assets/gems/gem-g-colour.svg"
+        },
+        {
+          "alias": "gem-g-lineH",
+          "src": "assets/gems/gem-g-lineH.svg"
+        },
+        {
+          "alias": "gem-g-lineV",
+          "src": "assets/gems/gem-g-lineV.svg"
+        },
+        {
+          "alias": "gem-o-area",
+          "src": "assets/gems/gem-o-area.svg"
+        },
+        {
+          "alias": "gem-o-base",
+          "src": "assets/gems/gem-o-base.svg"
+        },
+        {
+          "alias": "gem-o-colour",
+          "src": "assets/gems/gem-o-colour.svg"
+        },
+        {
+          "alias": "gem-o-lineH",
+          "src": "assets/gems/gem-o-lineH.svg"
+        },
+        {
+          "alias": "gem-o-lineV",
+          "src": "assets/gems/gem-o-lineV.svg"
+        },
+        {
+          "alias": "gem-p-area",
+          "src": "assets/gems/gem-p-area.svg"
+        },
+        {
+          "alias": "gem-p-base",
+          "src": "assets/gems/gem-p-base.svg"
+        },
+        {
+          "alias": "gem-p-colour",
+          "src": "assets/gems/gem-p-colour.svg"
+        },
+        {
+          "alias": "gem-p-lineH",
+          "src": "assets/gems/gem-p-lineH.svg"
+        },
+        {
+          "alias": "gem-p-lineV",
+          "src": "assets/gems/gem-p-lineV.svg"
+        },
+        {
+          "alias": "gem-r-area",
+          "src": "assets/gems/gem-r-area.svg"
+        },
+        {
+          "alias": "gem-r-base",
+          "src": "assets/gems/gem-r-base.svg"
+        },
+        {
+          "alias": "gem-r-colour",
+          "src": "assets/gems/gem-r-colour.svg"
+        },
+        {
+          "alias": "gem-r-lineH",
+          "src": "assets/gems/gem-r-lineH.svg"
+        },
+        {
+          "alias": "gem-r-lineV",
+          "src": "assets/gems/gem-r-lineV.svg"
+        },
+        {
+          "alias": "gem-w-area",
+          "src": "assets/gems/gem-w-area.svg"
+        },
+        {
+          "alias": "gem-w-base",
+          "src": "assets/gems/gem-w-base.svg"
+        },
+        {
+          "alias": "gem-w-colour",
+          "src": "assets/gems/gem-w-colour.svg"
+        },
+        {
+          "alias": "gem-w-lineH",
+          "src": "assets/gems/gem-w-lineH.svg"
+        },
+        {
+          "alias": "gem-w-lineV",
+          "src": "assets/gems/gem-w-lineV.svg"
+        },
+        {
+          "alias": "gem-y-area",
+          "src": "assets/gems/gem-y-area.svg"
+        },
+        {
+          "alias": "gem-y-base",
+          "src": "assets/gems/gem-y-base.svg"
+        },
+        {
+          "alias": "gem-y-colour",
+          "src": "assets/gems/gem-y-colour.svg"
+        },
+        {
+          "alias": "gem-y-lineH",
+          "src": "assets/gems/gem-y-lineH.svg"
+        },
+        {
+          "alias": "gem-y-lineV",
+          "src": "assets/gems/gem-y-lineV.svg"
+        },
+        {
+          "alias": "ui-button",
+          "src": "assets/ui/button.svg"
+        },
+        {
+          "alias": "ui-icon-back",
+          "src": "assets/ui/icon-back.svg"
+        },
+        {
+          "alias": "ui-icon-pause",
+          "src": "assets/ui/icon-pause.svg"
+        },
+        {
+          "alias": "ui-icon-settings",
+          "src": "assets/ui/icon-settings.svg"
+        },
+        {
+          "alias": "ui-star-empty",
+          "src": "assets/ui/star-empty.svg"
+        },
+        {
+          "alias": "ui-star-filled",
+          "src": "assets/ui/star-filled.svg"
+        },
+        {
+          "alias": "particle-particle-circle",
+          "src": "assets/particles/particle-circle.svg"
+        },
+        {
+          "alias": "particle-particle-glow",
+          "src": "assets/particles/particle-glow.svg"
+        },
+        {
+          "alias": "particle-particle-ring",
+          "src": "assets/particles/particle-ring.svg"
+        },
+        {
+          "alias": "particle-particle-spark",
+          "src": "assets/particles/particle-spark.svg"
+        }
+      ]
+    },
+    {
+      "name": "world-1",
+      "description": "World 1 assets (lazy loaded)",
+      "assets": [
+        {
+          "alias": "world-1-bg",
+          "src": "assets/worlds/world-1-bg.svg"
+        }
+      ]
+    },
+    {
+      "name": "world-2",
+      "description": "World 2 assets (lazy loaded)",
+      "assets": [
+        {
+          "alias": "world-2-bg",
+          "src": "assets/worlds/world-2-bg.svg"
+        }
+      ]
+    },
+    {
+      "name": "world-3",
+      "description": "World 3 assets (lazy loaded)",
+      "assets": [
+        {
+          "alias": "world-3-bg",
+          "src": "assets/worlds/world-3-bg.svg"
+        }
+      ]
+    },
+    {
+      "name": "world-4",
+      "description": "World 4 assets (lazy loaded)",
+      "assets": [
+        {
+          "alias": "world-4-bg",
+          "src": "assets/worlds/world-4-bg.svg"
+        }
+      ]
+    },
+    {
+      "name": "audio",
+      "description": "Audio assets (lazy loaded)",
+      "assets": [
+        {
+          "alias": "bgm-world-1",
+          "src": "assets/audio/bgm-world-1.mp3"
+        },
+        {
+          "alias": "bgm-world-2",
+          "src": "assets/audio/bgm-world-2.mp3"
+        },
+        {
+          "alias": "bgm-world-3",
+          "src": "assets/audio/bgm-world-3.mp3"
+        },
+        {
+          "alias": "bgm-world-4",
+          "src": "assets/audio/bgm-world-4.mp3"
+        },
+        {
+          "alias": "sfx-match",
+          "src": "assets/audio/sfx-match.mp3"
+        },
+        {
+          "alias": "sfx-chain",
+          "src": "assets/audio/sfx-chain.mp3"
+        },
+        {
+          "alias": "sfx-special",
+          "src": "assets/audio/sfx-special.mp3"
+        },
+        {
+          "alias": "sfx-combo",
+          "src": "assets/audio/sfx-combo.mp3"
+        },
+        {
+          "alias": "sfx-invalid",
+          "src": "assets/audio/sfx-invalid.mp3"
+        }
+      ]
+    }
+  ]
+}

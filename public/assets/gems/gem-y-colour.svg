@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <circle cx="32" cy="32" r="24" fill="#ffcc00"/>
+  <circle cx="28" cy="28" r="13.200000000000001" fill="#ffcc00" opacity="0.5" filter="url(#glow)"/>
+  <circle cx="32" cy="32" r="28" fill="none" stroke="url(#rainbow)" stroke-width="3"/>
+      <defs><linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#ff3344"/>
+        <stop offset="20%" stop-color="#ff8833"/>
+        <stop offset="40%" stop-color="#ffcc00"/>
+        <stop offset="60%" stop-color="#33cc66"/>
+        <stop offset="80%" stop-color="#3388ff"/>
+        <stop offset="100%" stop-color="#aa44ff"/>
+      </linearGradient></defs>
+  <defs><filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+</svg>

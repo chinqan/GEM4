@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <radialGradient id="wbg2" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#ff6644" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#3e1a1a" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="720" fill="#3e1a1a"/>
+  <rect width="1280" height="720" fill="url(#wbg2)"/>
+  <!-- Decorative elements -->
+  <circle cx="200" cy="150" r="80" fill="#ff6644" opacity="0.05"/>
+  <circle cx="1000" cy="500" r="120" fill="#ff6644" opacity="0.04"/>
+  <circle cx="640" cy="360" r="200" fill="#ff6644" opacity="0.02"/>
+  <text x="640" y="680" text-anchor="middle" fill="#ff6644" font-size="14" font-family="sans-serif" opacity="0.4">World 2: Ember Peaks</text>
+</svg>

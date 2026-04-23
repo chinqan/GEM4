@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <radialGradient id="wbg4" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#aa66ff" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#2e1a3e" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="720" fill="#2e1a3e"/>
+  <rect width="1280" height="720" fill="url(#wbg4)"/>
+  <!-- Decorative elements -->
+  <circle cx="200" cy="150" r="80" fill="#aa66ff" opacity="0.05"/>
+  <circle cx="1000" cy="500" r="120" fill="#aa66ff" opacity="0.04"/>
+  <circle cx="640" cy="360" r="200" fill="#aa66ff" opacity="0.02"/>
+  <text x="640" y="680" text-anchor="middle" fill="#aa66ff" font-size="14" font-family="sans-serif" opacity="0.4">World 4: Twilight Spire</text>
+</svg>
