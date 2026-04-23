@@ -104,22 +104,17 @@ export class BoardRenderer {
 
         activeKeys.add(key);
         const gem = cell.gem;
-        const existing = this.sprites.get(key);
 
-        if (existing) {
-          // 更新位置（可能因 cascade 移動）
-          this.updateSpritePosition(existing, col, row);
-        } else {
-          // 建立新 sprite
-          const sprite = this.factory.create(
-            gem.colour,
-            gem.special,
-            col,
-            row,
-          );
-          this.sprites.set(key, sprite);
-          this.layers.gemLayer.addChild(sprite);
-        }
+        // 移除舊 sprite 並重建，確保顏色/特殊類型正確
+        this.removeSprite(key);
+        const sprite = this.factory.create(
+          gem.colour,
+          gem.special,
+          col,
+          row,
+        );
+        this.sprites.set(key, sprite);
+        this.layers.gemLayer.addChild(sprite);
       }
     }
 

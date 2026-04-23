@@ -315,7 +315,8 @@ export function determineSpecial(
     case 'straight3':
       return undefined;
     case 'straight4':
-      return direction === 'horizontal' ? 'lineH' : 'lineV';
+      // 垂直於消除方向：水平消除 → 垂直炸彈，垂直消除 → 水平炸彈
+      return direction === 'horizontal' ? 'lineV' : 'lineH';
     case 'straight5':
       return 'colour';
     case 'T':

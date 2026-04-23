@@ -213,7 +213,7 @@ describe('mergeRuns', () => {
     ]);
     expect(runs.length).toBe(1);
     expect(runs[0].shape).toBe('straight4');
-    expect(runs[0].spawnsSpecial).toBe('lineH');
+    expect(runs[0].spawnsSpecial).toBe('lineV');
   });
 
   it('獨立 5 連直線 → straight5', () => {
@@ -284,12 +284,12 @@ describe('determineSpecial', () => {
     expect(determineSpecial('straight3', 'vertical')).toBeUndefined();
   });
 
-  it('straight4 水平 → lineH', () => {
-    expect(determineSpecial('straight4', 'horizontal')).toBe('lineH');
+  it('straight4 水平 → lineV（垂直於消除方向）', () => {
+    expect(determineSpecial('straight4', 'horizontal')).toBe('lineV');
   });
 
-  it('straight4 垂直 → lineV', () => {
-    expect(determineSpecial('straight4', 'vertical')).toBe('lineV');
+  it('straight4 垂直 → lineH（垂直於消除方向）', () => {
+    expect(determineSpecial('straight4', 'vertical')).toBe('lineH');
   });
 
   it('straight5 → colour', () => {
@@ -336,24 +336,24 @@ describe('detectMatches', () => {
     expect(matches[0].cells.length).toBe(3);
   });
 
-  it('水平 4 連 → straight4 + lineH', () => {
+  it('水平 4 連 → straight4 + lineV（垂直於消除方向）', () => {
     const board = createBoard(6, 6);
     fillRow(board, 0, ['B', 'B', 'B', 'B', 'G', 'Y']);
 
     const matches = detectMatches(board);
     expect(matches.length).toBe(1);
     expect(matches[0].shape).toBe('straight4');
-    expect(matches[0].spawnsSpecial).toBe('lineH');
+    expect(matches[0].spawnsSpecial).toBe('lineV');
   });
 
-  it('垂直 4 連 → straight4 + lineV', () => {
+  it('垂直 4 連 → straight4 + lineH（垂直於消除方向）', () => {
     const board = createBoard(6, 6);
     fillCol(board, 0, ['P', 'P', 'P', 'P', 'G', 'Y']);
 
     const matches = detectMatches(board);
     expect(matches.length).toBe(1);
     expect(matches[0].shape).toBe('straight4');
-    expect(matches[0].spawnsSpecial).toBe('lineV');
+    expect(matches[0].spawnsSpecial).toBe('lineH');
   });
 
   it('5 連直線 → straight5 + colour', () => {
@@ -459,7 +459,7 @@ describe('detectMatches', () => {
     const swapPos: CellPos = [3, 0];
     const matches = detectMatches(board, { swapPos });
     expect(matches.length).toBe(1);
-    expect(matches[0].spawnsSpecial).toBe('lineH');
+    expect(matches[0].spawnsSpecial).toBe('lineV');
     expect(matches[0].spawnAt).toEqual([3, 0]);
   });
 
@@ -470,7 +470,7 @@ describe('detectMatches', () => {
     // No swapPos → cascade trigger
     const matches = detectMatches(board);
     expect(matches.length).toBe(1);
-    expect(matches[0].spawnsSpecial).toBe('lineH');
+    expect(matches[0].spawnsSpecial).toBe('lineV');
     // Center of [0,0],[1,0],[2,0],[3,0] sorted → index 1 → [1,0]
     expect(matches[0].spawnAt).toBeDefined();
   });

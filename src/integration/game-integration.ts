@@ -12,6 +12,12 @@ import type { AppRefs } from '../app';
 import type { DebugPanel } from '../debug/tweakpane';
 import type { StatsPanel } from '../debug/stats';
 import type { LoadController } from '../assets/load-controller';
+import type { Container } from 'pixi.js';
+import type { RulesEngine, GameLoop } from '../game/runtime/game-loop';
+import type { BoardRenderer } from '../rendering/board-renderer';
+import type { BoardInput } from '../input/board-input';
+import type { InputSystem } from '../input/input-system';
+import type { ViewportManager } from '../rendering/viewport';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -69,6 +75,14 @@ export class GameIntegration {
   private currentState: AppState = { kind: 'splash' };
   private subsystems: SubsystemRefs;
   private cleanupFns: Array<() => void> = [];
+
+  // ─── Active game session ────────────────────────────────
+  private activeRulesEngine: RulesEngine | null = null;
+  private activeGameLoop: GameLoop | null = null;
+  private activeBoardRenderer: BoardRenderer | null = null;
+  private activeBoardInput: BoardInput | null = null;
+  private activeInputSystem: InputSystem | null = null;
+  private activeViewportManager: ViewportManager | null = null;
 
   constructor(config: GameIntegrationConfig) {
     this.config = config;
@@ -231,116 +245,1199 @@ export class GameIntegration {
     // Update debug panel
     this.subsystems.debugPanel?.updateMetrics({ appState: to.kind });
 
-    // Route to appropriate handler
+    // Route to appropriate handler (fire-and-forget for async screens)
     switch (to.kind) {
       case 'splash':
-        this.showSplash();
+        void this.showSplash();
         break;
       case 'menu':
-        this.showMenu();
+        void this.showMenu();
         break;
       case 'worldMap':
-        this.showWorldMap(to.worldId);
+        void this.showWorldMap(to.worldId);
         break;
       case 'levelSelect':
-        this.showLevelSelect(to.worldId, to.levelId);
+        void this.showLevelSelect(to.worldId, to.levelId);
         break;
       case 'game':
-        this.startLevel(to.levelId, to.seed);
+        void this.startLevel(to.levelId, to.seed);
         break;
       case 'pause':
-        this.showPause();
+        void this.showPause();
         break;
       case 'levelComplete':
-        this.showLevelComplete(to.result);
+        void this.showLevelComplete(to.result);
         break;
       case 'levelFail':
-        this.showLevelFail(to.result);
+        void this.showLevelFail(to.result);
         break;
       case 'endless':
         this.startEndless(to.seed);
         break;
       case 'endlessEnd':
-        this.showEndlessEnd(to.result);
+        void this.showEndlessEnd(to.result);
         break;
       case 'settings':
-        this.showSettings();
+        void this.showSettings();
         break;
       case 'credits':
-        this.showCredits();
+        void this.showCredits();
         break;
     }
   }
 
-  // ─── Screen Handlers (stubs) ────────────────────────────
+  // ─── Screen Management ───────────────────────────────────
 
-  private showSplash(): void {
-    // TODO: Show splash screen with loading progress
+  /** Currently displayed screen container */
+  private activeScreen: Container | null = null;
+
+  /** Remove the current screen from the UI layer */
+  private clearScreen(): void {
+    if (this.activeScreen && this.subsystems.app) {
+      const uiLayer = this.subsystems.app.layers.uiLayer;
+      if (this.activeScreen.parent === uiLayer) {
+        uiLayer.removeChild(this.activeScreen);
+      }
+      this.activeScreen.destroy({ children: true });
+      this.activeScreen = null;
+    }
   }
 
-  private showMenu(): void {
-    // TODO: Show main menu (Play, Endless, Settings, Credits)
+  /** Tear down game session when leaving game state */
+  private onLeavingGameState(from: AppState): void {
+    if (from.kind === 'game' || from.kind === 'endless') {
+      // Don't tear down if going to pause — we want to resume
+      // Tear down happens explicitly when level resolves
+    }
   }
 
-  private showWorldMap(worldId: number): void {
-    // TODO: Show world map with level nodes
-    // Lazy-load world assets if needed
+  /** Set a new screen on the UI layer */
+  private setScreen(screen: Container): void {
+    this.clearScreen();
+    this.activeScreen = screen;
+    this.subsystems.app?.layers.uiLayer.addChild(screen);
+  }
+
+  /** Get the current canvas dimensions */
+  private getScreenSize(): { width: number; height: number } {
+    const app = this.subsystems.app?.app;
+    if (app) {
+      return { width: app.screen.width, height: app.screen.height };
+    }
+    return { width: window.innerWidth, height: window.innerHeight };
+  }
+
+  // ─── Screen Handlers ────────────────────────────────────
+
+  private async showSplash(): Promise<void> {
+    const { createSplashScreen } = await import('../ui/screens/splash');
+    const { width, height } = this.getScreenSize();
+    const splash = createSplashScreen({ width, height });
+    splash.setLoadProgress(1);
+    splash.showTapPrompt(true);
+    this.setScreen(splash);
+
+    // Tap to proceed to menu
+    splash.eventMode = 'static';
+    splash.on('pointertap', () => {
+      this.transitionTo({ kind: 'menu' });
+    });
+  }
+
+  private async showMenu(): Promise<void> {
+    const { createMainMenuScreen } = await import('../ui/screens/main-menu');
+    const { width, height } = this.getScreenSize();
+    const menu = createMainMenuScreen({
+      width,
+      height,
+      endlessUnlocked: false,
+      onPlay: () => this.transitionTo({ kind: 'worldMap', worldId: 1 }),
+      onEndless: () => this.transitionTo({ kind: 'endless' }),
+      onSettings: () => this.transitionTo({ kind: 'settings', returnTo: this.currentState } as any),
+      onCredits: () => this.transitionTo({ kind: 'credits' }),
+    });
+    this.setScreen(menu);
+  }
+
+  private async showWorldMap(worldId: number): Promise<void> {
     this.subsystems.loadController?.loadWorld(worldId);
+
+    const { createWorldMapScreen } = await import('../ui/screens/world-map');
+    const { SaveManager } = await import('../state/save-state');
+    const { width, height } = this.getScreenSize();
+
+    // 從存檔讀取關卡進度
+    const saveManager = new SaveManager();
+    const save = saveManager.load();
+
+    // Generate level node data for this world (20 levels per world)
+    const levels = [];
+    const startLevel = (worldId - 1) * 20 + 1;
+    for (let i = 0; i < 20; i++) {
+      const levelId = startLevel + i;
+      const record = save.levels[levelId];
+      const isUnlocked = save.progress.unlockedLevels.includes(levelId);
+      const isCompleted = record && record.stars > 0;
+      levels.push({
+        levelId,
+        state: isCompleted ? 'completed' as const
+             : isUnlocked ? (i === 0 ? 'current' as const : 'unlocked' as const)
+             : 'locked' as const,
+        stars: (record?.stars ?? 0) as 0 | 1 | 2 | 3,
+      });
+    }
+
+    const worldNames: Record<number, string> = {
+      1: 'Crystal Cavern',
+      2: 'Ocean Depths',
+      3: 'Mystic Garden',
+      4: 'Solar Temple',
+    };
+
+    const worldMap = createWorldMapScreen({
+      width,
+      height,
+      worldId,
+      worldName: worldNames[worldId] ?? `World ${worldId}`,
+      levels,
+      onBack: () => this.transitionTo({ kind: 'menu' }),
+      onLevelTap: (levelId) => this.transitionTo({ kind: 'levelSelect', worldId, levelId }),
+      onPrevWorld: worldId > 1 ? () => this.transitionTo({ kind: 'worldMap', worldId: worldId - 1 }) : undefined,
+      onNextWorld: worldId < 4 ? () => this.transitionTo({ kind: 'worldMap', worldId: worldId + 1 }) : undefined,
+    });
+    worldMap.setWorldNavigation(worldId > 1, worldId < 4);
+    this.setScreen(worldMap);
   }
 
-  private showLevelSelect(worldId: number, levelId: number): void {
-    // TODO: Show level select card with objectives
+  private async showLevelSelect(worldId: number, levelId: number): Promise<void> {
+    const { createLevelSelectCard } = await import('../ui/screens/level-select');
+    const { width, height } = this.getScreenSize();
+    const card = createLevelSelectCard({
+      width,
+      height,
+      data: {
+        worldId,
+        levelId,
+        objectiveText: 'Score 1000 points',
+        moveBudget: 20,
+        bestStars: 0,
+        bestScore: 0,
+        attempts: 0,
+      },
+      onPlay: () => this.transitionTo({ kind: 'game', levelId }),
+      onCancel: () => this.transitionTo({ kind: 'worldMap', worldId }),
+    });
+    this.setScreen(card);
   }
 
-  private startLevel(levelId: number, seed?: bigint): void {
-    // TODO: Initialize RulesEngine, start GameLoop
+  private async startLevel(levelId: number, seed?: bigint): Promise<void> {
+    // Tear down any existing game session
+    this.teardownGameSession();
+
+    // Ensure level registry is loaded
+    await import('../game/level/levels/index');
+
+    const { loadLevel } = await import('../game/level/level-spec');
+    const spec = loadLevel(levelId);
+    if (!spec) {
+      console.error(`[GameIntegration] Level ${levelId} not found`);
+      this.transitionTo({ kind: 'worldMap', worldId: 1 });
+      return;
+    }
+
+    // Create RNG streams
+    const { createRngStreams } = await import('../game/rules/rng');
+    const gameSeed = seed ?? BigInt(Date.now());
+    const rngStreams = createRngStreams(gameSeed);
+
+    // Initialize board
+    const { initBoard } = await import('../game/runtime/reshuffle');
+    const board = initBoard(spec, rngStreams.boardInit);
+
+    // Create command queue and rules engine
+    const { CommandQueue, RulesEngine } = await import('../game/runtime/game-loop');
+    const commandQueue = new CommandQueue();
+    const rulesEngine = new RulesEngine({
+      board,
+      spec,
+      cascadeRng: rngStreams.cascadeFill,
+      eventBus: this.eventBus,
+      commandQueue,
+    });
+    this.activeRulesEngine = rulesEngine;
+
+    // Create board renderer
+    const appRefs = this.subsystems.app;
+    if (!appRefs) return;
+
+    const { BoardRenderer } = await import('../rendering/board-renderer');
+    const boardRenderer = new BoardRenderer(appRefs.layers);
+    boardRenderer.sync(board);
+    this.activeBoardRenderer = boardRenderer;
+
+    // Position the board layer using viewport
+    const { ViewportManager } = await import('../rendering/viewport');
+    const { CELL_SIZE } = await import('../rendering/design-tokens');
+    const canvas = appRefs.app.canvas as HTMLCanvasElement;
+    const viewportManager = new ViewportManager(appRefs.layers.boardLayer, canvas);
+    viewportManager.start(board.width, board.height, CELL_SIZE);
+    this.activeViewportManager = viewportManager;
+
+    // Draw grid background
+    await this.drawGridBackground(appRefs, board.width, board.height, CELL_SIZE);
+
+    // Create board input
+    const { BoardInput } = await import('../input/board-input');
+    const boardInput = new BoardInput({
+      commandQueue,
+      boardWidth: board.width,
+      boardHeight: board.height,
+      cellSize: CELL_SIZE,
+    });
+    boardInput.updateViewport(viewportManager.viewport);
+    boardInput.onSelectionChange = (cell) => {
+      boardRenderer.setSelection(cell);
+    };
+    this.activeBoardInput = boardInput;
+
+    // Use PixiJS event system on boardLayer for reliable pointer handling
+    // This avoids coordinate issues with raw DOM events
+    const boardLayer = appRefs.layers.boardLayer;
+    boardLayer.eventMode = 'static';
+    boardLayer.hitArea = {
+      contains: (x: number, y: number) => {
+        return x >= 0 && x < board.width * CELL_SIZE &&
+               y >= 0 && y < board.height * CELL_SIZE;
+      },
+    };
+
+    let tapStartCell: [number, number] | null = null;
+    let selectedCell: [number, number] | null = null;
+
+    const pixelToGrid = (localX: number, localY: number): [number, number] | null => {
+      const col = Math.floor(localX / CELL_SIZE);
+      const row = Math.floor(localY / CELL_SIZE);
+      if (col < 0 || col >= board.width || row < 0 || row >= board.height) return null;
+      return [col, row];
+    };
+
+    const isAdjacent = (a: [number, number], b: [number, number]): boolean => {
+      const dc = Math.abs(a[0] - b[0]);
+      const dr = Math.abs(a[1] - b[1]);
+      return (dc === 1 && dr === 0) || (dc === 0 && dr === 1);
+    };
+
+    // ─── 動畫化交換流程 ──────────────────────────────────
+    const { createSwapAnimation, createMatchClearAnimation,
+            createCascadeDropAnimation, createSpecialActivationEffect } = await import('../rendering/animations');
+    const { ParticlePool, MergeParticleSystem } = await import('../rendering/particles');
+    const { createScorePopup } = await import('../ui/juice/score-popup');
+    const { getCell, cloneBoard } = await import('../game/rules/board');
+    const { detectMatches } = await import('../game/rules/match-detect');
+    const { applyGravity, fillFromTop } = await import('../game/rules/cascade');
+    const { matchScore, specialActivationScore, comboScore } = await import('../game/rules/scoring');
+    const { resolveCombo, comboKey } = await import('../game/rules/combo-matrix');
+    const { activateColourGem, activateLineBomb, activateAreaBomb, processSpecialActivations } = await import('../game/rules/special-gems');
+    const { Howl } = await import('howler');
+    const { SaveManager } = await import('../state/save-state');
+    const { GEM_COLOURS } = await import('../rendering/design-tokens');
+    const { playMatchSfx, playSwap, playInvalid, playCascade,
+            playLevelComplete, playLevelFail, playCombo } = await import('../audio/synth-sfx');
+
+    const mergeFx = new MergeParticleSystem(appRefs.layers.boardLayer, appRefs.app.renderer);
+
+    // 工具：等待指定毫秒
+    const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+    // 工具：並行播放一組動畫
+    const playAnims = (anims: Array<{ elapsed: number; duration: number; update(dt: number): boolean; complete(): void }>) => {
+      if (anims.length === 0) return Promise.resolve();
+      return new Promise<void>(resolve => {
+        let last = performance.now();
+        const tick = (now: number) => {
+          const dt = now - last;
+          last = now;
+          let allDone = true;
+          for (const a of anims) {
+            if (!a.update(dt)) allDone = false;
+          }
+          if (allDone) {
+            for (const a of anims) a.complete();
+            resolve();
+          } else {
+            requestAnimationFrame(tick);
+          }
+        };
+        requestAnimationFrame(tick);
+      });
+    };
+
+    let isProcessing = false;
+
+    const doSwap = async (from: [number, number], to: [number, number]) => {
+      if (isProcessing || rulesEngine.settled) return;
+      isProcessing = true;
+
+      try {
+
+      const spriteA = boardRenderer.getSprite(from[0], from[1]);
+      const spriteB = boardRenderer.getSprite(to[0], to[1]);
+
+      // ── 階段 1：Swap 滑動動畫（200ms）──
+      if (spriteA && spriteB) {
+        playSwap();
+        await playAnims([createSwapAnimation({ spriteA, spriteB, posA: from, posB: to })]);
+      }
+
+      // 在資料層執行交換
+      const cellFrom = getCell(board, from)!;
+      const cellTo = getCell(board, to)!;
+      if (!cellFrom.gem || !cellTo.gem) { return; }
+
+      const tempGem = cellFrom.gem;
+      cellFrom.gem = cellTo.gem;
+      cellTo.gem = tempGem;
+
+      // ── 交換類型偵測 ──
+      const effectLayer = appRefs.layers.boardLayer;
+
+      // ─── 輔助：播放一組格子的消除動畫 + 粒子 ───
+      const playClearAnimsForCells = async (cells: [number, number][], chainVal: number) => {
+        const anims: Array<ReturnType<typeof createMatchClearAnimation>> = [];
+        for (const [c, r] of cells) {
+          const spr = boardRenderer.getSprite(c, r);
+          if (spr) {
+            anims.push(createMatchClearAnimation(spr));
+            const cl = getCell(board, [c, r]);
+            if (cl?.gem?.colour) {
+              const fxLevel = Math.min(chainVal - 1, 3);
+              mergeFx.spawn(c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2, fxLevel, GEM_COLOURS[cl.gem.colour]);
+            }
+          }
+        }
+        await playAnims(anims);
+      };
+
+      // ─── 輔助：顯示加分飛字 ───
+      const showScorePopup = (score: number, cells: [number, number][], chainVal: number) => {
+        if (score > 0 && cells.length > 0) {
+          const avgCol = cells.reduce((s, c) => s + c[0], 0) / cells.length;
+          const avgRow = cells.reduce((s, c) => s + c[1], 0) / cells.length;
+          const popup = createScorePopup({
+            text: `+${score}`,
+            x: avgCol * CELL_SIZE + CELL_SIZE / 2,
+            y: avgRow * CELL_SIZE + CELL_SIZE / 2,
+            colour: chainVal >= 3 ? 0xff6644 : 0xf6c453,
+            fontSize: chainVal >= 2 ? 28 : 22,
+          });
+          appRefs.layers.boardLayer.addChild(popup.container);
+        }
+      };
+
+      // ─── 輔助：播放被動啟動動畫與計分 ───
+      const handlePassiveActivations = async (
+        clearedCells: [number, number][],
+        chainVal: number,
+        excludePositions?: Set<string>,
+      ): Promise<[number, number][]> => {
+        // 暫時移除需要排除的特殊寶石（例如剛生成的），避免被 processSpecialActivations 引爆
+        const savedGems: Array<{ pos: [number, number]; gem: any }> = [];
+        if (excludePositions) {
+          for (const key of excludePositions) {
+            const [cs, rs] = key.split(',');
+            const c = parseInt(cs);
+            const r = parseInt(rs);
+            const cell = getCell(board, [c, r]);
+            if (cell?.gem?.special) {
+              savedGems.push({ pos: [c, r], gem: cell.gem });
+              cell.gem = null;
+            }
+          }
+        }
+
+        // 預先抓取所有格子的 sprite 引用和顏色（processSpecialActivations 會清除 gem）
+        const spriteMap = new Map<string, { sprite: any; colour: number | null }>();
+        for (let c = 0; c < board.width; c++) {
+          for (let r = 0; r < board.height; r++) {
+            const spr = boardRenderer.getSprite(c, r);
+            const cl = getCell(board, [c, r]);
+            if (spr && cl?.gem) {
+              spriteMap.set(`${c},${r}`, {
+                sprite: spr,
+                colour: cl.gem.colour ? GEM_COLOURS[cl.gem.colour] : null,
+              });
+            }
+          }
+        }
+
+        const passiveResult = processSpecialActivations(board, clearedCells);
+
+        // 還原被暫時移除的特殊寶石
+        for (const { pos, gem } of savedGems) {
+          const cell = getCell(board, pos);
+          if (cell && !cell.gem) cell.gem = gem;
+        }
+
+        let extraCleared: [number, number][] = [];
+
+        if (passiveResult.triggeredSpecials.length > 0) {
+          // 播放啟動特效（擴展環）
+          const activationAnims: Array<ReturnType<typeof createSpecialActivationEffect>> = [];
+          for (const pos of passiveResult.triggeredSpecials) {
+            const [c, r] = pos;
+            activationAnims.push(createSpecialActivationEffect(
+              c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+            ));
+          }
+          playMatchSfx(passiveResult.clearedCells.length, chainVal);
+          await playAnims(activationAnims);
+
+          const originalSet = new Set(clearedCells.map(([c, r]) => `${c},${r}`));
+          extraCleared = passiveResult.clearedCells
+            .filter(([c, r]) => !originalSet.has(`${c},${r}`))
+            .map(([c, r]) => [c, r] as [number, number]);
+
+          if (extraCleared.length > 0) {
+            const passiveScore = specialActivationScore(extraCleared.length, chainVal, false);
+            rulesEngine.score += passiveScore;
+            showScorePopup(passiveScore, extraCleared, chainVal);
+
+            // 使用預先抓取的 sprite 引用播放消除動畫
+            const clearAnims: Array<ReturnType<typeof createMatchClearAnimation>> = [];
+            for (const [c, r] of extraCleared) {
+              const ref = spriteMap.get(`${c},${r}`);
+              if (ref) {
+                clearAnims.push(createMatchClearAnimation(ref.sprite));
+                if (ref.colour !== null) {
+                  const fxLevel = Math.min(chainVal - 1, 3);
+                  mergeFx.spawn(c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2, fxLevel, ref.colour);
+                }
+              }
+            }
+            await playAnims(clearAnims);
+          }
+        }
+
+        return extraCleared;
+      };
+
+      // ─── 輔助：重力 + 填充 + 掉落動畫 ───
+      const runGravityAndDrop = async () => {
+        const gemsBefore: Map<number, Array<{ row: number; gem: typeof board.cells[0][0]['gem'] }>> = new Map();
+        for (let c = 0; c < board.width; c++) {
+          const colGems: Array<{ row: number; gem: typeof board.cells[0][0]['gem'] }> = [];
+          for (let r = 0; r < board.height; r++) {
+            const cell = board.cells[c][r];
+            if (cell.gem && !cell.isEmpty) colGems.push({ row: r, gem: cell.gem });
+          }
+          gemsBefore.set(c, colGems);
+        }
+
+        applyGravity(board);
+        fillFromTop(board, rngStreams.cascadeFill, [...spec.gems.colours]);
+
+        const dropDistances: Map<string, number> = new Map();
+        for (let c = 0; c < board.width; c++) {
+          const before = gemsBefore.get(c) || [];
+          const emptySlots: number[] = [];
+          for (let r = 0; r < board.height; r++) {
+            if (board.cells[c][r].isEmpty) continue;
+            emptySlots.push(r);
+          }
+          const numExisting = before.length;
+          const numTotal = emptySlots.length;
+          const numNew = numTotal - numExisting;
+          for (let i = 0; i < numExisting; i++) {
+            const oldRow = before[i].row;
+            const newRow = emptySlots[numNew + i];
+            if (newRow !== undefined && newRow !== oldRow) dropDistances.set(`${c},${newRow}`, newRow - oldRow);
+          }
+          for (let i = 0; i < numNew; i++) {
+            const newRow = emptySlots[i];
+            if (newRow !== undefined) dropDistances.set(`${c},${newRow}`, newRow + 1 + i);
+          }
+        }
+
+        boardRenderer.sync(board);
+
+        const colMaxDist: Map<number, number> = new Map();
+        for (const [key, dist] of dropDistances) {
+          const col = parseInt(key.split(',')[0]);
+          const prev = colMaxDist.get(col) || 0;
+          if (dist > prev) colMaxDist.set(col, dist);
+        }
+
+        const dropAnims: Array<ReturnType<typeof createCascadeDropAnimation>> = [];
+        for (const [key] of dropDistances) {
+          const [cs, rs] = key.split(',');
+          const c = parseInt(cs);
+          const r = parseInt(rs);
+          const spr = boardRenderer.getSprite(c, r);
+          const maxDist = colMaxDist.get(c) || 0;
+          if (!spr || maxDist <= 0) continue;
+          const fromRow = r - maxDist;
+          spr.position.set(c * CELL_SIZE + CELL_SIZE / 2, fromRow * CELL_SIZE + CELL_SIZE / 2);
+          dropAnims.push(createCascadeDropAnimation({ sprite: spr, fromRow, toRow: r, col: c }));
+        }
+
+        if (dropAnims.length > 0) {
+          await playAnims(dropAnims);
+        } else {
+          await wait(80);
+        }
+      };
+
+      // ─── 輔助：cascade 循環 ───
+      const runCascadeLoop = async (chainStart: number): Promise<number> => {
+        let ch = chainStart;
+        let mtchs = detectMatches(board);
+
+        while (mtchs.length > 0) {
+          ch++;
+          const cSet = new Set<string>();
+          const cCells: [number, number][] = [];
+          for (const m of mtchs) {
+            for (const c of m.cells) {
+              const k = `${c[0]},${c[1]}`;
+              if (!cSet.has(k)) { cSet.add(k); cCells.push([c[0], c[1]]); }
+            }
+          }
+
+          let sScore = 0;
+          for (const m of mtchs) sScore += matchScore(m.shape, ch, 0);
+          rulesEngine.score += sScore;
+
+          playMatchSfx(cCells.length, ch);
+          await playClearAnimsForCells(cCells, ch);
+          showScorePopup(sScore, cCells, ch);
+
+          // 生成特殊寶石
+          for (const m of mtchs) {
+            if (m.spawnsSpecial && m.spawnAt) {
+              const sc = getCell(board, m.spawnAt);
+              if (sc?.gem) { sc.gem.special = m.spawnsSpecial; cSet.delete(`${m.spawnAt[0]},${m.spawnAt[1]}`); }
+            }
+          }
+
+          // ── 在清除前，啟動 match 中包含的特殊寶石（lineH/lineV/area）──
+          const spawnPos = new Set<string>();
+          for (const m of mtchs) {
+            if (m.spawnsSpecial && m.spawnAt) {
+              spawnPos.add(`${m.spawnAt[0]},${m.spawnAt[1]}`);
+            }
+          }
+          const cascadeInMatchSpecials: [number, number][] = [];
+          for (const [c, r] of cCells) {
+            const k = `${c},${r}`;
+            if (!cSet.has(k)) continue;
+            if (spawnPos.has(k)) continue;
+            const cl = getCell(board, [c, r]);
+            if (cl?.gem?.special && (cl.gem.special === 'lineH' || cl.gem.special === 'lineV' || cl.gem.special === 'area')) {
+              cascadeInMatchSpecials.push([c, r]);
+            }
+          }
+
+          for (const [sc, sr] of cascadeInMatchSpecials) {
+            const sCell = getCell(board, [sc, sr]);
+            if (!sCell?.gem?.special) continue;
+            const sType = sCell.gem.special;
+            let actResult: { clearedCells: [number, number][]; triggeredSpecials: [number, number][] };
+            if (sType === 'lineH' || sType === 'lineV') {
+              actResult = activateLineBomb(board, [sc, sr]);
+            } else {
+              actResult = activateAreaBomb(board, [sc, sr]);
+            }
+            for (const [ac, ar] of actResult.clearedCells) {
+              const ak = `${ac},${ar}`;
+              if (!cSet.has(ak)) { cSet.add(ak); cCells.push([ac, ar]); }
+            }
+            const actScore = specialActivationScore(actResult.clearedCells.length, ch, false);
+            rulesEngine.score += actScore;
+            await playAnims([createSpecialActivationEffect(
+              sc * CELL_SIZE + CELL_SIZE / 2, sr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+            )]);
+            showScorePopup(actScore, actResult.clearedCells.map(([ac, ar]) => [ac, ar] as [number, number]), ch);
+          }
+
+          // 清除所有格子
+          for (const [c, r] of cCells) {
+            const k = `${c},${r}`;
+            if (cSet.has(k)) { const cl = getCell(board, [c, r]); if (cl) cl.gem = null; }
+          }
+
+          // 被動啟動處理
+          const actualCleared = cCells.filter(([c, r]) => cSet.has(`${c},${r}`));
+          const extra = await handlePassiveActivations(actualCleared, ch, spawnPos);
+          for (const [c, r] of extra) cSet.add(`${c},${r}`);
+
+          await runGravityAndDrop();
+
+          hud.setScore(rulesEngine.score);
+          hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+
+          mtchs = detectMatches(board);
+        }
+
+        return ch;
+      };
+
+      let chain = 0;
+
+      if (cellFrom.gem.special && cellTo.gem.special) {
+        // ═══════════════════════════════════════════════════
+        // ── Combo 路徑（兩顆特殊寶石交換）──
+        // ═══════════════════════════════════════════════════
+        const comboResult = resolveCombo(board, from, to);
+        if (!comboResult || comboResult.clearedCells.length === 0) {
+          cellTo.gem = cellFrom.gem;
+          cellFrom.gem = tempGem;
+          playInvalid();
+          boardRenderer.sync(board);
+          return;
+        }
+
+        rulesEngine.movesRemaining--;
+        chain = 1;
+
+        const cType = comboKey(tempGem.special!, cellTo.gem.special!);
+        const comboPoints = cType ? comboScore(cType, chain) : 0;
+        rulesEngine.score += comboPoints;
+
+        playCombo();
+        const comboClearedCells = comboResult.clearedCells.map(([c, r]) => [c, r] as [number, number]);
+        playMatchSfx(comboClearedCells.length, chain);
+        await playClearAnimsForCells(comboClearedCells, chain);
+        showScorePopup(comboPoints, comboClearedCells, chain);
+
+        await handlePassiveActivations(comboClearedCells, chain);
+
+        boardRenderer.sync(board);
+        await runGravityAndDrop();
+
+        hud.setScore(rulesEngine.score);
+        hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+
+        chain = await runCascadeLoop(chain);
+
+      } else if (
+        (cellFrom.gem.special === 'colour' && cellTo.gem.colour !== null) ||
+        (cellTo.gem.special === 'colour' && cellFrom.gem.colour !== null)
+      ) {
+        // ═══════════════════════════════════════════════════
+        // ── Colour Gem 路徑 ──
+        // ═══════════════════════════════════════════════════
+        const colourGemPos: [number, number] = cellFrom.gem.special === 'colour' ? from : to;
+        const normalPos: [number, number] = cellFrom.gem.special === 'colour' ? to : from;
+        const normalCell = getCell(board, normalPos)!;
+        const targetColour = normalCell.gem!.colour!;
+
+        rulesEngine.movesRemaining--;
+        chain = 1;
+
+        const colourResult = activateColourGem(board, colourGemPos, targetColour);
+        const colourClearedCells = colourResult.clearedCells.map(([c, r]) => [c, r] as [number, number]);
+
+        const activationPoints = specialActivationScore(colourClearedCells.length, chain, true);
+        rulesEngine.score += activationPoints;
+
+        const [cgc, cgr] = colourGemPos;
+        await playAnims([createSpecialActivationEffect(
+          cgc * CELL_SIZE + CELL_SIZE / 2, cgr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+        )]);
+
+        playMatchSfx(colourClearedCells.length, chain);
+        await playClearAnimsForCells(colourClearedCells, chain);
+        showScorePopup(activationPoints, colourClearedCells, chain);
+
+        await handlePassiveActivations(colourClearedCells, chain);
+
+        boardRenderer.sync(board);
+        await runGravityAndDrop();
+
+        hud.setScore(rulesEngine.score);
+        hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+
+        chain = await runCascadeLoop(chain);
+
+      } else if (
+        cellFrom.gem.special && (cellFrom.gem.special === 'lineH' || cellFrom.gem.special === 'lineV' || cellFrom.gem.special === 'area') ||
+        cellTo.gem.special && (cellTo.gem.special === 'lineH' || cellTo.gem.special === 'lineV' || cellTo.gem.special === 'area')
+      ) {
+        // ═══════════════════════════════════════════════════
+        // ── 單顆特殊寶石啟動路徑（Line Bomb / Area Bomb + 普通寶石交換）──
+        // ═══════════════════════════════════════════════════
+        const specialPos: [number, number] = cellFrom.gem.special ? from : to;
+        const specialCell = getCell(board, specialPos)!;
+        const specialType = specialCell.gem!.special!;
+
+        rulesEngine.movesRemaining--;
+        chain = 1;
+
+        // 先計算會被清除的格子，並預先抓取 sprite 引用（啟動後 gem 會被清空）
+        let targetCells: [number, number][] = [];
+        const [sCol, sRow] = specialPos;
+        if (specialType === 'lineH') {
+          for (let c = 0; c < board.width; c++) targetCells.push([c, sRow]);
+        } else if (specialType === 'lineV') {
+          for (let r = 0; r < board.height; r++) targetCells.push([sCol, r]);
+        } else {
+          for (let dc = -1; dc <= 1; dc++) {
+            for (let dr = -1; dr <= 1; dr++) {
+              const c = sCol + dc, r = sRow + dr;
+              if (c >= 0 && c < board.width && r >= 0 && r < board.height) targetCells.push([c, r]);
+            }
+          }
+        }
+
+        // 預先抓取 sprite 引用和顏色（用於消除動畫和粒子）
+        const spriteRefs: Array<{ sprite: any; col: number; row: number; colour: number | null }> = [];
+        for (const [c, r] of targetCells) {
+          const spr = boardRenderer.getSprite(c, r);
+          const cl = getCell(board, [c, r]);
+          if (spr) {
+            spriteRefs.push({
+              sprite: spr,
+              col: c,
+              row: r,
+              colour: cl?.gem?.colour ? GEM_COLOURS[cl.gem.colour] : null,
+            });
+          }
+        }
+
+        // 啟動特殊寶石（修改 board 資料）
+        let activationResult: { clearedCells: [number, number][]; triggeredSpecials: [number, number][] };
+        if (specialType === 'lineH' || specialType === 'lineV') {
+          activationResult = activateLineBomb(board, specialPos);
+        } else {
+          activationResult = activateAreaBomb(board, specialPos);
+        }
+
+        const activatedCells = activationResult.clearedCells.map(([c, r]) => [c, r] as [number, number]);
+        const actScore = specialActivationScore(activatedCells.length, chain, false);
+        rulesEngine.score += actScore;
+
+        // 播放啟動特效（擴展環）
+        await playAnims([createSpecialActivationEffect(
+          sCol * CELL_SIZE + CELL_SIZE / 2, sRow * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+        )]);
+
+        // 播放消除動畫（使用預先抓取的 sprite 引用）
+        playMatchSfx(activatedCells.length, chain);
+        const clearAnims: Array<ReturnType<typeof createMatchClearAnimation>> = [];
+        for (const ref of spriteRefs) {
+          clearAnims.push(createMatchClearAnimation(ref.sprite));
+          if (ref.colour !== null) {
+            const fxLevel = Math.min(chain - 1, 3);
+            mergeFx.spawn(ref.col * CELL_SIZE + CELL_SIZE / 2, ref.row * CELL_SIZE + CELL_SIZE / 2, fxLevel, ref.colour);
+          }
+        }
+        await playAnims(clearAnims);
+        showScorePopup(actScore, activatedCells, chain);
+
+        // 被動啟動處理
+        await handlePassiveActivations(activatedCells, chain);
+
+        boardRenderer.sync(board);
+        await runGravityAndDrop();
+
+        hud.setScore(rulesEngine.score);
+        hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+
+        chain = await runCascadeLoop(chain);
+
+      } else {
+        // ═══════════════════════════════════════════════════
+        // ── 普通消除路徑 ──
+        // ═══════════════════════════════════════════════════
+        let matches = detectMatches(board, { swapPos: to });
+
+        if (matches.length === 0) {
+          cellTo.gem = cellFrom.gem;
+          cellFrom.gem = tempGem;
+          playInvalid();
+          boardRenderer.sync(board);
+          return;
+        }
+
+        rulesEngine.movesRemaining--;
+
+        while (matches.length > 0) {
+          chain++;
+
+          const clearedSet = new Set<string>();
+          const clearedCells: [number, number][] = [];
+          for (const m of matches) {
+            for (const c of m.cells) {
+              const k = `${c[0]},${c[1]}`;
+              if (!clearedSet.has(k)) { clearedSet.add(k); clearedCells.push([c[0], c[1]]); }
+            }
+          }
+
+          let stepScore = 0;
+          for (const m of matches) stepScore += matchScore(m.shape, chain, 0);
+          rulesEngine.score += stepScore;
+
+          playMatchSfx(clearedCells.length, chain);
+          await playClearAnimsForCells(clearedCells, chain);
+          showScorePopup(stepScore, clearedCells, chain);
+
+          // 生成特殊寶石（在清除之前，讓 spawnAt 位置保留）
+          for (const m of matches) {
+            if (m.spawnsSpecial && m.spawnAt) {
+              const sc = getCell(board, m.spawnAt);
+              if (sc?.gem) { sc.gem.special = m.spawnsSpecial; clearedSet.delete(`${m.spawnAt[0]},${m.spawnAt[1]}`); }
+            }
+          }
+
+          // ── 在清除前，啟動 match 中包含的特殊寶石（lineH/lineV/area）──
+          // 這些炸彈本身是 match 的一部分，若先清除就無法啟動
+          const spawnPositions = new Set<string>();
+          for (const m of matches) {
+            if (m.spawnsSpecial && m.spawnAt) {
+              spawnPositions.add(`${m.spawnAt[0]},${m.spawnAt[1]}`);
+            }
+          }
+          const inMatchSpecials: [number, number][] = [];
+          for (const [c, r] of clearedCells) {
+            const k = `${c},${r}`;
+            if (!clearedSet.has(k)) continue; // 已被 spawnAt 排除
+            if (spawnPositions.has(k)) continue; // 剛生成的特殊寶石不啟動
+            const cl = getCell(board, [c, r]);
+            if (cl?.gem?.special && (cl.gem.special === 'lineH' || cl.gem.special === 'lineV' || cl.gem.special === 'area')) {
+              inMatchSpecials.push([c, r]);
+            }
+          }
+
+          // 依序啟動 match 中的特殊寶石
+          for (const [sc, sr] of inMatchSpecials) {
+            const sCell = getCell(board, [sc, sr]);
+            if (!sCell?.gem?.special) continue;
+            const sType = sCell.gem.special;
+            let actResult: { clearedCells: [number, number][]; triggeredSpecials: [number, number][] };
+            if (sType === 'lineH' || sType === 'lineV') {
+              actResult = activateLineBomb(board, [sc, sr]);
+            } else {
+              actResult = activateAreaBomb(board, [sc, sr]);
+            }
+            // 合併啟動清除的格子
+            for (const [ac, ar] of actResult.clearedCells) {
+              const ak = `${ac},${ar}`;
+              if (!clearedSet.has(ak)) { clearedSet.add(ak); clearedCells.push([ac, ar]); }
+            }
+            // 播放啟動特效
+            const actScore = specialActivationScore(actResult.clearedCells.length, chain, false);
+            rulesEngine.score += actScore;
+            await playAnims([createSpecialActivationEffect(
+              sc * CELL_SIZE + CELL_SIZE / 2, sr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+            )]);
+            showScorePopup(actScore, actResult.clearedCells.map(([ac, ar]) => [ac, ar] as [number, number]), chain);
+          }
+
+          // 清除所有 matched + 啟動波及的格子
+          for (const [c, r] of clearedCells) {
+            const k = `${c},${r}`;
+            if (clearedSet.has(k)) { const cl = getCell(board, [c, r]); if (cl) cl.gem = null; }
+          }
+
+          // 被動啟動處理
+          // 注意：排除 spawnAt 位置，避免剛生成的特殊寶石被立即引爆
+          const actualCleared = clearedCells.filter(([c, r]) => clearedSet.has(`${c},${r}`));
+          const extra = await handlePassiveActivations(actualCleared, chain, spawnPositions);
+          for (const [c, r] of extra) clearedSet.add(`${c},${r}`);
+
+          await runGravityAndDrop();
+
+          hud.setScore(rulesEngine.score);
+          hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+
+          matches = detectMatches(board);
+        }
+      }
+
+      // ── 階段 5：檢查關卡結束 ──
+      const objectiveTarget = spec.objective.type === 'score' ? spec.objective.target : Infinity;
+      const outOfMoves = rulesEngine.movesRemaining !== Infinity && rulesEngine.movesRemaining <= 0;
+
+      if (rulesEngine.score >= objectiveTarget || outOfMoves) {
+        rulesEngine.settled = true;
+        const cleared = rulesEngine.score >= objectiveTarget;
+        this.eventBus.emit({
+          kind: 'level.resolved',
+          result: {
+            levelId: spec.id,
+            cleared,
+            stars: cleared ? (rulesEngine.score >= spec.stars.three ? 3 : rulesEngine.score >= spec.stars.two ? 2 : 1) as 0|1|2|3 : 0,
+            score: rulesEngine.score,
+            chainMax: chain,
+            movesRemaining: rulesEngine.movesRemaining === Infinity ? 0 : rulesEngine.movesRemaining,
+            specialSpawnedCount: 0,
+            durationMs: 0,
+          },
+        });
+      }
+
+      } catch (err) {
+        console.error('[doSwap] Unexpected error:', err);
+        boardRenderer.sync(board);
+      } finally {
+        isProcessing = false;
+      }
+    };
+
+    boardLayer.on('pointerdown', (e) => {
+      const local = e.getLocalPosition(boardLayer);
+      tapStartCell = pixelToGrid(local.x, local.y);
+    });
+
+    boardLayer.on('pointerup', (e) => {
+      const local = e.getLocalPosition(boardLayer);
+      const cell = pixelToGrid(local.x, local.y);
+      if (!cell || !tapStartCell) {
+        tapStartCell = null;
+        return;
+      }
+
+      // 如果 down 和 up 在不同格子且相鄰 → drag swap
+      if (tapStartCell[0] !== cell[0] || tapStartCell[1] !== cell[1]) {
+        if (isAdjacent(tapStartCell, cell)) {
+          doSwap(tapStartCell, cell);
+          selectedCell = null;
+          boardRenderer.setSelection(null);
+        }
+        tapStartCell = null;
+        return;
+      }
+
+      // 同一格 → tap-tap swap 邏輯
+      if (!selectedCell) {
+        selectedCell = cell;
+        boardRenderer.setSelection(cell);
+      } else if (selectedCell[0] === cell[0] && selectedCell[1] === cell[1]) {
+        selectedCell = null;
+        boardRenderer.setSelection(null);
+      } else if (isAdjacent(selectedCell, cell)) {
+        doSwap(selectedCell, cell);
+        selectedCell = null;
+        boardRenderer.setSelection(null);
+      } else {
+        selectedCell = cell;
+        boardRenderer.setSelection(cell);
+      }
+      tapStartCell = null;
+    });
+
+    // Create HUD
+    const { createGameHUD } = await import('../ui/screens/game-hud');
+    const { width, height } = this.getScreenSize();
+    const hud = createGameHUD({
+      width,
+      height,
+      mode: spec.constraints.timeBudget ? 'time' : 'moves',
+      onPause: () => this.transitionTo({ kind: 'pause', previous: this.currentState } as any),
+    });
+    hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+    hud.setScore(0);
+    this.setScreen(hud);
+
+    // Wire up event listeners
+    const unsubResolved = this.eventBus.on('level.resolved', (e) => {
+      // 儲存進度
+      if (e.result.cleared) {
+        try {
+          const sm = new SaveManager();
+          const save = sm.load();
+          // 更新關卡紀錄
+          const prev = save.levels[e.result.levelId];
+          save.levels[e.result.levelId] = {
+            stars: Math.max(prev?.stars ?? 0, e.result.stars) as 0|1|2|3,
+            highScore: Math.max(prev?.highScore ?? 0, e.result.score),
+            attempts: (prev?.attempts ?? 0) + 1,
+          };
+          // 解鎖下一關
+          const nextLevel = e.result.levelId + 1;
+          if (!save.progress.unlockedLevels.includes(nextLevel)) {
+            save.progress.unlockedLevels.push(nextLevel);
+          }
+          save.progress.totalStars = Object.values(save.levels).reduce((s, l) => s + l.stars, 0);
+          sm.save(save, true);
+        } catch { /* non-critical */ }
+        playLevelComplete();
+      } else {
+        playLevelFail();
+      }
+
+      // 延遲 1.5 秒讓玩家看到最終盤面，再進入結算
+      setTimeout(() => {
+        this.teardownGameSession();
+        if (e.result.cleared) {
+          this.transitionTo({ kind: 'levelComplete', result: e.result });
+        } else {
+          this.transitionTo({ kind: 'levelFail', result: e.result });
+        }
+      }, 1500);
+    });
+
+    // Create game loop with minimal renderer/audio/telemetry stubs
+    const { GameLoop } = await import('../game/runtime/game-loop');
+    const gameLoop = new GameLoop(
+      rulesEngine,
+      {
+        render: (_alpha: number) => {
+          boardRenderer.update(16.67);
+          mergeFx.update(16);
+        },
+      },
+      { update: () => {} },
+      { tick: () => {} },
+      this.eventBus,
+    );
+    gameLoop.start();
+    this.activeGameLoop = gameLoop;
+
+    // Store cleanup for game-specific event listeners
+    this.cleanupFns.push(unsubResolved);
   }
 
-  private showPause(): void {
-    // TODO: Show pause overlay
+  /** Tear down the active game session */
+  private teardownGameSession(): void {
+    this.activeGameLoop?.stop();
+    this.activeGameLoop = null;
+
+    this.activeBoardRenderer?.destroy();
+    this.activeBoardRenderer = null;
+
+    this.activeViewportManager?.destroy();
+    this.activeViewportManager = null;
+
+    this.activeRulesEngine = null;
+
+    // Clear board layer children and events
+    if (this.subsystems.app) {
+      const { boardLayer, cellLayer, gemLayer, glowLayer, specialOverlay, selectionRing } = this.subsystems.app.layers;
+      boardLayer.removeAllListeners();
+      boardLayer.eventMode = 'auto';
+      cellLayer.removeChildren();
+      gemLayer.removeChildren();
+      glowLayer.removeChildren();
+      specialOverlay.removeChildren();
+      selectionRing.removeChildren();
+    }
   }
 
-  private showLevelComplete(result?: import('../types').LevelResult): void {
-    // TODO: Show level complete screen with star animation
+  /** Draw a grid background for the board */
+  private async drawGridBackground(appRefs: AppRefs, cols: number, rows: number, cellSize: number): Promise<void> {
+    const { Graphics } = await import('pixi.js');
+    const grid = new Graphics();
+    grid.label = 'grid-bg';
+
+    for (let col = 0; col < cols; col++) {
+      for (let row = 0; row < rows; row++) {
+        const x = col * cellSize;
+        const y = row * cellSize;
+        const isEven = (col + row) % 2 === 0;
+        grid.rect(x, y, cellSize, cellSize);
+        grid.fill({ color: isEven ? 0x1a1f3a : 0x14183a, alpha: 0.8 });
+      }
+    }
+
+    appRefs.layers.cellLayer.addChild(grid);
   }
 
-  private showLevelFail(result?: import('../types').LevelResult): void {
-    // TODO: Show level fail screen
+  private async showPause(): Promise<void> {
+    const { createPauseOverlay } = await import('../ui/screens/pause-overlay');
+    const { width, height } = this.getScreenSize();
+    const pauseState = this.currentState as import('../state/app-state').PauseState;
+    const overlay = createPauseOverlay({
+      width,
+      height,
+      onResume: () => this.transitionTo(pauseState.previous),
+      onRestart: () => this.transitionTo(pauseState.previous),
+      onSettings: () => this.transitionTo({ kind: 'settings', returnTo: this.currentState } as any),
+      onQuit: () => this.transitionTo({ kind: 'menu' }),
+    });
+    this.setScreen(overlay);
+  }
+
+  private async showLevelComplete(result?: import('../types').LevelResult): Promise<void> {
+    const { createLevelCompleteScreen } = await import('../ui/screens/level-complete');
+    const { width, height } = this.getScreenSize();
+    const screen = createLevelCompleteScreen({
+      width,
+      height,
+      result,
+      worldId: 1,
+      onNext: () => this.transitionTo({ kind: 'worldMap', worldId: 1 }),
+      onReplay: () => this.transitionTo({ kind: 'game', levelId: result?.levelId ?? 1 }),
+      onMap: () => this.transitionTo({ kind: 'worldMap', worldId: 1 }),
+    });
+    this.setScreen(screen);
+  }
+
+  private async showLevelFail(result?: import('../types').LevelResult): Promise<void> {
+    const { createLevelFailScreen } = await import('../ui/screens/level-fail');
+    const { width, height } = this.getScreenSize();
+    const screen = createLevelFailScreen({
+      width,
+      height,
+      onRetry: () => this.transitionTo({ kind: 'game', levelId: result?.levelId ?? 1 }),
+      onMap: () => this.transitionTo({ kind: 'worldMap', worldId: 1 }),
+    });
+    this.setScreen(screen);
   }
 
   private startEndless(seed?: bigint): void {
-    // TODO: Initialize endless mode
+    // Endless mode — for now show a placeholder via game HUD
+    this.startLevel(0, seed);
   }
 
-  private showEndlessEnd(result?: import('../types').EndlessResult): void {
-    // TODO: Show endless end screen
+  private async showEndlessEnd(result?: import('../types').EndlessResult): Promise<void> {
+    // Reuse level complete screen for now
+    const { createLevelCompleteScreen } = await import('../ui/screens/level-complete');
+    const { width, height } = this.getScreenSize();
+    const screen = createLevelCompleteScreen({
+      width,
+      height,
+      onNext: () => this.transitionTo({ kind: 'menu' }),
+      onReplay: () => this.transitionTo({ kind: 'menu' }),
+      onMap: () => this.transitionTo({ kind: 'menu' }),
+    });
+    this.setScreen(screen);
   }
 
-  private showSettings(): void {
-    // TODO: Show settings DOM overlay
+  private async showSettings(): Promise<void> {
+    // Use credits screen as a placeholder for settings for now
+    const { createCreditsScreen } = await import('../ui/screens/credits');
+    const { width, height } = this.getScreenSize();
+    const settingsState = this.currentState as import('../state/app-state').SettingsState;
+    const screen = createCreditsScreen({
+      width,
+      height,
+      onClose: () => this.transitionTo(settingsState.returnTo),
+    });
+    this.setScreen(screen);
   }
 
-  private showCredits(): void {
-    // TODO: Show credits screen
+  private async showCredits(): Promise<void> {
+    const { createCreditsScreen } = await import('../ui/screens/credits');
+    const { width, height } = this.getScreenSize();
+    const screen = createCreditsScreen({
+      width,
+      height,
+      onClose: () => this.transitionTo({ kind: 'menu' }),
+    });
+    this.setScreen(screen);
   }
 
   private updateSplashProgress(progress: number): void {
-    // TODO: Update splash screen progress bar
+    // Update splash screen if it's the active screen
+    if (this.activeScreen && 'setLoadProgress' in this.activeScreen) {
+      (this.activeScreen as any).setLoadProgress(progress);
+    }
   }
 
   // ─── Event Listeners ────────────────────────────────────
 
   private setupEventListeners(): void {
-    // Level resolved → transition to complete/fail
-    const unsubResolved = this.eventBus.on('level.resolved', (e) => {
-      if (e.result.cleared) {
-        this.transitionTo({ kind: 'levelComplete', result: e.result });
-      } else {
-        this.transitionTo({ kind: 'levelFail', result: e.result });
-      }
-    });
-    this.cleanupFns.push(unsubResolved);
-
     // Intensity updates → debug panel
     const unsubIntensity = this.eventBus.on('intensity.updated', (e) => {
       this.subsystems.debugPanel?.updateMetrics({ intensity: e.value });

@@ -8,6 +8,8 @@
         "node *",
         "ls *",
         "head *",
-        "echo *"
+        "echo *",
+        "cat *",
+        "test *"
     ]
 }

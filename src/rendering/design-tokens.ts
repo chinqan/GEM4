@@ -111,16 +111,16 @@ export const CHAIN_SATURATION_BOOST = 2.0;
 // ─── 粒子常數 ──────────────────────────────────────────────
 
 /** Match 爆破粒子數量 */
-export const MATCH_BURST_PARTICLE_COUNT = 8;
+export const MATCH_BURST_PARTICLE_COUNT = 18;
 
 /** Match 爆破粒子生命週期（ms） */
-export const MATCH_BURST_LIFETIME_MS = 400;
+export const MATCH_BURST_LIFETIME_MS = 1100;
 
 /** Match 爆破粒子速度（px/s） */
-export const MATCH_BURST_SPEED = 120;
+export const MATCH_BURST_SPEED = 380;
 
 /** Match 爆破粒子半徑（px） */
-export const MATCH_BURST_RADIUS = 3;
+export const MATCH_BURST_RADIUS = 7;
 
 /** Chain 大型光效粒子生命週期（ms） */
 export const CHAIN_GLOW_LIFETIME_MS = 600;

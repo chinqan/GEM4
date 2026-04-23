@@ -233,30 +233,45 @@ export function createMatchClearAnimation(sprite: Container): Animation {
 /**
  * 建立 cascade 掉落動畫：120ms/行的距離。
  *
- * 使用 smoothstep 緩動，讓掉落有自然的減速感。
+ * 使用 ease-in 加速模擬重力，落地時有微小彈跳。
+ * 同欄所有寶石在 game-integration 中已統一為相同掉落距離，
+ * 因此以相同速度剛體平移，不會出現超越現象。
  */
 export function createCascadeDropAnimation(config: CascadeDropConfig): Animation {
   const { sprite, fromRow, toRow, col } = config;
   const distance = Math.abs(toRow - fromRow);
-  const duration = distance * CASCADE_DROP_MS_PER_ROW;
+  const fallDuration = distance * CASCADE_DROP_MS_PER_ROW;
 
   const startX = col * CELL_SIZE + CELL_SIZE / 2;
   const startY = fromRow * CELL_SIZE + CELL_SIZE / 2;
   const endY = toRow * CELL_SIZE + CELL_SIZE / 2;
 
+  // 彈跳參數
+  const bounceHeight = Math.min(distance * 2, 6);
+  const bounceDuration = 80;
+  const totalDuration = fallDuration + bounceDuration;
+
   return {
     elapsed: 0,
-    duration,
+    duration: totalDuration,
 
     update(dtMs: number): boolean {
       this.elapsed += dtMs;
-      const progress = Math.min(this.elapsed / this.duration, 1);
 
-      // 使用 ease-out 讓掉落有自然的減速感
-      const t = smoothstep(progress);
-      sprite.position.set(startX, lerp(startY, endY, t));
+      if (this.elapsed <= fallDuration) {
+        // 掉落階段：ease-in（加速，模擬重力）
+        const fallProgress = Math.min(this.elapsed / fallDuration, 1);
+        const t = fallProgress * fallProgress; // quadratic ease-in
+        sprite.position.set(startX, lerp(startY, endY, t));
+      } else {
+        // 彈跳階段：快速上彈再回落
+        const bounceElapsed = this.elapsed - fallDuration;
+        const bounceProgress = Math.min(bounceElapsed / bounceDuration, 1);
+        const bounceT = Math.sin(bounceProgress * Math.PI);
+        sprite.position.set(startX, endY - bounceHeight * bounceT);
+      }
 
-      return this.elapsed >= this.duration;
+      return this.elapsed >= totalDuration;
     },
 
     complete(): void {
