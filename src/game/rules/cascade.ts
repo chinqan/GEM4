@@ -3,7 +3,7 @@ import type { Board } from './board';
 import { getCell, createGem } from './board';
 import { detectMatches } from './match-detect';
 import { Mulberry32 } from './rng';
-import { processSpecialActivations } from './special-gems';
+import { processSpecialActivations, type PassiveSpecialType } from './special-gems';
 
 // ─── 型別定義 ───────────────────────────────────────────────
 
@@ -238,13 +238,13 @@ export function runCascade(
       }
     }
 
-    // 8. 檢查 matched cells 中是否有特殊寶石需要觸發
-    // 先清除普通格子，收集特殊寶石位置
-    const specialPositions: CellPos[] = [];
+    // 8. 在清除前快照 matched cells 中的特殊寶石狀態
+    const specialSnapshot = new Map<string, PassiveSpecialType>();
     for (const pos of matchedCells) {
       const cell = getCell(board, pos);
-      if (cell?.gem?.special) {
-        specialPositions.push(pos);
+      const sp = cell?.gem?.special;
+      if (sp === 'lineH' || sp === 'lineV' || sp === 'area' || sp === 'colour') {
+        specialSnapshot.set(`${pos[0]},${pos[1]}`, sp);
       }
     }
 
@@ -256,9 +256,12 @@ export function runCascade(
       cell.gem = null;
     }
 
-    // 10. 若有特殊寶石被消除，觸發 processSpecialActivations
-    if (specialPositions.length > 0) {
-      const specialResult = processSpecialActivations(board, clearedCells);
+    // 10. 若有特殊寶石被消除，觸發 processSpecialActivations（傳入快照）
+    if (specialSnapshot.size > 0) {
+      const specialResult = processSpecialActivations(board, clearedCells, specialSnapshot, {
+        rng,
+        colours,
+      });
       // 合併額外清除的格子
       for (const pos of specialResult.clearedCells) {
         const key = `${pos[0]},${pos[1]}`;

@@ -176,14 +176,14 @@
 
 | 寶石 | 啟動效果 | 可否穿過 Lock | 可否被 cascade 觸發 |
 |---|---|---|---|
-| Line Bomb (H) | 清除整列 8 格 | 是（破鎖） | 是（相鄰被消時爆） |
+| Line Bomb (H) | 清除整列 8 格 | 是（破鎖） | 是（自身被消時爆） |
 | Line Bomb (V) | 清除整行 8 格 | 是（破鎖） | 是 |
 | Area Bomb | 清除以自身為中心的 3×3（邊緣自動裁切） | 是（破鎖） | 是 |
 | Colour Gem (swap 啟動) | 清除棋盤上所有「與被交換對象同色」的寶石 | 否（Colour Gem 無法鎖定 locked cell 的顏色） | 否（獨立存在時不自爆；必經交換或 combo） |
 
-#### Passive activation（cascade / 鄰近消除觸發）
+#### Passive activation（自身被消除觸發）
 
-- Line Bomb / Area Bomb：**會**。當相鄰格消除時，該 Special 被視為「被消」→ 啟動它的效果，並計入 chain。
+- Line Bomb / Area Bomb：**會**。當該 Special 自身被消除時（例如被其他炸彈的爆炸範圍波及、或被 Colour Gem 清除），啟動它的效果，並計入 chain。僅鄰居被消除而自身未被消除時**不會**觸發。
 - Colour Gem：**不會**。必經玩家交換或與其他 Special 組 combo 才啟動。
 
 ### 5.3 Special Combos — 完整矩陣

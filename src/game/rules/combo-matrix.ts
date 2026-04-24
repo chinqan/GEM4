@@ -2,6 +2,7 @@ import type { SpecialGemType, ComboType, CellPos, GemColour } from '../../types'
 import type { Board } from './board';
 import { getCell, isValidPos } from './board';
 import type { ClearResult } from './special-gems';
+import type { Mulberry32 } from './rng';
 
 // ─── 內部工具 ───────────────────────────────────────────────
 
@@ -207,7 +208,8 @@ function colourTransform(
   origin: CellPos,
   posA: CellPos,
   posB: CellPos,
-  targetSpecial: 'lineH' | 'area',
+  targetSpecial: 'line' | 'area',
+  rng?: Mulberry32,
 ): ClearResult {
   // 找出非 colour 的那顆寶石的顏色
   const cellA = getCell(board, posA);
@@ -246,11 +248,16 @@ function colourTransform(
     }
   }
 
-  // 將同色寶石轉為指定特殊類型
+  // 將同色寶石轉為指定特殊類型。line 類型每顆隨機 lineH/lineV；
+  // 若未提供 rng，以 (col+row) 奇偶決定，保持確定性且兩向都會出現。
+  const pickDirection = (pos: CellPos): 'lineH' | 'lineV' => {
+    if (rng) return rng.next() < 0.5 ? 'lineH' : 'lineV';
+    return (pos[0] + pos[1]) % 2 === 0 ? 'lineH' : 'lineV';
+  };
   for (const pos of transformedPositions) {
     const cell = getCell(board, pos);
     if (cell?.gem) {
-      cell.gem.special = targetSpecial;
+      cell.gem.special = targetSpecial === 'area' ? 'area' : pickDirection(pos);
     }
   }
 
@@ -275,7 +282,7 @@ function colourTransform(
     if (!cell?.gem) continue;
 
     const special = cell.gem.special;
-    let targets: CellPos[] = [];
+    const targets: CellPos[] = [];
 
     if (special === 'lineH') {
       const [, row] = pos;
@@ -345,6 +352,7 @@ export function resolveCombo(
   board: Board,
   posA: CellPos,
   posB: CellPos,
+  rng?: Mulberry32,
 ): ClearResult | null {
   const cellA = getCell(board, posA);
   const cellB = getCell(board, posB);
@@ -372,10 +380,10 @@ export function resolveCombo(
       return largeAreaClear(board, origin);
 
     case 'colour.line':
-      return colourTransform(board, origin, posA, posB, 'lineH');
+      return colourTransform(board, origin, posA, posB, 'line', rng);
 
     case 'colour.bomb':
-      return colourTransform(board, origin, posA, posB, 'area');
+      return colourTransform(board, origin, posA, posB, 'area', rng);
 
     case 'colour.colour':
       return fullBoardClear(board);

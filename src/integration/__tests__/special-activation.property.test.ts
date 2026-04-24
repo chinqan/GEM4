@@ -378,24 +378,27 @@ describe('Property 1: Passive activation integration', () => {
           const board = createFilledBoard(width, height, 'R');
           placeGem(board, sc, sr, 'R', specialType);
 
-          // Clear a cell adjacent to the special gem to trigger passive activation
-          const adjacentCol = sc > 0 ? sc - 1 : sc + 1;
-          const adjacentRow = sr;
-          board.cells[adjacentCol][adjacentRow].gem = null;
+          // Build snapshot before clearing (records the special gem's type)
+          const snapshot = new Map<string, 'lineH' | 'lineV' | 'area'>();
+          snapshot.set(`${sc},${sr}`, specialType as 'lineH' | 'lineV' | 'area');
 
-          const initialCleared: CellPos[] = [[adjacentCol, adjacentRow]];
-          const result = processSpecialActivations(board, initialCleared);
+          // Clear the special gem itself to trigger passive activation
+          board.cells[sc][sr].gem = null;
 
-          // The special gem should be triggered
+          const initialCleared: CellPos[] = [[sc, sr]];
+          const result = processSpecialActivations(board, initialCleared, snapshot);
+
+          // The special gem should be triggered (it was in the cleared set)
           expect(result.triggeredSpecials.length).toBeGreaterThanOrEqual(1);
           const triggeredSet = posSet(result.triggeredSpecials);
           expect(triggeredSet.has(`${sc},${sr}`)).toBe(true);
 
           // The result's clearedCells should include the initial cleared cells
           const clearedSet = posSet(result.clearedCells);
-          expect(clearedSet.has(`${adjacentCol},${adjacentRow}`)).toBe(true);
+          expect(clearedSet.has(`${sc},${sr}`)).toBe(true);
 
           // The cleared cells should be more than just the initial cleared
+          // (the special gem's blast should clear additional cells)
           expect(result.clearedCells.length).toBeGreaterThan(initialCleared.length);
         },
       ),

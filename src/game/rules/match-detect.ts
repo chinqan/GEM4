@@ -14,6 +14,7 @@ export interface RawRun {
 /** 偵測選項 */
 export interface DetectOptions {
   swapPos?: CellPos; // 玩家交換後到達的位置（swap 觸發時提供）
+  swapPos2?: CellPos; // 交換的另一個位置（兩顆寶石都可能形成 match）
 }
 
 // ─── 5.1 水平掃描 ──────────────────────────────────────────
@@ -214,84 +215,116 @@ function getMergedDirection(
   return 'horizontal';
 }
 
-/** 合併重疊的 runs 為 MatchDescriptor[] */
-export function mergeRuns(runs: RawRun[]): MatchDescriptor[] {
-  const hRuns = runs.filter((r) => r.direction === 'horizontal');
-  const vRuns = runs.filter((r) => r.direction === 'vertical');
+/** 合併多個重疊 run 的所有格子（去重，保留順序） */
+function mergeManyCells(runs: RawRun[]): CellPos[] {
+  const seen = new Set<string>();
+  const result: CellPos[] = [];
+  for (const run of runs) {
+    for (const c of run.cells) {
+      const k = posKey(c);
+      if (!seen.has(k)) {
+        seen.add(k);
+        result.push(c);
+      }
+    }
+  }
+  return result;
+}
 
-  // 追蹤已被合併的 run
-  const mergedH = new Set<number>();
-  const mergedV = new Set<number>();
+/** 對一群 run（可能包含多條 H 和多條 V，全部同色且相互連通）分類形狀 */
+function classifyGroup(group: RawRun[]): {
+  shape: MatchShape;
+  direction: 'horizontal' | 'vertical';
+} {
+  const hRuns = group.filter((r) => r.direction === 'horizontal');
+  const vRuns = group.filter((r) => r.direction === 'vertical');
+
+  // 只有同方向 runs：獨立 run（group 中應只有 1 條，因為重疊會被先前 scan 合併）
+  if (hRuns.length === 0 || vRuns.length === 0) {
+    const run = group[0];
+    return { shape: classifySingleRun(run), direction: run.direction };
+  }
+
+  // 有多條（≥3 條）run 相互連通：視為 cross
+  if (group.length >= 3) {
+    const longest = group.reduce((a, b) =>
+      b.cells.length > a.cells.length ? b : a,
+    );
+    return { shape: 'cross', direction: longest.direction };
+  }
+
+  // 恰好一條 H 和一條 V，用原本的兩-run 分類邏輯
+  const hRun = hRuns[0];
+  const vRun = vRuns[0];
+  const shared = findSharedCells(hRun, vRun);
+  return {
+    shape: classifyMergedShape(hRun, vRun, shared),
+    direction: getMergedDirection(hRun, vRun),
+  };
+}
+
+/** 合併重疊的 runs 為 MatchDescriptor[]。
+ *  使用 union-find 將同色且共享格子的 runs 合併為單一 group，
+ *  支援一條 run 同時與多條 run 相交（例如十字 + 多肢 T/L）。
+ */
+export function mergeRuns(runs: RawRun[]): MatchDescriptor[] {
+  const n = runs.length;
+
+  // union-find
+  const parent: number[] = Array.from({ length: n }, (_, i) => i);
+  const find = (x: number): number => {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  };
+  const union = (a: number, b: number): void => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  };
+
+  // 每格 → 隸屬的 run 索引列表
+  const cellToRuns = new Map<string, number[]>();
+  for (let i = 0; i < n; i++) {
+    for (const c of runs[i].cells) {
+      const k = posKey(c);
+      const arr = cellToRuns.get(k);
+      if (arr) arr.push(i);
+      else cellToRuns.set(k, [i]);
+    }
+  }
+
+  // 共享格子且同色的 runs 合併
+  for (const [, runIdxs] of cellToRuns) {
+    if (runIdxs.length < 2) continue;
+    for (let i = 1; i < runIdxs.length; i++) {
+      if (runs[runIdxs[0]].colour === runs[runIdxs[i]].colour) {
+        union(runIdxs[0], runIdxs[i]);
+      }
+    }
+  }
+
+  // 依 root 分組
+  const groups = new Map<number, RawRun[]>();
+  for (let i = 0; i < n; i++) {
+    const r = find(i);
+    const arr = groups.get(r);
+    if (arr) arr.push(runs[i]);
+    else groups.set(r, [runs[i]]);
+  }
 
   const results: MatchDescriptor[] = [];
-
-  // 嘗試合併水平+垂直 run 對（同色且共享格子）
-  for (let hi = 0; hi < hRuns.length; hi++) {
-    for (let vi = 0; vi < vRuns.length; vi++) {
-      if (mergedH.has(hi) || mergedV.has(vi)) continue;
-
-      const hRun = hRuns[hi];
-      const vRun = vRuns[vi];
-
-      // 必須同色
-      if (hRun.colour !== vRun.colour) continue;
-
-      const shared = findSharedCells(hRun, vRun);
-      if (shared.length === 0) continue;
-
-      // 合併
-      mergedH.add(hi);
-      mergedV.add(vi);
-
-      const cells = mergeCells(hRun, vRun);
-      const shape = classifyMergedShape(hRun, vRun, shared);
-      const direction = getMergedDirection(hRun, vRun);
-      const special = determineSpecial(shape, direction);
-
-      const desc: MatchDescriptor = {
-        cells,
-        shape,
-        colour: hRun.colour,
-      };
-
-      if (special !== undefined) {
-        desc.spawnsSpecial = special;
-      }
-
-      results.push(desc);
-    }
-  }
-
-  // 處理未被合併的獨立 run
-  for (let hi = 0; hi < hRuns.length; hi++) {
-    if (mergedH.has(hi)) continue;
-    const run = hRuns[hi];
-    const shape = classifySingleRun(run);
-    const special = determineSpecial(shape, 'horizontal');
+  for (const [, group] of groups) {
+    const cells = mergeManyCells(group);
+    const { shape, direction } = classifyGroup(group);
+    const special = determineSpecial(shape, direction);
 
     const desc: MatchDescriptor = {
-      cells: [...run.cells],
+      cells,
       shape,
-      colour: run.colour,
-    };
-
-    if (special !== undefined) {
-      desc.spawnsSpecial = special;
-    }
-
-    results.push(desc);
-  }
-
-  for (let vi = 0; vi < vRuns.length; vi++) {
-    if (mergedV.has(vi)) continue;
-    const run = vRuns[vi];
-    const shape = classifySingleRun(run);
-    const special = determineSpecial(shape, 'vertical');
-
-    const desc: MatchDescriptor = {
-      cells: [...run.cells],
-      shape,
-      colour: run.colour,
+      colour: group[0].colour,
     };
 
     if (special !== undefined) {
@@ -385,15 +418,18 @@ function getIntersectionCell(
 function determineSpawnAt(
   match: MatchDescriptor,
   swapPos?: CellPos,
+  swapPos2?: CellPos,
 ): CellPos | undefined {
   if (match.spawnsSpecial === undefined) return undefined;
 
-  // swap 觸發：如果 swapPos 在 match 的 cells 中，spawnAt = swapPos
-  if (swapPos) {
-    const swapKey = posKey(swapPos);
-    const inMatch = match.cells.some((c) => posKey(c) === swapKey);
-    if (inMatch) {
-      return swapPos;
+  // swap 觸發：優先檢查 swapPos，再檢查 swapPos2
+  for (const pos of [swapPos, swapPos2]) {
+    if (pos) {
+      const key = posKey(pos);
+      const inMatch = match.cells.some((c) => posKey(c) === key);
+      if (inMatch) {
+        return pos;
+      }
     }
   }
 
@@ -433,30 +469,31 @@ export function detectMatches(
 
   // 決定生成位置
   for (const match of matches) {
-    const spawnAt = determineSpawnAt(match, options?.swapPos);
+    const spawnAt = determineSpawnAt(match, options?.swapPos, options?.swapPos2);
     if (spawnAt) {
       match.spawnAt = spawnAt;
     }
   }
 
-  // 套用優先序：僅保留最高優先的特殊寶石
-  // 找出最高優先的 match
-  let maxPriority = 0;
-  let maxIdx = -1;
-  for (let i = 0; i < matches.length; i++) {
-    const p = specialPriority(matches[i].spawnsSpecial);
-    if (p > maxPriority) {
-      maxPriority = p;
-      maxIdx = i;
-    }
-  }
-
-  // 移除非最高優先的特殊寶石
-  if (maxIdx >= 0) {
+  // 套用優先序：僅在玩家主動 swap 時限制為一顆最高優先的特殊寶石。
+  // cascade（無 swapPos）時允許每個獨立 match 各自生成特殊寶石。
+  if (options?.swapPos !== undefined) {
+    let maxPriority = 0;
+    let maxIdx = -1;
     for (let i = 0; i < matches.length; i++) {
-      if (i !== maxIdx && matches[i].spawnsSpecial !== undefined) {
-        delete matches[i].spawnsSpecial;
-        delete matches[i].spawnAt;
+      const p = specialPriority(matches[i].spawnsSpecial);
+      if (p > maxPriority) {
+        maxPriority = p;
+        maxIdx = i;
+      }
+    }
+
+    if (maxIdx >= 0) {
+      for (let i = 0; i < matches.length; i++) {
+        if (i !== maxIdx && matches[i].spawnsSpecial !== undefined) {
+          delete matches[i].spawnsSpecial;
+          delete matches[i].spawnAt;
+        }
       }
     }
   }

@@ -292,7 +292,7 @@ export class RulesEngine {
     const cellFrom = getCell(this.board, from)!;
     const cellTo = getCell(this.board, to)!;
 
-    const result = resolveCombo(this.board, from, to);
+    const result = resolveCombo(this.board, from, to, this.cascadeRng);
     if (!result || result.clearedCells.length === 0) {
       this.eventBus.emit({ kind: 'swap.invalid', from, to });
       return;

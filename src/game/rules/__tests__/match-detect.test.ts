@@ -475,20 +475,32 @@ describe('detectMatches', () => {
     expect(matches[0].spawnAt).toBeDefined();
   });
 
-  it('優先序：Colour Gem > Area Bomb > Line Bomb', () => {
+  it('優先序：swap 觸發時僅最高優先者生成特殊寶石（Colour > Area > Line）', () => {
     const board = createBoard(9, 9);
     // 5 連直線 → colour (priority 3)
     fillRow(board, 0, ['R', 'R', 'R', 'R', 'R', 'G', 'B', 'Y', 'P']);
     // 4 連 → lineH (priority 1)
     fillRow(board, 2, ['B', 'B', 'B', 'B', 'G', 'Y', 'P', 'W', 'O']);
 
-    const matches = detectMatches(board);
+    // swap 觸發才套用「單次僅生成一顆」規則
+    const matches = detectMatches(board, { swapPos: [2, 0] });
     expect(matches.length).toBe(2);
 
-    // Only the highest priority should have spawnsSpecial
     const withSpecial = matches.filter((m) => m.spawnsSpecial !== undefined);
     expect(withSpecial.length).toBe(1);
     expect(withSpecial[0].spawnsSpecial).toBe('colour');
+  });
+
+  it('cascade 觸發（無 swapPos）時多個獨立 match 各自保留特殊寶石', () => {
+    const board = createBoard(9, 9);
+    fillRow(board, 0, ['R', 'R', 'R', 'R', 'R', 'G', 'B', 'Y', 'P']);
+    fillRow(board, 2, ['B', 'B', 'B', 'B', 'G', 'Y', 'P', 'W', 'O']);
+
+    const matches = detectMatches(board);
+    expect(matches.length).toBe(2);
+
+    const withSpecial = matches.filter((m) => m.spawnsSpecial !== undefined);
+    expect(withSpecial.length).toBe(2);
   });
 
   it('T 形 spawnAt 為交會點', () => {

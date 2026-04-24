@@ -44,6 +44,8 @@ export interface CascadeDropConfig {
   fromRow: number;
   toRow: number;
   col: number;
+  /** 延遲啟動（ms），用於排隊掉落效果 */
+  delayMs?: number;
 }
 
 // ─── 緩動函式 ──────────────────────────────────────────────
@@ -238,7 +240,7 @@ export function createMatchClearAnimation(sprite: Container): Animation {
  * 因此以相同速度剛體平移，不會出現超越現象。
  */
 export function createCascadeDropAnimation(config: CascadeDropConfig): Animation {
-  const { sprite, fromRow, toRow, col } = config;
+  const { sprite, fromRow, toRow, col, delayMs = 0 } = config;
   const distance = Math.abs(toRow - fromRow);
   const fallDuration = distance * CASCADE_DROP_MS_PER_ROW;
 
@@ -249,7 +251,7 @@ export function createCascadeDropAnimation(config: CascadeDropConfig): Animation
   // 彈跳參數
   const bounceHeight = Math.min(distance * 2, 6);
   const bounceDuration = 80;
-  const totalDuration = fallDuration + bounceDuration;
+  const totalDuration = delayMs + fallDuration + bounceDuration;
 
   return {
     elapsed: 0,
@@ -258,14 +260,22 @@ export function createCascadeDropAnimation(config: CascadeDropConfig): Animation
     update(dtMs: number): boolean {
       this.elapsed += dtMs;
 
-      if (this.elapsed <= fallDuration) {
+      // 延遲階段：保持在起始位置不動
+      if (this.elapsed <= delayMs) {
+        sprite.position.set(startX, startY);
+        return false;
+      }
+
+      const active = this.elapsed - delayMs;
+
+      if (active <= fallDuration) {
         // 掉落階段：ease-in（加速，模擬重力）
-        const fallProgress = Math.min(this.elapsed / fallDuration, 1);
+        const fallProgress = Math.min(active / fallDuration, 1);
         const t = fallProgress * fallProgress; // quadratic ease-in
         sprite.position.set(startX, lerp(startY, endY, t));
       } else {
         // 彈跳階段：快速上彈再回落
-        const bounceElapsed = this.elapsed - fallDuration;
+        const bounceElapsed = active - fallDuration;
         const bounceProgress = Math.min(bounceElapsed / bounceDuration, 1);
         const bounceT = Math.sin(bounceProgress * Math.PI);
         sprite.position.set(startX, endY - bounceHeight * bounceT);
@@ -457,6 +467,51 @@ export function createChainSaturationPulse(
           boardLayer.filters = null;
         }
       }
+    },
+  };
+}
+
+// ─── Debug：特殊寶石影響區域遮片 ───────────────────────────
+
+/**
+ * 建立紅色半透明遮片，標示特殊寶石啟動時的影響區域。
+ * 遮片在 SPECIAL_ACTIVATION_MS 期間顯示，之後自動移除。
+ *
+ * @param cells 受影響的格子座標
+ * @param parentLayer 要掛載遮片的圖層（通常是 boardLayer）
+ */
+export function createBlastZoneOverlay(
+  cells: Array<[number, number]>,
+  parentLayer: Container,
+): Animation {
+  const container = new Container();
+  container.label = 'blastZoneOverlay';
+  parentLayer.addChild(container);
+
+  for (const [col, row] of cells) {
+    const rect = new Graphics();
+    rect.rect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+    rect.fill({ color: 0xff0000, alpha: 0.35 });
+    container.addChild(rect);
+  }
+
+  return {
+    elapsed: 0,
+    duration: SPECIAL_ACTIVATION_MS,
+
+    update(dtMs: number): boolean {
+      this.elapsed += dtMs;
+      // 淡出效果：後半段逐漸降低透明度
+      const progress = Math.min(this.elapsed / this.duration, 1);
+      if (progress > 0.5) {
+        container.alpha = 1 - (progress - 0.5) * 2;
+      }
+      return this.elapsed >= this.duration;
+    },
+
+    complete(): void {
+      parentLayer.removeChild(container);
+      container.destroy({ children: true });
     },
   };
 }

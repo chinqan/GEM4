@@ -529,7 +529,8 @@ export class GameIntegration {
 
     // ─── 動畫化交換流程 ──────────────────────────────────
     const { createSwapAnimation, createMatchClearAnimation,
-            createCascadeDropAnimation, createSpecialActivationEffect } = await import('../rendering/animations');
+            createCascadeDropAnimation, createSpecialActivationEffect,
+            createBlastZoneOverlay } = await import('../rendering/animations');
     const { ParticlePool, MergeParticleSystem } = await import('../rendering/particles');
     const { createScorePopup } = await import('../ui/juice/score-popup');
     const { getCell, cloneBoard } = await import('../game/rules/board');
@@ -639,6 +640,7 @@ export class GameIntegration {
         clearedCells: [number, number][],
         chainVal: number,
         excludePositions?: Set<string>,
+        specialSnapshot?: Map<string, 'lineH' | 'lineV' | 'area' | 'colour'>,
       ): Promise<[number, number][]> => {
         // 暫時移除需要排除的特殊寶石（例如剛生成的），避免被 processSpecialActivations 引爆
         const savedGems: Array<{ pos: [number, number]; gem: any }> = [];
@@ -652,6 +654,8 @@ export class GameIntegration {
               savedGems.push({ pos: [c, r], gem: cell.gem });
               cell.gem = null;
             }
+            // 也從快照中移除被排除的位置
+            if (specialSnapshot) specialSnapshot.delete(key);
           }
         }
 
@@ -670,7 +674,10 @@ export class GameIntegration {
           }
         }
 
-        const passiveResult = processSpecialActivations(board, clearedCells);
+        const passiveResult = processSpecialActivations(board, clearedCells, specialSnapshot, {
+          rng: rngStreams.cascadeFill,
+          colours: [...spec.gems.colours],
+        });
 
         // 還原被暫時移除的特殊寶石
         for (const { pos, gem } of savedGems) {
@@ -681,7 +688,7 @@ export class GameIntegration {
         let extraCleared: [number, number][] = [];
 
         if (passiveResult.triggeredSpecials.length > 0) {
-          // 播放啟動特效（擴展環）
+          // 播放啟動特效（擴展環）+ 紅色遮片標示影響區域
           const activationAnims: Array<ReturnType<typeof createSpecialActivationEffect>> = [];
           for (const pos of passiveResult.triggeredSpecials) {
             const [c, r] = pos;
@@ -689,13 +696,17 @@ export class GameIntegration {
               c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
             ));
           }
+          const originalSet = new Set(clearedCells.map(([c, r]) => `${c},${r}`));
+          const passiveExtraCells = passiveResult.clearedCells
+            .filter(([c, r]) => !originalSet.has(`${c},${r}`))
+            .map(([c, r]) => [c, r] as [number, number]);
+          if (passiveExtraCells.length > 0) {
+            activationAnims.push(createBlastZoneOverlay(passiveExtraCells, effectLayer));
+          }
           playMatchSfx(passiveResult.clearedCells.length, chainVal);
           await playAnims(activationAnims);
 
-          const originalSet = new Set(clearedCells.map(([c, r]) => `${c},${r}`));
-          extraCleared = passiveResult.clearedCells
-            .filter(([c, r]) => !originalSet.has(`${c},${r}`))
-            .map(([c, r]) => [c, r] as [number, number]);
+          extraCleared = passiveExtraCells;
 
           if (extraCleared.length > 0) {
             const passiveScore = specialActivationScore(extraCleared.length, chainVal, false);
@@ -754,28 +765,22 @@ export class GameIntegration {
           }
           for (let i = 0; i < numNew; i++) {
             const newRow = emptySlots[i];
-            if (newRow !== undefined) dropDistances.set(`${c},${newRow}`, newRow + 1 + i);
+            // 新寶石在畫面外排隊：第 i 顆排在 row -(numNew - i)
+            // 掉落距離 = newRow + numNew - i，所有新寶石同時掉、速度一致
+            if (newRow !== undefined) dropDistances.set(`${c},${newRow}`, newRow + numNew - i);
           }
         }
 
         boardRenderer.sync(board);
 
-        const colMaxDist: Map<number, number> = new Map();
-        for (const [key, dist] of dropDistances) {
-          const col = parseInt(key.split(',')[0]);
-          const prev = colMaxDist.get(col) || 0;
-          if (dist > prev) colMaxDist.set(col, dist);
-        }
-
         const dropAnims: Array<ReturnType<typeof createCascadeDropAnimation>> = [];
-        for (const [key] of dropDistances) {
+        for (const [key, dist] of dropDistances) {
           const [cs, rs] = key.split(',');
           const c = parseInt(cs);
           const r = parseInt(rs);
           const spr = boardRenderer.getSprite(c, r);
-          const maxDist = colMaxDist.get(c) || 0;
-          if (!spr || maxDist <= 0) continue;
-          const fromRow = r - maxDist;
+          if (!spr || dist <= 0) continue;
+          const fromRow = r - dist;
           spr.position.set(c * CELL_SIZE + CELL_SIZE / 2, fromRow * CELL_SIZE + CELL_SIZE / 2);
           dropAnims.push(createCascadeDropAnimation({ sprite: spr, fromRow, toRow: r, col: c }));
         }
@@ -788,11 +793,17 @@ export class GameIntegration {
       };
 
       // ─── 輔助：cascade 循環 ───
+      const MAX_CASCADE_LOOP_STEPS = 50;
       const runCascadeLoop = async (chainStart: number): Promise<number> => {
         let ch = chainStart;
+        let steps = 0;
         let mtchs = detectMatches(board);
 
         while (mtchs.length > 0) {
+          if (++steps > MAX_CASCADE_LOOP_STEPS) {
+            console.warn('[cascade] exceeded MAX_CASCADE_LOOP_STEPS, aborting');
+            break;
+          }
           ch++;
           const cSet = new Set<string>();
           const cCells: [number, number][] = [];
@@ -803,37 +814,55 @@ export class GameIntegration {
             }
           }
 
+          // 先確認 spawnAt 位置，立刻賦予特殊寶石（不參與消除動畫）
+          const spawnPos = new Set<string>();
+          for (const m of mtchs) {
+            if (m.spawnsSpecial && m.spawnAt) {
+              const spKey = `${m.spawnAt[0]},${m.spawnAt[1]}`;
+              spawnPos.add(spKey);
+              const sc = getCell(board, m.spawnAt);
+              if (sc?.gem) {
+                sc.gem.special = m.spawnsSpecial;
+              }
+              cSet.delete(spKey);
+            }
+          }
+
+          // 立刻更新 spawnAt 位置的 sprite
+          if (spawnPos.size > 0) {
+            boardRenderer.sync(board);
+          }
+
           let sScore = 0;
           for (const m of mtchs) sScore += matchScore(m.shape, ch, 0);
           rulesEngine.score += sScore;
 
-          playMatchSfx(cCells.length, ch);
-          await playClearAnimsForCells(cCells, ch);
-          showScorePopup(sScore, cCells, ch);
-
-          // 生成特殊寶石
-          for (const m of mtchs) {
-            if (m.spawnsSpecial && m.spawnAt) {
-              const sc = getCell(board, m.spawnAt);
-              if (sc?.gem) { sc.gem.special = m.spawnsSpecial; cSet.delete(`${m.spawnAt[0]},${m.spawnAt[1]}`); }
-            }
-          }
+          // 對排除 spawnAt 後的 cells 播消除動畫
+          const cascadeCellsToClear = cCells.filter(([c, r]) => cSet.has(`${c},${r}`));
+          playMatchSfx(cascadeCellsToClear.length, ch);
+          await playClearAnimsForCells(cascadeCellsToClear, ch);
+          showScorePopup(sScore, cascadeCellsToClear, ch);
 
           // ── 在清除前，啟動 match 中包含的特殊寶石（lineH/lineV/area）──
-          const spawnPos = new Set<string>();
-          for (const m of mtchs) {
-            if (m.spawnsSpecial && m.spawnAt) {
-              spawnPos.add(`${m.spawnAt[0]},${m.spawnAt[1]}`);
-            }
-          }
           const cascadeInMatchSpecials: [number, number][] = [];
           for (const [c, r] of cCells) {
             const k = `${c},${r}`;
             if (!cSet.has(k)) continue;
             if (spawnPos.has(k)) continue;
             const cl = getCell(board, [c, r]);
-            if (cl?.gem?.special && (cl.gem.special === 'lineH' || cl.gem.special === 'lineV' || cl.gem.special === 'area')) {
+            if (cl?.gem?.special && (cl.gem.special === 'lineH' || cl.gem.special === 'lineV' || cl.gem.special === 'area' || cl.gem.special === 'colour')) {
               cascadeInMatchSpecials.push([c, r]);
+            }
+          }
+
+          // 在啟動前，先快照所有 cCells 中的特殊寶石狀態（用於後續被動啟動判斷）
+          const cascadeSnapshot = new Map<string, 'lineH' | 'lineV' | 'area' | 'colour'>();
+          for (const [c, r] of cCells) {
+            const cl = getCell(board, [c, r]);
+            if (cl?.gem?.special && (cl.gem.special === 'lineH' || cl.gem.special === 'lineV' || cl.gem.special === 'area' || cl.gem.special === 'colour')) {
+              if (!spawnPos.has(`${c},${r}`)) {
+                cascadeSnapshot.set(`${c},${r}`, cl.gem.special);
+              }
             }
           }
 
@@ -841,21 +870,105 @@ export class GameIntegration {
             const sCell = getCell(board, [sc, sr]);
             if (!sCell?.gem?.special) continue;
             const sType = sCell.gem.special;
+
+            // 暫時保護 spawnAt 位置的寶石，避免被爆炸清除
+            const savedCascadeSpawnGems: Array<{ pos: [number, number]; gem: any }> = [];
+            for (const spKey of spawnPos) {
+              const [scs, srs] = spKey.split(',');
+              const spc = parseInt(scs);
+              const spr2 = parseInt(srs);
+              const spCell = getCell(board, [spc, spr2]);
+              if (spCell?.gem) {
+                savedCascadeSpawnGems.push({ pos: [spc, spr2], gem: spCell.gem });
+                spCell.gem = null;
+              }
+            }
+
+            // 預先計算爆炸目標並抓取 sprite 引用（啟動後 gem 會被清空）
+            let blastTargets: [number, number][] = [];
+            if (sType === 'lineH') {
+              for (let c = 0; c < board.width; c++) blastTargets.push([c, sr]);
+            } else if (sType === 'lineV') {
+              for (let r = 0; r < board.height; r++) blastTargets.push([sc, r]);
+            } else {
+              for (let dc = -1; dc <= 1; dc++) {
+                for (let dr = -1; dr <= 1; dr++) {
+                  const c = sc + dc, r = sr + dr;
+                  if (c >= 0 && c < board.width && r >= 0 && r < board.height) blastTargets.push([c, r]);
+                }
+              }
+            }
+            const blastSpriteRefs: Array<{ sprite: any; col: number; row: number; colour: number | null }> = [];
+            for (const [bc, br] of blastTargets) {
+              // 跳過 spawnAt 位置（已被保護，不應播消除動畫）
+              if (spawnPos.has(`${bc},${br}`)) continue;
+              const spr = boardRenderer.getSprite(bc, br);
+              const cl = getCell(board, [bc, br]);
+              if (spr) {
+                blastSpriteRefs.push({
+                  sprite: spr, col: bc, row: br,
+                  colour: cl?.gem?.colour ? GEM_COLOURS[cl.gem.colour] : null,
+                });
+              }
+            }
+
             let actResult: { clearedCells: [number, number][]; triggeredSpecials: [number, number][] };
+
+            // 在啟動前快照爆炸範圍內的特殊寶石（啟動會清除 gem）
+            for (const [bc, br] of blastTargets) {
+              const bk = `${bc},${br}`;
+              if (!cascadeSnapshot.has(bk)) {
+                const bcl = getCell(board, [bc, br]);
+                if (bcl?.gem?.special && (bcl.gem.special === 'lineH' || bcl.gem.special === 'lineV' || bcl.gem.special === 'area' || bcl.gem.special === 'colour')) {
+                  if (!spawnPos.has(bk)) {
+                    cascadeSnapshot.set(bk, bcl.gem.special);
+                  }
+                }
+              }
+            }
+
             if (sType === 'lineH' || sType === 'lineV') {
               actResult = activateLineBomb(board, [sc, sr]);
             } else {
               actResult = activateAreaBomb(board, [sc, sr]);
             }
+
+            // 還原被保護的 spawnAt 寶石
+            for (const { pos, gem } of savedCascadeSpawnGems) {
+              const restoreCell = getCell(board, pos);
+              if (restoreCell && !restoreCell.gem) restoreCell.gem = gem;
+            }
+
             for (const [ac, ar] of actResult.clearedCells) {
               const ak = `${ac},${ar}`;
               if (!cSet.has(ak)) { cSet.add(ak); cCells.push([ac, ar]); }
             }
             const actScore = specialActivationScore(actResult.clearedCells.length, ch, false);
             rulesEngine.score += actScore;
-            await playAnims([createSpecialActivationEffect(
-              sc * CELL_SIZE + CELL_SIZE / 2, sr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
-            )]);
+
+            // 播放啟動特效 + 紅色遮片
+            await playAnims([
+              createSpecialActivationEffect(
+                sc * CELL_SIZE + CELL_SIZE / 2, sr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+              ),
+              createBlastZoneOverlay(
+                actResult.clearedCells.map(([ac, ar]) => [ac, ar] as [number, number]),
+                effectLayer,
+              ),
+            ]);
+
+            // 播放消除動畫（使用預先抓取的 sprite 引用）
+            playMatchSfx(actResult.clearedCells.length, ch);
+            const blastClearAnims: Array<ReturnType<typeof createMatchClearAnimation>> = [];
+            for (const ref of blastSpriteRefs) {
+              blastClearAnims.push(createMatchClearAnimation(ref.sprite));
+              if (ref.colour !== null) {
+                const fxLevel = Math.min(ch - 1, 3);
+                mergeFx.spawn(ref.col * CELL_SIZE + CELL_SIZE / 2, ref.row * CELL_SIZE + CELL_SIZE / 2, fxLevel, ref.colour);
+              }
+            }
+            await playAnims(blastClearAnims);
+
             showScorePopup(actScore, actResult.clearedCells.map(([ac, ar]) => [ac, ar] as [number, number]), ch);
           }
 
@@ -867,7 +980,7 @@ export class GameIntegration {
 
           // 被動啟動處理
           const actualCleared = cCells.filter(([c, r]) => cSet.has(`${c},${r}`));
-          const extra = await handlePassiveActivations(actualCleared, ch, spawnPos);
+          const extra = await handlePassiveActivations(actualCleared, ch, spawnPos, cascadeSnapshot);
           for (const [c, r] of extra) cSet.add(`${c},${r}`);
 
           await runGravityAndDrop();
@@ -887,7 +1000,33 @@ export class GameIntegration {
         // ═══════════════════════════════════════════════════
         // ── Combo 路徑（兩顆特殊寶石交換）──
         // ═══════════════════════════════════════════════════
-        const comboResult = resolveCombo(board, from, to);
+        // 在 resolveCombo 清除格子前，快照整個棋盤的特殊寶石狀態
+        const comboSnapshot = new Map<string, 'lineH' | 'lineV' | 'area' | 'colour'>();
+        for (let c = 0; c < board.width; c++) {
+          for (let r = 0; r < board.height; r++) {
+            const cl = getCell(board, [c, r]);
+            if (cl?.gem?.special && (cl.gem.special === 'lineH' || cl.gem.special === 'lineV' || cl.gem.special === 'area' || cl.gem.special === 'colour')) {
+              comboSnapshot.set(`${c},${r}`, cl.gem.special);
+            }
+          }
+        }
+
+        // 在 resolveCombo 前預先抓取所有格子的 sprite 引用和顏色
+        const comboSpriteMap = new Map<string, { sprite: any; colour: number | null }>();
+        for (let c = 0; c < board.width; c++) {
+          for (let r = 0; r < board.height; r++) {
+            const spr = boardRenderer.getSprite(c, r);
+            const cl = getCell(board, [c, r]);
+            if (spr && cl?.gem) {
+              comboSpriteMap.set(`${c},${r}`, {
+                sprite: spr,
+                colour: cl.gem.colour ? GEM_COLOURS[cl.gem.colour] : null,
+              });
+            }
+          }
+        }
+
+        const comboResult = resolveCombo(board, from, to, rngStreams.cascadeFill);
         if (!comboResult || comboResult.clearedCells.length === 0) {
           cellTo.gem = cellFrom.gem;
           cellFrom.gem = tempGem;
@@ -905,11 +1044,34 @@ export class GameIntegration {
 
         playCombo();
         const comboClearedCells = comboResult.clearedCells.map(([c, r]) => [c, r] as [number, number]);
+        // 紅色遮片標示 combo 影響區域
+        const comboOverlay = createBlastZoneOverlay(comboClearedCells, effectLayer);
         playMatchSfx(comboClearedCells.length, chain);
-        await playClearAnimsForCells(comboClearedCells, chain);
+        // 使用預先抓取的 sprite 引用播放消除動畫（含粒子）
+        {
+          const comboClearAnims: Array<ReturnType<typeof createMatchClearAnimation>> = [];
+          for (const [c, r] of comboClearedCells) {
+            const ref = comboSpriteMap.get(`${c},${r}`);
+            if (ref) {
+              comboClearAnims.push(createMatchClearAnimation(ref.sprite));
+              if (ref.colour !== null) {
+                const fxLevel = Math.min(chain - 1, 3);
+                mergeFx.spawn(c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2, fxLevel, ref.colour);
+              }
+            }
+          }
+          await playAnims(comboClearAnims);
+        }
+        comboOverlay.complete();
         showScorePopup(comboPoints, comboClearedCells, chain);
 
-        await handlePassiveActivations(comboClearedCells, chain);
+        // 排除 combo 本身的兩顆特殊寶石：它們已被 resolveCombo 顯式啟動，
+        // 不應再被 processSpecialActivations 以被動觸發身份重跑一次。
+        const comboExclude = new Set<string>([
+          `${from[0]},${from[1]}`,
+          `${to[0]},${to[1]}`,
+        ]);
+        await handlePassiveActivations(comboClearedCells, chain, comboExclude, comboSnapshot);
 
         boardRenderer.sync(board);
         await runGravityAndDrop();
@@ -934,6 +1096,32 @@ export class GameIntegration {
         rulesEngine.movesRemaining--;
         chain = 1;
 
+        // 在 activateColourGem 清除格子前，快照特殊寶石狀態
+        const colourSnapshot = new Map<string, 'lineH' | 'lineV' | 'area' | 'colour'>();
+        for (let c = 0; c < board.width; c++) {
+          for (let r = 0; r < board.height; r++) {
+            const cl = getCell(board, [c, r]);
+            if (cl?.gem?.special && (cl.gem.special === 'lineH' || cl.gem.special === 'lineV' || cl.gem.special === 'area' || cl.gem.special === 'colour')) {
+              colourSnapshot.set(`${c},${r}`, cl.gem.special);
+            }
+          }
+        }
+
+        // 在 activateColourGem 前預先抓取所有格子的 sprite 引用和顏色
+        const colourSpriteMap = new Map<string, { sprite: any; colour: number | null }>();
+        for (let c = 0; c < board.width; c++) {
+          for (let r = 0; r < board.height; r++) {
+            const spr = boardRenderer.getSprite(c, r);
+            const cl = getCell(board, [c, r]);
+            if (spr && cl?.gem) {
+              colourSpriteMap.set(`${c},${r}`, {
+                sprite: spr,
+                colour: cl.gem.colour ? GEM_COLOURS[cl.gem.colour] : null,
+              });
+            }
+          }
+        }
+
         const colourResult = activateColourGem(board, colourGemPos, targetColour);
         const colourClearedCells = colourResult.clearedCells.map(([c, r]) => [c, r] as [number, number]);
 
@@ -941,101 +1129,35 @@ export class GameIntegration {
         rulesEngine.score += activationPoints;
 
         const [cgc, cgr] = colourGemPos;
-        await playAnims([createSpecialActivationEffect(
-          cgc * CELL_SIZE + CELL_SIZE / 2, cgr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
-        )]);
+        await playAnims([
+          createSpecialActivationEffect(
+            cgc * CELL_SIZE + CELL_SIZE / 2, cgr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+          ),
+          createBlastZoneOverlay(colourClearedCells, effectLayer),
+        ]);
 
+        // 使用預先抓取的 sprite 引用播放消除動畫（含粒子）
         playMatchSfx(colourClearedCells.length, chain);
-        await playClearAnimsForCells(colourClearedCells, chain);
-        showScorePopup(activationPoints, colourClearedCells, chain);
-
-        await handlePassiveActivations(colourClearedCells, chain);
-
-        boardRenderer.sync(board);
-        await runGravityAndDrop();
-
-        hud.setScore(rulesEngine.score);
-        hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
-
-        chain = await runCascadeLoop(chain);
-
-      } else if (
-        cellFrom.gem.special && (cellFrom.gem.special === 'lineH' || cellFrom.gem.special === 'lineV' || cellFrom.gem.special === 'area') ||
-        cellTo.gem.special && (cellTo.gem.special === 'lineH' || cellTo.gem.special === 'lineV' || cellTo.gem.special === 'area')
-      ) {
-        // ═══════════════════════════════════════════════════
-        // ── 單顆特殊寶石啟動路徑（Line Bomb / Area Bomb + 普通寶石交換）──
-        // ═══════════════════════════════════════════════════
-        const specialPos: [number, number] = cellFrom.gem.special ? from : to;
-        const specialCell = getCell(board, specialPos)!;
-        const specialType = specialCell.gem!.special!;
-
-        rulesEngine.movesRemaining--;
-        chain = 1;
-
-        // 先計算會被清除的格子，並預先抓取 sprite 引用（啟動後 gem 會被清空）
-        let targetCells: [number, number][] = [];
-        const [sCol, sRow] = specialPos;
-        if (specialType === 'lineH') {
-          for (let c = 0; c < board.width; c++) targetCells.push([c, sRow]);
-        } else if (specialType === 'lineV') {
-          for (let r = 0; r < board.height; r++) targetCells.push([sCol, r]);
-        } else {
-          for (let dc = -1; dc <= 1; dc++) {
-            for (let dr = -1; dr <= 1; dr++) {
-              const c = sCol + dc, r = sRow + dr;
-              if (c >= 0 && c < board.width && r >= 0 && r < board.height) targetCells.push([c, r]);
+        {
+          const colourClearAnims: Array<ReturnType<typeof createMatchClearAnimation>> = [];
+          for (const [c, r] of colourClearedCells) {
+            const ref = colourSpriteMap.get(`${c},${r}`);
+            if (ref) {
+              colourClearAnims.push(createMatchClearAnimation(ref.sprite));
+              if (ref.colour !== null) {
+                const fxLevel = Math.min(chain - 1, 3);
+                mergeFx.spawn(c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2, fxLevel, ref.colour);
+              }
             }
           }
+          await playAnims(colourClearAnims);
         }
+        showScorePopup(activationPoints, colourClearedCells, chain);
 
-        // 預先抓取 sprite 引用和顏色（用於消除動畫和粒子）
-        const spriteRefs: Array<{ sprite: any; col: number; row: number; colour: number | null }> = [];
-        for (const [c, r] of targetCells) {
-          const spr = boardRenderer.getSprite(c, r);
-          const cl = getCell(board, [c, r]);
-          if (spr) {
-            spriteRefs.push({
-              sprite: spr,
-              col: c,
-              row: r,
-              colour: cl?.gem?.colour ? GEM_COLOURS[cl.gem.colour] : null,
-            });
-          }
-        }
-
-        // 啟動特殊寶石（修改 board 資料）
-        let activationResult: { clearedCells: [number, number][]; triggeredSpecials: [number, number][] };
-        if (specialType === 'lineH' || specialType === 'lineV') {
-          activationResult = activateLineBomb(board, specialPos);
-        } else {
-          activationResult = activateAreaBomb(board, specialPos);
-        }
-
-        const activatedCells = activationResult.clearedCells.map(([c, r]) => [c, r] as [number, number]);
-        const actScore = specialActivationScore(activatedCells.length, chain, false);
-        rulesEngine.score += actScore;
-
-        // 播放啟動特效（擴展環）
-        await playAnims([createSpecialActivationEffect(
-          sCol * CELL_SIZE + CELL_SIZE / 2, sRow * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
-        )]);
-
-        // 播放消除動畫（使用預先抓取的 sprite 引用）
-        playMatchSfx(activatedCells.length, chain);
-        const clearAnims: Array<ReturnType<typeof createMatchClearAnimation>> = [];
-        for (const ref of spriteRefs) {
-          clearAnims.push(createMatchClearAnimation(ref.sprite));
-          if (ref.colour !== null) {
-            const fxLevel = Math.min(chain - 1, 3);
-            mergeFx.spawn(ref.col * CELL_SIZE + CELL_SIZE / 2, ref.row * CELL_SIZE + CELL_SIZE / 2, fxLevel, ref.colour);
-          }
-        }
-        await playAnims(clearAnims);
-        showScorePopup(actScore, activatedCells, chain);
-
-        // 被動啟動處理
-        await handlePassiveActivations(activatedCells, chain);
+        // 排除 Colour Gem 本身：它已被 activateColourGem 以玩家指定色顯式啟動，
+        // 不應再被被動觸發隨機挑一色多清一次。
+        const colourExclude = new Set<string>([`${colourGemPos[0]},${colourGemPos[1]}`]);
+        await handlePassiveActivations(colourClearedCells, chain, colourExclude, colourSnapshot);
 
         boardRenderer.sync(board);
         await runGravityAndDrop();
@@ -1047,11 +1169,23 @@ export class GameIntegration {
 
       } else {
         // ═══════════════════════════════════════════════════
-        // ── 普通消除路徑 ──
+        // ── 普通消除路徑（含 Line/Area Bomb 交換）──
+        // 先偵測基本 match，有 match 則先處理消除；
+        // 若無 match 但其中一顆是 Line/Area Bomb，則直接啟動炸彈。
         // ═══════════════════════════════════════════════════
-        let matches = detectMatches(board, { swapPos: to });
+        let matches = detectMatches(board, { swapPos: to, swapPos2: from });
 
-        if (matches.length === 0) {
+        // 判斷是否有 Line/Area Bomb 參與交換
+        const swappedSpecialPos: [number, number] | null = (() => {
+          const fGem = getCell(board, from)?.gem;
+          const tGem = getCell(board, to)?.gem;
+          if (fGem?.special && (fGem.special === 'lineH' || fGem.special === 'lineV' || fGem.special === 'area')) return from;
+          if (tGem?.special && (tGem.special === 'lineH' || tGem.special === 'lineV' || tGem.special === 'area')) return to;
+          return null;
+        })();
+
+        if (matches.length === 0 && !swappedSpecialPos) {
+          // 無 match 且無特殊寶石 → 無效交換
           cellTo.gem = cellFrom.gem;
           cellFrom.gem = tempGem;
           playInvalid();
@@ -1061,75 +1195,268 @@ export class GameIntegration {
 
         rulesEngine.movesRemaining--;
 
-        while (matches.length > 0) {
-          chain++;
+        if (matches.length === 0 && swappedSpecialPos) {
+          // ── 無 match 但有 Line/Area Bomb → 直接啟動炸彈 ──
+          const specialCell = getCell(board, swappedSpecialPos)!;
+          const specialType = specialCell.gem!.special! as 'lineH' | 'lineV' | 'area';
+          chain = 1;
 
-          const clearedSet = new Set<string>();
-          const clearedCells: [number, number][] = [];
-          for (const m of matches) {
-            for (const c of m.cells) {
-              const k = `${c[0]},${c[1]}`;
-              if (!clearedSet.has(k)) { clearedSet.add(k); clearedCells.push([c[0], c[1]]); }
+          // 先計算會被清除的格子，並預先抓取 sprite 引用（啟動後 gem 會被清空）
+          let targetCells: [number, number][] = [];
+          const [sCol, sRow] = swappedSpecialPos;
+          if (specialType === 'lineH') {
+            for (let c = 0; c < board.width; c++) targetCells.push([c, sRow]);
+          } else if (specialType === 'lineV') {
+            for (let r = 0; r < board.height; r++) targetCells.push([sCol, r]);
+          } else {
+            for (let dc = -1; dc <= 1; dc++) {
+              for (let dr = -1; dr <= 1; dr++) {
+                const c = sCol + dc, r = sRow + dr;
+                if (c >= 0 && c < board.width && r >= 0 && r < board.height) targetCells.push([c, r]);
+              }
             }
+          }
+
+          // 預先抓取 sprite 引用和顏色（用於消除動畫和粒子）
+          const spriteRefs: Array<{ sprite: any; col: number; row: number; colour: number | null }> = [];
+          for (const [c, r] of targetCells) {
+            const spr = boardRenderer.getSprite(c, r);
+            const cl = getCell(board, [c, r]);
+            if (spr) {
+              spriteRefs.push({
+                sprite: spr, col: c, row: r,
+                colour: cl?.gem?.colour ? GEM_COLOURS[cl.gem.colour] : null,
+              });
+            }
+          }
+
+          // 在啟動前快照特殊寶石狀態（啟動會清除 gem）
+          const directSnapshot = new Map<string, 'lineH' | 'lineV' | 'area' | 'colour'>();
+          for (const [c, r] of targetCells) {
+            const cl = getCell(board, [c, r]);
+            if (cl?.gem?.special && (cl.gem.special === 'lineH' || cl.gem.special === 'lineV' || cl.gem.special === 'area' || cl.gem.special === 'colour')) {
+              directSnapshot.set(`${c},${r}`, cl.gem.special);
+            }
+          }
+
+          // 啟動特殊寶石（修改 board 資料）
+          let activationResult: { clearedCells: [number, number][]; triggeredSpecials: [number, number][] };
+          if (specialType === 'lineH' || specialType === 'lineV') {
+            activationResult = activateLineBomb(board, swappedSpecialPos);
+          } else {
+            activationResult = activateAreaBomb(board, swappedSpecialPos);
+          }
+
+          const activatedCells = activationResult.clearedCells.map(([c, r]) => [c, r] as [number, number]);
+          const actScore = specialActivationScore(activatedCells.length, chain, false);
+          rulesEngine.score += actScore;
+
+          // 播放啟動特效（擴展環）+ 紅色遮片標示影響區域
+          await playAnims([
+            createSpecialActivationEffect(
+              sCol * CELL_SIZE + CELL_SIZE / 2, sRow * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+            ),
+            createBlastZoneOverlay(activatedCells, effectLayer),
+          ]);
+
+          // 播放消除動畫（使用預先抓取的 sprite 引用）
+          playMatchSfx(activatedCells.length, chain);
+          const directClearAnims: Array<ReturnType<typeof createMatchClearAnimation>> = [];
+          for (const ref of spriteRefs) {
+            directClearAnims.push(createMatchClearAnimation(ref.sprite));
+            if (ref.colour !== null) {
+              const fxLevel = Math.min(chain - 1, 3);
+              mergeFx.spawn(ref.col * CELL_SIZE + CELL_SIZE / 2, ref.row * CELL_SIZE + CELL_SIZE / 2, fxLevel, ref.colour);
+            }
+          }
+          await playAnims(directClearAnims);
+          showScorePopup(actScore, activatedCells, chain);
+
+          // 被動啟動處理（排除 swap 直接啟動的那顆炸彈，避免被再次當被動觸發）
+          const directExclude = new Set<string>([
+            `${swappedSpecialPos[0]},${swappedSpecialPos[1]}`,
+          ]);
+          await handlePassiveActivations(activatedCells, chain, directExclude, directSnapshot);
+
+          boardRenderer.sync(board);
+          await runGravityAndDrop();
+
+          hud.setScore(rulesEngine.score);
+          hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+
+          chain = await runCascadeLoop(chain);
+
+        } else {
+          // ── 有 match → 先處理基本消除（特殊寶石在 match 中會被 inMatchSpecials 處理）──
+
+          while (matches.length > 0) {
+            chain++;
+
+            const clearedSet = new Set<string>();
+            const clearedCells: [number, number][] = [];
+            for (const m of matches) {
+              for (const c of m.cells) {
+                const k = `${c[0]},${c[1]}`;
+                if (!clearedSet.has(k)) { clearedSet.add(k); clearedCells.push([c[0], c[1]]); }
+              }
+            }
+
+          // 先確認 spawnAt 位置，立刻賦予特殊寶石（不參與消除動畫）
+          const spawnPositions = new Set<string>();
+          for (const m of matches) {
+            if (m.spawnsSpecial && m.spawnAt) {
+              const spKey = `${m.spawnAt[0]},${m.spawnAt[1]}`;
+              spawnPositions.add(spKey);
+              // 立刻在資料層賦予特殊寶石
+              const sc = getCell(board, m.spawnAt);
+              if (sc?.gem) {
+                sc.gem.special = m.spawnsSpecial;
+              }
+              // 從 clearedSet 中移除（不會被清除）
+              clearedSet.delete(spKey);
+            }
+          }
+
+          // 立刻更新 spawnAt 位置的 sprite（顯示為特殊寶石）
+          if (spawnPositions.size > 0) {
+            boardRenderer.sync(board);
           }
 
           let stepScore = 0;
           for (const m of matches) stepScore += matchScore(m.shape, chain, 0);
           rulesEngine.score += stepScore;
 
-          playMatchSfx(clearedCells.length, chain);
-          await playClearAnimsForCells(clearedCells, chain);
-          showScorePopup(stepScore, clearedCells, chain);
-
-          // 生成特殊寶石（在清除之前，讓 spawnAt 位置保留）
-          for (const m of matches) {
-            if (m.spawnsSpecial && m.spawnAt) {
-              const sc = getCell(board, m.spawnAt);
-              if (sc?.gem) { sc.gem.special = m.spawnsSpecial; clearedSet.delete(`${m.spawnAt[0]},${m.spawnAt[1]}`); }
-            }
-          }
+          // 對排除 spawnAt 後的 cells 播消除動畫
+          const cellsToClear = clearedCells.filter(([c, r]) => clearedSet.has(`${c},${r}`));
+          playMatchSfx(cellsToClear.length, chain);
+          await playClearAnimsForCells(cellsToClear, chain);
+          showScorePopup(stepScore, cellsToClear, chain);
 
           // ── 在清除前，啟動 match 中包含的特殊寶石（lineH/lineV/area）──
-          // 這些炸彈本身是 match 的一部分，若先清除就無法啟動
-          const spawnPositions = new Set<string>();
-          for (const m of matches) {
-            if (m.spawnsSpecial && m.spawnAt) {
-              spawnPositions.add(`${m.spawnAt[0]},${m.spawnAt[1]}`);
-            }
-          }
           const inMatchSpecials: [number, number][] = [];
           for (const [c, r] of clearedCells) {
             const k = `${c},${r}`;
             if (!clearedSet.has(k)) continue; // 已被 spawnAt 排除
             if (spawnPositions.has(k)) continue; // 剛生成的特殊寶石不啟動
             const cl = getCell(board, [c, r]);
-            if (cl?.gem?.special && (cl.gem.special === 'lineH' || cl.gem.special === 'lineV' || cl.gem.special === 'area')) {
+            if (cl?.gem?.special && (cl.gem.special === 'lineH' || cl.gem.special === 'lineV' || cl.gem.special === 'area' || cl.gem.special === 'colour')) {
               inMatchSpecials.push([c, r]);
             }
           }
 
           // 依序啟動 match 中的特殊寶石
+          // 在啟動前，先快照所有 clearedCells 中的特殊寶石狀態（用於後續被動啟動判斷）
+          const normalMatchSnapshot = new Map<string, 'lineH' | 'lineV' | 'area' | 'colour'>();
+          for (const [c, r] of clearedCells) {
+            const k = `${c},${r}`;
+            if (spawnPositions.has(k)) continue;
+            const cl = getCell(board, [c, r]);
+            if (cl?.gem?.special && (cl.gem.special === 'lineH' || cl.gem.special === 'lineV' || cl.gem.special === 'area' || cl.gem.special === 'colour')) {
+              normalMatchSnapshot.set(k, cl.gem.special);
+            }
+          }
+
           for (const [sc, sr] of inMatchSpecials) {
             const sCell = getCell(board, [sc, sr]);
             if (!sCell?.gem?.special) continue;
             const sType = sCell.gem.special;
+
+            // 暫時保護 spawnAt 位置的寶石，避免被爆炸清除
+            const savedSpawnGems: Array<{ pos: [number, number]; gem: any }> = [];
+            for (const spKey of spawnPositions) {
+              const [scs, srs] = spKey.split(',');
+              const spc = parseInt(scs);
+              const spr2 = parseInt(srs);
+              const spCell = getCell(board, [spc, spr2]);
+              if (spCell?.gem) {
+                savedSpawnGems.push({ pos: [spc, spr2], gem: spCell.gem });
+                spCell.gem = null;
+              }
+            }
+
+            // 預先計算爆炸目標並抓取 sprite 引用（啟動後 gem 會被清空）
+            let inMatchBlastTargets: [number, number][] = [];
+            if (sType === 'lineH') {
+              for (let c = 0; c < board.width; c++) inMatchBlastTargets.push([c, sr]);
+            } else if (sType === 'lineV') {
+              for (let r = 0; r < board.height; r++) inMatchBlastTargets.push([sc, r]);
+            } else {
+              for (let dc = -1; dc <= 1; dc++) {
+                for (let dr = -1; dr <= 1; dr++) {
+                  const c = sc + dc, r = sr + dr;
+                  if (c >= 0 && c < board.width && r >= 0 && r < board.height) inMatchBlastTargets.push([c, r]);
+                }
+              }
+            }
+            const inMatchBlastSpriteRefs: Array<{ sprite: any; col: number; row: number; colour: number | null }> = [];
+            for (const [bc, br] of inMatchBlastTargets) {
+              // 跳過 spawnAt 位置（已被保護，不應播消除動畫）
+              if (spawnPositions.has(`${bc},${br}`)) continue;
+              const spr = boardRenderer.getSprite(bc, br);
+              const cl = getCell(board, [bc, br]);
+              if (spr) {
+                inMatchBlastSpriteRefs.push({
+                  sprite: spr, col: bc, row: br,
+                  colour: cl?.gem?.colour ? GEM_COLOURS[cl.gem.colour] : null,
+                });
+              }
+            }
+
             let actResult: { clearedCells: [number, number][]; triggeredSpecials: [number, number][] };
+
+            // 在啟動前快照爆炸範圍內的特殊寶石（啟動會清除 gem）
+            for (const [bc, br] of inMatchBlastTargets) {
+              const bk = `${bc},${br}`;
+              if (!normalMatchSnapshot.has(bk)) {
+                const bcl = getCell(board, [bc, br]);
+                if (bcl?.gem?.special && (bcl.gem.special === 'lineH' || bcl.gem.special === 'lineV' || bcl.gem.special === 'area' || bcl.gem.special === 'colour')) {
+                  normalMatchSnapshot.set(bk, bcl.gem.special);
+                }
+              }
+            }
+
             if (sType === 'lineH' || sType === 'lineV') {
               actResult = activateLineBomb(board, [sc, sr]);
             } else {
               actResult = activateAreaBomb(board, [sc, sr]);
             }
-            // 合併啟動清除的格子
+
+            // 還原被保護的 spawnAt 寶石
+            for (const { pos, gem } of savedSpawnGems) {
+              const restoreCell = getCell(board, pos);
+              if (restoreCell && !restoreCell.gem) restoreCell.gem = gem;
+            }
+
+            // 合併啟動清除的格子（排除 spawnAt 位置）
             for (const [ac, ar] of actResult.clearedCells) {
               const ak = `${ac},${ar}`;
               if (!clearedSet.has(ak)) { clearedSet.add(ak); clearedCells.push([ac, ar]); }
             }
-            // 播放啟動特效
+            // 播放啟動特效 + 紅色遮片
             const actScore = specialActivationScore(actResult.clearedCells.length, chain, false);
             rulesEngine.score += actScore;
-            await playAnims([createSpecialActivationEffect(
-              sc * CELL_SIZE + CELL_SIZE / 2, sr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
-            )]);
+            await playAnims([
+              createSpecialActivationEffect(
+                sc * CELL_SIZE + CELL_SIZE / 2, sr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+              ),
+              createBlastZoneOverlay(
+                actResult.clearedCells.map(([ac, ar]) => [ac, ar] as [number, number]),
+                effectLayer,
+              ),
+            ]);
+
+            // 播放消除動畫（使用預先抓取的 sprite 引用）
+            playMatchSfx(actResult.clearedCells.length, chain);
+            const inMatchClearAnims: Array<ReturnType<typeof createMatchClearAnimation>> = [];
+            for (const ref of inMatchBlastSpriteRefs) {
+              inMatchClearAnims.push(createMatchClearAnimation(ref.sprite));
+              if (ref.colour !== null) {
+                const fxLevel = Math.min(chain - 1, 3);
+                mergeFx.spawn(ref.col * CELL_SIZE + CELL_SIZE / 2, ref.row * CELL_SIZE + CELL_SIZE / 2, fxLevel, ref.colour);
+              }
+            }
+            await playAnims(inMatchClearAnims);
+
             showScorePopup(actScore, actResult.clearedCells.map(([ac, ar]) => [ac, ar] as [number, number]), chain);
           }
 
@@ -1142,7 +1469,7 @@ export class GameIntegration {
           // 被動啟動處理
           // 注意：排除 spawnAt 位置，避免剛生成的特殊寶石被立即引爆
           const actualCleared = clearedCells.filter(([c, r]) => clearedSet.has(`${c},${r}`));
-          const extra = await handlePassiveActivations(actualCleared, chain, spawnPositions);
+          const extra = await handlePassiveActivations(actualCleared, chain, spawnPositions, normalMatchSnapshot);
           for (const [c, r] of extra) clearedSet.add(`${c},${r}`);
 
           await runGravityAndDrop();
@@ -1151,6 +1478,7 @@ export class GameIntegration {
           hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
 
           matches = detectMatches(board);
+          }
         }
       }
 
