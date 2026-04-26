@@ -60,6 +60,7 @@ export function createLevelSelectCard(options: CreateLevelSelectOptions): LevelS
   overlay.rect(0, 0, width, height);
   overlay.fill({ color: 0x0b1026, alpha: BG.overlayAlpha });
   overlay.eventMode = 'static'; // 攔截點擊
+  overlay.on('pointerup', () => { onCancel?.(); });
   container.addChild(overlay);
 
   // ── 卡片面板 ─────────────────────────────────────────
@@ -71,6 +72,7 @@ export function createLevelSelectCard(options: CreateLevelSelectOptions): LevelS
   const card = new Graphics();
   card.roundRect(cardX, cardY, cardW, cardH, RADIUS.lg);
   card.fill({ color: BG.panel });
+  card.eventMode = 'static'; // 阻止卡片區域的點擊穿透到 overlay
   container.addChild(card);
 
   // ── 標題 ──────────────────────────────────────────────
@@ -164,10 +166,12 @@ export function createLevelSelectCard(options: CreateLevelSelectOptions): LevelS
       budgetText.text = '';
     }
 
-    if (d.bestScore > 0) {
-      bestText.text = `過往最佳: ${d.bestScore.toLocaleString()} 分`;
+    if (d.attempts === 0) {
+      bestText.text = '過往最佳: 尚未挑戰';
+    } else if (d.bestScore === 0) {
+      bestText.text = '過往最佳: 0 分';
     } else {
-      bestText.text = '過往最佳: —';
+      bestText.text = `過往最佳: ${d.bestScore.toLocaleString()} 分`;
     }
 
     attemptsText.text = `嘗試次數: ${d.attempts}`;

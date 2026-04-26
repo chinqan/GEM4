@@ -95,7 +95,7 @@ export function createLevelCompleteScreen(options: CreateLevelCompleteOptions): 
 
   // ── 星星 ──────────────────────────────────────────────
   const starDisplay = createStarDisplay({ starSize: 28, gap: 16, initialStars: 0 });
-  starDisplay.position.set(width / 2 - 52, panelY + 70);
+  starDisplay.position.set(width / 2 - 58, panelY + 96);
   container.addChild(starDisplay);
 
   // ── 分數明細 ──────────────────────────────────────────

@@ -96,8 +96,57 @@ export const CASCADE_DROP_MS_PER_ROW = 120;
 /** 特殊寶石 spawn 震波時長（ms） */
 export const SPECIAL_SPAWN_SHOCKWAVE_MS = 600;
 
-/** 特殊寶石啟動效果時長（ms） */
+/**
+ * 特殊寶石啟動效果預設時長（ms）。保留為向後相容的常數；
+ * 新程式碼應透過 {@link getSpecialActivationDuration} 取得分級時長。
+ */
 export const SPECIAL_ACTIVATION_MS = 800;
+
+/** 直線炸彈（lineH / lineV）啟動時長（ms） */
+export const SPECIAL_ACTIVATION_MS_LINE = 550;
+
+/** 區域炸彈（3×3 area）啟動時長（ms） */
+export const SPECIAL_ACTIVATION_MS_AREA = 750;
+
+/** 顏色寶石（colour）啟動時長（ms） */
+export const SPECIAL_ACTIVATION_MS_COLOUR = 1000;
+
+/** 雙特殊組合（combo）啟動時長（ms） */
+export const SPECIAL_ACTIVATION_MS_COMBO = 1100;
+
+/** 連鎖中被動觸發的時長折扣（避免長 cascade 拖節奏） */
+export const PASSIVE_ACTIVATION_DURATION_SCALE = 0.7;
+
+export type SpecialActivationKind = 'lineH' | 'lineV' | 'area' | 'colour' | 'combo';
+
+/**
+ * 依特殊寶石類型取得啟動動畫時長。
+ *
+ * @param kind 特殊寶石類型
+ * @param passive 是否為連鎖中的被動觸發；被動觸發會套用 {@link PASSIVE_ACTIVATION_DURATION_SCALE} 折扣
+ */
+export function getSpecialActivationDuration(
+  kind: SpecialActivationKind,
+  passive = false,
+): number {
+  let base: number;
+  switch (kind) {
+    case 'lineH':
+    case 'lineV':
+      base = SPECIAL_ACTIVATION_MS_LINE;
+      break;
+    case 'area':
+      base = SPECIAL_ACTIVATION_MS_AREA;
+      break;
+    case 'colour':
+      base = SPECIAL_ACTIVATION_MS_COLOUR;
+      break;
+    case 'combo':
+      base = SPECIAL_ACTIVATION_MS_COMBO;
+      break;
+  }
+  return passive ? Math.round(base * PASSIVE_ACTIVATION_DURATION_SCALE) : base;
+}
 
 /** Chain ≥3 飽和脈衝時長（ms） */
 export const CHAIN_SATURATION_PULSE_MS = 300;

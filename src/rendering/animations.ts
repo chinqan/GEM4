@@ -346,6 +346,7 @@ export function createSpecialActivationEffect(
   y: number,
   colour: number,
   fxLayer: Container,
+  duration: number = SPECIAL_ACTIVATION_MS,
 ): Animation {
   const container = new Container();
   container.label = 'activationEffect';
@@ -370,7 +371,7 @@ export function createSpecialActivationEffect(
 
   return {
     elapsed: 0,
-    duration: SPECIAL_ACTIVATION_MS,
+    duration,
 
     update(dtMs: number): boolean {
       this.elapsed += dtMs;
@@ -483,6 +484,7 @@ export function createChainSaturationPulse(
 export function createBlastZoneOverlay(
   cells: Array<[number, number]>,
   parentLayer: Container,
+  duration: number = SPECIAL_ACTIVATION_MS,
 ): Animation {
   const container = new Container();
   container.label = 'blastZoneOverlay';
@@ -497,7 +499,7 @@ export function createBlastZoneOverlay(
 
   return {
     elapsed: 0,
-    duration: SPECIAL_ACTIVATION_MS,
+    duration,
 
     update(dtMs: number): boolean {
       this.elapsed += dtMs;

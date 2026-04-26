@@ -1,1 +1,7 @@
+index.ts:43 Gem v1 — 啟動中...
+index.ts:45 Gem v1 — 啟動完成 (phase: running)
+:3001/favicon.ico:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+game-integration.ts:1524 [doSwap] Unexpected error: TypeError: Cannot read properties of null (reading 'special')
+    at doSwap (game-integration.ts:1052:61)
+doSwap @ game-integration.ts:1524
 {"sessionId":"9507e7f8-2085-4b57-9125-fc9b8cd7e149","pid":13941,"acquiredAt":1777037064973}

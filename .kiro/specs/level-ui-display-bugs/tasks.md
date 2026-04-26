@@ -1,0 +1,141 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration tests
+  - **Property 1: Bug Condition** - Level UI Display Bugs
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bugs exist
+  - **DO NOT attempt to fix the tests or the code when they fail**
+  - **NOTE**: These tests encode the expected behavior - they will validate the fixes when they pass after implementation
+  - **GOAL**: Surface counterexamples that demonstrate all 5 bugs exist
+  - **Scoped PBT Approach**: Scope properties to concrete failing cases for each bug
+  - Create test file `src/ui/screens/__tests__/level-select-bugfix.property.test.ts`
+  - **Bug 1 - Best score display**: Generate `LevelSelectData` with `attempts=0, bestScore=0` and `attempts>0, bestScore=0`. Assert `setLevelData` sets bestText to `'過往最佳: 尚未挑戰'` when `attempts=0` and `'過往最佳: 0 分'` when `attempts>0, bestScore=0`. On unfixed code, both cases incorrectly show `'過往最佳: —'` (EXPECTED FAILURE).
+  - **Bug 2 - formatObjectiveText**: Write property: for any `Objective` input, `formatObjectiveText(objective)` returns correct Chinese text: score→`達成 {target} 分`, collect→`收集 {count} 個{colour}寶石`, clear→`清除 {count} 個{blocker}`, drop→`送達 {count} 個寶石`, multi→combined sub-descriptions. On unfixed code, function does not exist (EXPECTED FAILURE).
+  - **Bug 3 - getSummary missing**: Write property: `CollectTracker.getSummary()` returns `{current, total}` summing collected/target across colours; `DropTracker.getSummary()` returns `{current: dropped, total: target}`; `MultiTracker.getSummary()` sums current/total across sub-trackers. On unfixed code, `CollectTracker` and `DropTracker` lack `getSummary()` (EXPECTED FAILURE).
+  - **Bug 4 - Score breakdown**: Write property: for any `cleared=true` result with `movesRemaining > 0`, the score in `level.resolved` event MUST equal `baseScore + remainingMovesBonus(movesRemaining)`. On unfixed code, `doSwap` emits score without bonus (EXPECTED FAILURE).
+  - **Bug 5 - worldId hardcoded**: Write property: for any `levelId` mapping to `worldId != 1`, `showLevelComplete` passes the correct `worldId` from `loadLevel(levelId).worldId`. On unfixed code, worldId is always 1 (EXPECTED FAILURE).
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests FAIL (this is correct - it proves the bugs exist)
+  - Document counterexamples found to understand root causes
+  - Mark task complete when tests are written, run, and failures are documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 2.1, 2.2, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.11, 2.13, 2.14, 2.15_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Existing Level UI Behavior Unchanged
+  - **IMPORTANT**: Follow observation-first methodology
+  - Create test file `src/ui/screens/__tests__/level-select-preservation.property.test.ts` and `src/game/level/__tests__/objective-preservation.property.test.ts`
+  - **Observe on UNFIXED code, then write properties:**
+  - Observe: `setLevelData({attempts: 5, bestScore: 1200, ...})` → bestText = `'過往最佳: 1,200 分'`
+  - Write property: for all `LevelSelectData` where `attempts > 0` AND `bestScore > 0`, bestText equals `'過往最佳: ${bestScore.toLocaleString()} 分'` (from Preservation Req 3.1)
+  - Observe: `setLevelData` always sets title to `W{worldId} · Level {levelId.padStart(2,'0')}` format
+  - Write property: for all `LevelSelectData`, title format `W{worldId} · Level {XX}` is preserved (from Preservation Req 3.3)
+  - Observe: `setLevelData` sets budgetText correctly for moveBudget/timeBudget
+  - Write property: for all `LevelSelectData` with moveBudget or timeBudget, budget display is preserved (from Preservation Req 3.7)
+  - Observe: `ScoreTracker.getSummary()` returns `{current: min(score, target), total: target}`
+  - Write property: for all ScoreTracker states, `getSummary()` behavior is preserved
+  - Observe: `ClearTracker.getSummary()` returns correct current/total sums
+  - Write property: for all ClearTracker states, `getSummary()` behavior is preserved
+  - Observe: `calculateStars` returns correct star count based on score/movesRemaining/timeRemaining
+  - Write property: for all star calculation inputs, `calculateStars` behavior is preserved (from Preservation Req 3.6)
+  - Observe: when `cleared=false`, `level.resolved` score has no bonus added
+  - Write property: for all failed level results, score equals base score without bonus (from Preservation Req 3.6)
+  - Observe: `remainingMovesBonus(0)` returns 0 (no bonus when no remaining moves)
+  - Write property: `remainingMovesBonus(0) = 0` is preserved
+  - Verify all tests PASS on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+
+- [ ] 3. Fix for level UI display bugs (5 bugs)
+
+  - [x] 3.1 Bug 1: Fix best score display logic in `setLevelData`
+    - In `src/ui/screens/level-select.ts`, replace the `if (d.bestScore > 0)` block (~line 167-170) with three-way check:
+    - `if (d.attempts === 0)` → `bestText.text = '過往最佳: 尚未挑戰'`
+    - `else if (d.bestScore === 0)` → `bestText.text = '過往最佳: 0 分'`
+    - `else` → `bestText.text = '過往最佳: ${d.bestScore.toLocaleString()} 分'` (unchanged)
+    - _Bug_Condition: isBugCondition(input) where input.data.attempts = 0 OR (input.data.attempts > 0 AND input.data.bestScore = 0)_
+    - _Expected_Behavior: Three-way display: 尚未挑戰 / 0 分 / {bestScore} 分_
+    - _Preservation: bestScore > 0 display format unchanged (Req 3.1)_
+    - _Requirements: 2.1, 2.2, 2.3_
+
+  - [x] 3.2 Bug 2: Create `formatObjectiveText` utility and fix `showLevelSelect`
+    - Create `formatObjectiveText(objective: Objective): string` utility function (in `src/integration/game-integration.ts` or a shared utils file)
+    - Handle all Objective types: score→`達成 {target} 分`, collect→`收集 {count} 個{colour}寶石`, clear→`清除 {count} 個{blocker}`, drop→`送達 {count} 個寶石`, multi→join sub-objective descriptions
+    - In `showLevelSelect`, replace hardcoded data object:
+      - Call `loadLevel(levelId)` to get LevelSpec (import from `../game/level/level-spec`)
+      - Call `new SaveManager().load()` to get save state, read `save.levels[levelId]`
+      - Use `formatObjectiveText(spec.objective)` for objectiveText
+      - Use `spec.constraints.moveBudget` / `spec.constraints.timeBudget` for budget
+      - Use `record?.stars ?? 0` for bestStars, `record?.highScore ?? 0` for bestScore, `record?.attempts ?? 0` for attempts
+    - _Bug_Condition: showLevelSelect always passes hardcoded objectiveText='Score 1000 points', moveBudget=20, bestStars=0, bestScore=0, attempts=0_
+    - _Expected_Behavior: Dynamic data from LevelSpec and SaveManager_
+    - _Preservation: Button behavior, title format unchanged (Req 3.2, 3.3)_
+    - _Requirements: 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10_
+
+  - [x] 3.3 Bug 3: Add missing `getSummary()` to trackers and wire HUD objective updates
+    - In `src/game/level/objective.ts`:
+      - Add `getSummary()` to `CollectTracker`: sum collected/target across all colours → `{ current, total }`
+      - Add `getSummary()` to `DropTracker`: return `{ current: this.dropped, total: this.target }`
+      - Add `getSummary()` to `MultiTracker`: sum current/total across all sub-trackers via `getSummary()`
+    - In `src/integration/game-integration.ts` (`startLevel` method):
+      - After HUD creation, set initial objective: `const initSummary = rulesEngine.tracker.getSummary(); hud.setObjective(initSummary.current, initSummary.total);`
+    - In `src/integration/game-integration.ts` (`doSwap` flow):
+      - After every `hud.setScore` / `hud.setMoves` call in the cascade loop, add: `const summary = rulesEngine.tracker.getSummary(); hud.setObjective(summary.current, summary.total);`
+      - Ensure all paths that update tracker state (match processing, cascade steps, combo processing) also update HUD objective
+    - _Bug_Condition: CollectTracker/DropTracker/MultiTracker lack getSummary(); hud.setObjective() never called in doSwap_
+    - _Expected_Behavior: getSummary() returns {current, total}; HUD updated after each cascade_
+    - _Preservation: hud.setScore and hud.setMoves calls unchanged (Req 3.4, 3.5)_
+    - _Requirements: 2.11, 2.12_
+
+  - [x] 3.4 Bug 4: Add remaining moves bonus to score before emitting `level.resolved` in `doSwap`
+    - In `src/integration/game-integration.ts`, in the `doSwap` level-end check (~line 1583):
+    - When `cleared = true`, before emitting `level.resolved`, add: `const { remainingMovesBonus } = await import('../game/rules/scoring'); rulesEngine.score += remainingMovesBonus(mvRem);`
+    - Recalculate stars AFTER adding bonus: move `calculateStars` call after bonus addition
+    - This ensures `level.resolved` event's `score` field includes the bonus, matching `RulesEngine.checkEndOfLevel()` behavior
+    - `setResult` in `level-complete.ts` already correctly decomposes: `baseScore = r.score - r.movesRemaining * 1000`, so Score + Bonus = Total will hold
+    - _Bug_Condition: doSwap emits level.resolved with score not including remainingMovesBonus when cleared=true and movesRemaining > 0_
+    - _Expected_Behavior: score in level.resolved = baseScore + remainingMovesBonus(movesRemaining)_
+    - _Preservation: cleared=false path unchanged, no bonus added on failure (Req 3.6); calculateStars logic unchanged_
+    - _Requirements: 2.13, 2.14_
+
+  - [x] 3.5 Bug 5: Use dynamic worldId in `showLevelComplete` and `showLevelFail`
+    - In `src/integration/game-integration.ts`, in `showLevelComplete`:
+      - Import `loadLevel` from `../game/level/level-spec`
+      - Get `const spec = loadLevel(result?.levelId ?? 1); const wId = spec?.worldId ?? 1;`
+      - Replace `worldId: 1` with `worldId: wId`
+      - Replace `onNext: () => this.transitionTo({ kind: 'worldMap', worldId: 1 })` with `worldId: wId`
+      - Replace `onMap: () => this.transitionTo({ kind: 'worldMap', worldId: 1 })` with `worldId: wId`
+    - In `showLevelFail`:
+      - Same pattern: import `loadLevel`, get `spec.worldId`, replace hardcoded `worldId: 1` in `onMap` callback
+    - _Bug_Condition: showLevelComplete/showLevelFail always use worldId=1_
+    - _Expected_Behavior: worldId from loadLevel(result.levelId).worldId_
+    - _Preservation: Replay button behavior unchanged (navigates to correct levelId); level-complete screen layout unchanged_
+    - _Requirements: 2.15_
+
+  - [x] 3.6 Verify bug condition exploration tests now pass
+    - **Property 1: Expected Behavior** - Level UI Display Bugs Fixed
+    - **IMPORTANT**: Re-run the SAME tests from task 1 - do NOT write new tests
+    - The tests from task 1 encode the expected behavior for all 5 bugs
+    - When these tests pass, it confirms the expected behavior is satisfied:
+      - Bug 1: bestText shows correct three-way display
+      - Bug 2: formatObjectiveText returns correct Chinese text for all Objective types
+      - Bug 3: getSummary() works on CollectTracker/DropTracker/MultiTracker
+      - Bug 4: level.resolved score includes remainingMovesBonus
+      - Bug 5: showLevelComplete uses dynamic worldId
+    - Run bug condition exploration tests from step 1
+    - **EXPECTED OUTCOME**: Tests PASS (confirms all 5 bugs are fixed)
+    - _Requirements: 2.1, 2.2, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.11, 2.13, 2.14, 2.15_
+
+  - [x] 3.7 Verify preservation tests still pass
+    - **Property 2: Preservation** - Existing Level UI Behavior Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm: bestScore > 0 display format unchanged, title format unchanged, budget display unchanged, ScoreTracker/ClearTracker getSummary unchanged, calculateStars unchanged, failed level score unchanged
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Run full test suite: `npx vitest --run`
+  - Ensure all property-based tests (bug condition + preservation) pass
+  - Ensure all existing tests still pass (no regressions)
+  - Ensure TypeScript compilation succeeds: `npx tsc --noEmit`
+  - Ask the user if questions arise

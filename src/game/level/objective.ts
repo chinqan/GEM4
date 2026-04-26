@@ -16,6 +16,8 @@ export interface ObjectiveTracker {
   getProgress(): number;
   /** 取得 ObjectiveDelta（供 event bus 使用） */
   getDelta(): ObjectiveDelta;
+  /** 取得當前進度彙整（current/total），供 HUD 顯示 */
+  getSummary(): { current: number; total: number };
 }
 
 // ─── 11.1 Score 目標 ────────────────────────────────────────
@@ -40,6 +42,10 @@ export class ScoreTracker implements ObjectiveTracker {
 
   getDelta(): ObjectiveDelta {
     return { type: 'score', progress: this.getProgress() };
+  }
+
+  getSummary(): { current: number; total: number } {
+    return { current: Math.min(this.currentScore, this.target), total: this.target };
   }
 }
 
@@ -80,6 +86,16 @@ export class ClearTracker implements ObjectiveTracker {
       ).length,
     };
   }
+
+  getSummary(): { current: number; total: number } {
+    let current = 0;
+    let total = 0;
+    for (const t of this.targets) {
+      current += Math.min(this.cleared.get(t.blocker) ?? 0, t.count);
+      total += t.count;
+    }
+    return { current, total };
+  }
 }
 
 // ─── 11.3 Collect 目標 ──────────────────────────────────────
@@ -119,6 +135,16 @@ export class CollectTracker implements ObjectiveTracker {
       ).length,
     };
   }
+
+  getSummary(): { current: number; total: number } {
+    let current = 0;
+    let total = 0;
+    for (const t of this.targets) {
+      current += Math.min(this.collected.get(t.colour) ?? 0, t.count);
+      total += t.count;
+    }
+    return { current, total };
+  }
 }
 
 // ─── 11.4 Drop 目標 ─────────────────────────────────────────
@@ -142,6 +168,10 @@ export class DropTracker implements ObjectiveTracker {
 
   getDelta(): ObjectiveDelta {
     return { type: 'drop', progress: this.getProgress() };
+  }
+
+  getSummary(): { current: number; total: number } {
+    return { current: this.dropped, total: this.target };
   }
 }
 
@@ -178,6 +208,17 @@ export class MultiTracker implements ObjectiveTracker {
         t.isComplete(),
       ).length,
     };
+  }
+
+  getSummary(): { current: number; total: number } {
+    let current = 0;
+    let total = 0;
+    for (const t of this.trackers) {
+      const s = t.getSummary();
+      current += s.current;
+      total += s.total;
+    }
+    return { current, total };
   }
 }
 

@@ -137,7 +137,7 @@ export class RulesEngine {
   private readonly cascadeRng: Mulberry32;
   private readonly eventBus: GameEventBus;
   private readonly commandQueue: CommandQueue;
-  private readonly tracker: ObjectiveTracker;
+  public readonly tracker: ObjectiveTracker;
   private readonly colours: GemColour[];
 
   constructor(config: RulesEngineConfig) {

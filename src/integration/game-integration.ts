@@ -18,6 +18,56 @@ import type { BoardRenderer } from '../rendering/board-renderer';
 import type { BoardInput } from '../input/board-input';
 import type { InputSystem } from '../input/input-system';
 import type { ViewportManager } from '../rendering/viewport';
+import type { Objective, GemColour, BlockerKind } from '../types';
+
+// ─── Objective Text Formatting ──────────────────────────────
+
+/** Colour name mapping for objective text */
+const COLOUR_NAMES: Record<GemColour, string> = {
+  R: '紅色',
+  G: '綠色',
+  B: '藍色',
+  Y: '黃色',
+  P: '紫色',
+  W: '白色',
+  O: '橙色',
+};
+
+/** Blocker name mapping for objective text */
+const BLOCKER_NAMES: Record<BlockerKind, string> = {
+  jelly: '果凍',
+  lock: '鎖鏈',
+  generator: '生成器',
+  unstable: '不穩定方塊',
+};
+
+/**
+ * Convert an Objective to its Chinese display text.
+ *
+ * - score  → 「達成 {target} 分」
+ * - collect → 「收集 {count} 個{colour}寶石」(joined with 、)
+ * - clear  → 「清除 {count} 個{blocker}」(joined with 、)
+ * - drop   → 「送達 {count} 個寶石」
+ * - multi  → sub-objective descriptions joined with 、
+ */
+export function formatObjectiveText(objective: Objective): string {
+  switch (objective.type) {
+    case 'score':
+      return `達成 ${objective.target} 分`;
+    case 'collect':
+      return objective.target
+        .map((t) => `收集 ${t.count} 個${COLOUR_NAMES[t.colour]}寶石`)
+        .join('、');
+    case 'clear':
+      return objective.target
+        .map((t) => `清除 ${t.count} 個${BLOCKER_NAMES[t.blocker]}`)
+        .join('、');
+    case 'drop':
+      return `送達 ${objective.target.count} 個寶石`;
+    case 'multi':
+      return objective.objectives.map((o) => formatObjectiveText(o)).join('、');
+  }
+}
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -411,18 +461,33 @@ export class GameIntegration {
 
   private async showLevelSelect(worldId: number, levelId: number): Promise<void> {
     const { createLevelSelectCard } = await import('../ui/screens/level-select');
+    const { loadLevel } = await import('../game/level/level-spec');
+    const { SaveManager } = await import('../state/save-state');
     const { width, height } = this.getScreenSize();
+
+    // Ensure level registry is loaded
+    await import('../game/level/levels/index');
+
+    // Read LevelSpec for objective and constraints
+    const spec = loadLevel(levelId);
+
+    // Read save state for player records
+    const saveManager = new SaveManager();
+    const save = saveManager.load();
+    const record = save.levels[levelId];
+
     const card = createLevelSelectCard({
       width,
       height,
       data: {
         worldId,
         levelId,
-        objectiveText: 'Score 1000 points',
-        moveBudget: 20,
-        bestStars: 0,
-        bestScore: 0,
-        attempts: 0,
+        objectiveText: spec ? formatObjectiveText(spec.objective) : 'Score 1000 points',
+        moveBudget: spec?.constraints.moveBudget,
+        timeBudget: spec?.constraints.timeBudget,
+        bestStars: (record?.stars ?? 0) as 0 | 1 | 2 | 3,
+        bestScore: record?.highScore ?? 0,
+        attempts: record?.attempts ?? 0,
       },
       onPlay: () => this.transitionTo({ kind: 'game', levelId }),
       onCancel: () => this.transitionTo({ kind: 'worldMap', worldId }),
@@ -531,6 +596,7 @@ export class GameIntegration {
     const { createSwapAnimation, createMatchClearAnimation,
             createCascadeDropAnimation, createSpecialActivationEffect,
             createBlastZoneOverlay } = await import('../rendering/animations');
+    const { getSpecialActivationDuration } = await import('../rendering/design-tokens');
     const { ParticlePool, MergeParticleSystem } = await import('../rendering/particles');
     const { createScorePopup } = await import('../ui/juice/score-popup');
     const { getCell, cloneBoard } = await import('../game/rules/board');
@@ -539,6 +605,7 @@ export class GameIntegration {
     const { matchScore, specialActivationScore, comboScore } = await import('../game/rules/scoring');
     const { resolveCombo, comboKey } = await import('../game/rules/combo-matrix');
     const { activateColourGem, activateLineBomb, activateAreaBomb, processSpecialActivations } = await import('../game/rules/special-gems');
+    const { CollectTracker } = await import('../game/level/objective');
     const { Howl } = await import('howler');
     const { SaveManager } = await import('../state/save-state');
     const { GEM_COLOURS } = await import('../rendering/design-tokens');
@@ -555,15 +622,26 @@ export class GameIntegration {
       if (anims.length === 0) return Promise.resolve();
       return new Promise<void>(resolve => {
         let last = performance.now();
+        // 動畫安全上限：即使每幀 16.67ms，任何動畫超過 10 秒就強制結束
+        const STALL_TIMEOUT_MS = 10_000;
+        let totalElapsed = 0;
         const tick = (now: number) => {
           const dt = now - last;
           last = now;
+          totalElapsed += dt;
           let allDone = true;
           for (const a of anims) {
-            if (!a.update(dt)) allDone = false;
+            try {
+              if (!a.update(dt)) allDone = false;
+            } catch (err) {
+              // 單一動畫出錯不應讓整個 Promise 卡死。視為該動畫已完成。
+              console.error('[playAnims] animation update threw:', err);
+            }
           }
-          if (allDone) {
-            for (const a of anims) a.complete();
+          if (allDone || totalElapsed > STALL_TIMEOUT_MS) {
+            for (const a of anims) {
+              try { a.complete(); } catch (err) { console.error('[playAnims] complete threw:', err); }
+            }
             resolve();
           } else {
             requestAnimationFrame(tick);
@@ -573,7 +651,80 @@ export class GameIntegration {
       });
     };
 
+    // ─── Objective tracker helpers ────────────────────────────
+    // 對 RulesEngine 的 tracker（含 MultiTracker 內的子 tracker）遞迴找 CollectTracker
+    // 並呼叫 addCollected。配 score tracker 交由 RulesEngine.score 透過 ScoreTracker.updateScore
+    // 處理，但 game-integration 直接改 rulesEngine.score，所以這裡不負責 score tracker。
+    const addCollectToTracker = (colour: import('../types').GemColour, count: number): void => {
+      const walk = (t: any) => {
+        if (t instanceof CollectTracker) t.addCollected(colour, count);
+        if (t && typeof t.getTrackers === 'function') {
+          for (const sub of t.getTrackers()) walk(sub);
+        }
+      };
+      walk(rulesEngine.tracker);
+    };
+
+    // 在清除前以座標記錄目前 board 的顏色；讓 combo / colour / bomb 路徑
+    // 能在清除後仍知道原本每格是什麼顏色，用來餵給 collect tracker。
+    const snapshotColoursAt = (
+      cells: Array<[number, number]>,
+    ): Map<string, import('../types').GemColour> => {
+      const map = new Map<string, import('../types').GemColour>();
+      for (const [c, r] of cells) {
+        const cell = getCell(board, [c, r]);
+        const g = cell?.gem;
+        if (g && g.colour) map.set(`${c},${r}`, g.colour);
+      }
+      return map;
+    };
+
+    const recordCollectedFromSnapshot = (
+      clearedCells: Array<[number, number]>,
+      snapshot: Map<string, import('../types').GemColour>,
+    ): void => {
+      const counts = new Map<import('../types').GemColour, number>();
+      for (const [c, r] of clearedCells) {
+        const colour = snapshot.get(`${c},${r}`);
+        if (!colour) continue;
+        counts.set(colour, (counts.get(colour) ?? 0) + 1);
+      }
+      for (const [colour, count] of counts) addCollectToTracker(colour, count);
+    };
+
     let isProcessing = false;
+
+    // 同步 rulesEngine.score 到所有 ScoreTracker（含 MultiTracker 內的子 tracker）
+    const syncScoreToTracker = (t: any, score: number): void => {
+      if (t && typeof t.updateScore === 'function') t.updateScore(score);
+      if (t && typeof t.getTrackers === 'function') {
+        for (const sub of t.getTrackers()) syncScoreToTracker(sub, score);
+      }
+    };
+
+    // 取得目標進度：multi 目標回傳每個子 tracker 的獨立進度，其他回傳單一進度
+    const getObjectiveProgress = (): import('../ui/screens/game-hud').ObjectiveProgress[] => {
+      const tracker = rulesEngine.tracker;
+      if (tracker && typeof (tracker as any).getTrackers === 'function') {
+        // MultiTracker：回傳每個子 tracker 的獨立 summary
+        const subs = (tracker as any).getTrackers() as Array<{ getSummary(): { current: number; total: number } }>;
+        return subs.map((t) => t.getSummary());
+      }
+      // 單一目標
+      const s = tracker.getSummary();
+      return [s];
+    };
+
+    const updateHudObjective = () => {
+      // 先同步分數到 ScoreTracker，確保「達成分數」chip 與 SCORE 一致
+      syncScoreToTracker(rulesEngine.tracker, rulesEngine.score);
+      const progress = getObjectiveProgress();
+      if (progress.length === 1) {
+        hud.setObjective(progress[0].current, progress[0].total);
+      } else {
+        hud.setObjective(progress);
+      }
+    };
 
     const doSwap = async (from: [number, number], to: [number, number]) => {
       if (isProcessing || rulesEngine.settled) return;
@@ -635,6 +786,59 @@ export class GameIntegration {
         }
       };
 
+      // ─── 輔助：顯示彩色特效文字（連鎖、特殊寶石觸發）───
+      const showFlavorText = (
+        text: string,
+        cells: [number, number][],
+        colour: number,
+        fontSize: number,
+        yOffsetCells = -0.6,
+      ) => {
+        if (cells.length === 0) return;
+        const avgCol = cells.reduce((s, c) => s + c[0], 0) / cells.length;
+        const avgRow = cells.reduce((s, c) => s + c[1], 0) / cells.length;
+        const popup = createScorePopup({
+          text,
+          x: avgCol * CELL_SIZE + CELL_SIZE / 2,
+          y: avgRow * CELL_SIZE + CELL_SIZE / 2 + yOffsetCells * CELL_SIZE,
+          colour,
+          fontSize,
+          floatDistance: 80,
+          duration: 1100,
+        });
+        appRefs.layers.boardLayer.addChild(popup.container);
+      };
+
+      const showComboChainText = (chainVal: number, cells: [number, number][]) => {
+        if (chainVal < 2) return;
+        // 字體：ch=2→22, ch=3→26, ch=4→30, ch=5→34, ch=6+→42（封頂）
+        const fontSize = Math.min(14 + chainVal * 4, 42);
+        // 顏色：連鎖越高越熱烈
+        const colour =
+          chainVal >= 5 ? 0xff2244
+          : chainVal >= 4 ? 0xff5533
+          : chainVal >= 3 ? 0xff8844
+          : 0xffbb44;
+        showFlavorText(`COMBO ×${chainVal}`, cells, colour, fontSize, -1.0);
+      };
+
+      const SPECIAL_FLAVOR: Record<'lineH' | 'lineV' | 'area' | 'colour' | 'combo', { text: string; colour: number }> = {
+        lineH: { text: 'LINE BLAST!', colour: 0x44ddff },
+        lineV: { text: 'LINE BLAST!', colour: 0x44ddff },
+        area:  { text: 'AREA BOMB!', colour: 0xff9944 },
+        colour:{ text: 'COLOR BURST!', colour: 0xff44ff },
+        combo: { text: 'MEGA COMBO!', colour: 0xffd54a },
+      };
+
+      const showSpecialFlavor = (
+        kind: 'lineH' | 'lineV' | 'area' | 'colour' | 'combo',
+        cells: [number, number][],
+        fontSize = 36,
+      ) => {
+        const { text, colour } = SPECIAL_FLAVOR[kind];
+        showFlavorText(text, cells, colour, fontSize, -1.4);
+      };
+
       // ─── 輔助：播放被動啟動動畫與計分 ───
       const handlePassiveActivations = async (
         clearedCells: [number, number][],
@@ -690,18 +894,23 @@ export class GameIntegration {
         if (passiveResult.triggeredSpecials.length > 0) {
           // 播放啟動特效（擴展環）+ 紅色遮片標示影響區域
           const activationAnims: Array<ReturnType<typeof createSpecialActivationEffect>> = [];
+          let passiveMaxDur = 0;
           for (const pos of passiveResult.triggeredSpecials) {
             const [c, r] = pos;
+            const ptype = specialSnapshot?.get(`${c},${r}`) ?? 'area';
+            const pdur = getSpecialActivationDuration(ptype, true);
+            if (pdur > passiveMaxDur) passiveMaxDur = pdur;
             activationAnims.push(createSpecialActivationEffect(
-              c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+              c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer, pdur,
             ));
+            showSpecialFlavor(ptype, [[c, r]], 30);
           }
           const originalSet = new Set(clearedCells.map(([c, r]) => `${c},${r}`));
           const passiveExtraCells = passiveResult.clearedCells
             .filter(([c, r]) => !originalSet.has(`${c},${r}`))
             .map(([c, r]) => [c, r] as [number, number]);
           if (passiveExtraCells.length > 0) {
-            activationAnims.push(createBlastZoneOverlay(passiveExtraCells, effectLayer));
+            activationAnims.push(createBlastZoneOverlay(passiveExtraCells, effectLayer, passiveMaxDur));
           }
           playMatchSfx(passiveResult.clearedCells.length, chainVal);
           await playAnims(activationAnims);
@@ -812,6 +1021,7 @@ export class GameIntegration {
               const k = `${c[0]},${c[1]}`;
               if (!cSet.has(k)) { cSet.add(k); cCells.push([c[0], c[1]]); }
             }
+            addCollectToTracker(m.colour, m.cells.length);
           }
 
           // 先確認 spawnAt 位置，立刻賦予特殊寶石（不參與消除動畫）
@@ -842,6 +1052,7 @@ export class GameIntegration {
           playMatchSfx(cascadeCellsToClear.length, ch);
           await playClearAnimsForCells(cascadeCellsToClear, ch);
           showScorePopup(sScore, cascadeCellsToClear, ch);
+          showComboChainText(ch, cascadeCellsToClear);
 
           // ── 在清除前，啟動 match 中包含的特殊寶石（lineH/lineV/area）──
           const cascadeInMatchSpecials: [number, number][] = [];
@@ -947,13 +1158,16 @@ export class GameIntegration {
             rulesEngine.score += actScore;
 
             // 播放啟動特效 + 紅色遮片
+            const passiveCascadeDur = getSpecialActivationDuration(sType, true);
+            showSpecialFlavor(sType, [[sc, sr]], 30);
             await playAnims([
               createSpecialActivationEffect(
-                sc * CELL_SIZE + CELL_SIZE / 2, sr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+                sc * CELL_SIZE + CELL_SIZE / 2, sr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer, passiveCascadeDur,
               ),
               createBlastZoneOverlay(
                 actResult.clearedCells.map(([ac, ar]) => [ac, ar] as [number, number]),
                 effectLayer,
+                passiveCascadeDur,
               ),
             ]);
 
@@ -987,6 +1201,7 @@ export class GameIntegration {
 
           hud.setScore(rulesEngine.score);
           hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+          updateHudObjective();
 
           mtchs = detectMatches(board);
         }
@@ -1026,6 +1241,17 @@ export class GameIntegration {
           }
         }
 
+        // 在 resolveCombo 清除格子前先抓兩顆特殊寶石的類型（resolveCombo 會把 gem 設為 null）
+        const comboTypeA = cellFrom.gem.special!;
+        const comboTypeB = cellTo.gem.special!;
+
+        // 在 resolveCombo 前快照全盤顏色，讓清除後仍能記錄哪些色被收集
+        const comboAllCells: [number, number][] = [];
+        for (let c = 0; c < board.width; c++) {
+          for (let r = 0; r < board.height; r++) comboAllCells.push([c, r]);
+        }
+        const comboColourSnapshot = snapshotColoursAt(comboAllCells);
+
         const comboResult = resolveCombo(board, from, to, rngStreams.cascadeFill);
         if (!comboResult || comboResult.clearedCells.length === 0) {
           cellTo.gem = cellFrom.gem;
@@ -1038,15 +1264,25 @@ export class GameIntegration {
         rulesEngine.movesRemaining--;
         chain = 1;
 
-        const cType = comboKey(tempGem.special!, cellTo.gem.special!);
+        const cType = comboKey(comboTypeA, comboTypeB);
         const comboPoints = cType ? comboScore(cType, chain) : 0;
         rulesEngine.score += comboPoints;
 
         playCombo();
         const comboClearedCells = comboResult.clearedCells.map(([c, r]) => [c, r] as [number, number]);
-        // 紅色遮片標示 combo 影響區域
-        const comboOverlay = createBlastZoneOverlay(comboClearedCells, effectLayer);
+        recordCollectedFromSnapshot(comboClearedCells, comboColourSnapshot);
         playMatchSfx(comboClearedCells.length, chain);
+
+        // Combo 啟動：在兩顆特殊寶石的中點播放擴張光環 + 紅色遮片，全程 ~1100ms
+        const comboDur = getSpecialActivationDuration('combo', false);
+        const comboCx = ((from[0] + to[0]) / 2) * CELL_SIZE + CELL_SIZE / 2;
+        const comboCy = ((from[1] + to[1]) / 2) * CELL_SIZE + CELL_SIZE / 2;
+        showSpecialFlavor('combo', [from, to], 44);
+        await playAnims([
+          createSpecialActivationEffect(comboCx, comboCy, 0xffffff, effectLayer, comboDur),
+          createBlastZoneOverlay(comboClearedCells, effectLayer, comboDur),
+        ]);
+
         // 使用預先抓取的 sprite 引用播放消除動畫（含粒子）
         {
           const comboClearAnims: Array<ReturnType<typeof createMatchClearAnimation>> = [];
@@ -1062,7 +1298,6 @@ export class GameIntegration {
           }
           await playAnims(comboClearAnims);
         }
-        comboOverlay.complete();
         showScorePopup(comboPoints, comboClearedCells, chain);
 
         // 排除 combo 本身的兩顆特殊寶石：它們已被 resolveCombo 顯式啟動，
@@ -1078,6 +1313,7 @@ export class GameIntegration {
 
         hud.setScore(rulesEngine.score);
         hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+        updateHudObjective();
 
         chain = await runCascadeLoop(chain);
 
@@ -1122,18 +1358,28 @@ export class GameIntegration {
           }
         }
 
+        // 在 activateColourGem 前快照全盤顏色
+        const colourAllCells: [number, number][] = [];
+        for (let c = 0; c < board.width; c++) {
+          for (let r = 0; r < board.height; r++) colourAllCells.push([c, r]);
+        }
+        const colourColourSnapshot = snapshotColoursAt(colourAllCells);
+
         const colourResult = activateColourGem(board, colourGemPos, targetColour);
         const colourClearedCells = colourResult.clearedCells.map(([c, r]) => [c, r] as [number, number]);
+        recordCollectedFromSnapshot(colourClearedCells, colourColourSnapshot);
 
         const activationPoints = specialActivationScore(colourClearedCells.length, chain, true);
         rulesEngine.score += activationPoints;
 
         const [cgc, cgr] = colourGemPos;
+        const colourDur = getSpecialActivationDuration('colour', false);
+        showSpecialFlavor('colour', [[cgc, cgr]], 40);
         await playAnims([
           createSpecialActivationEffect(
-            cgc * CELL_SIZE + CELL_SIZE / 2, cgr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+            cgc * CELL_SIZE + CELL_SIZE / 2, cgr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer, colourDur,
           ),
-          createBlastZoneOverlay(colourClearedCells, effectLayer),
+          createBlastZoneOverlay(colourClearedCells, effectLayer, colourDur),
         ]);
 
         // 使用預先抓取的 sprite 引用播放消除動畫（含粒子）
@@ -1164,6 +1410,7 @@ export class GameIntegration {
 
         hud.setScore(rulesEngine.score);
         hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+        updateHudObjective();
 
         chain = await runCascadeLoop(chain);
 
@@ -1239,6 +1486,9 @@ export class GameIntegration {
             }
           }
 
+          // 啟動前快照目標區的顏色
+          const directColourSnapshot = snapshotColoursAt(targetCells);
+
           // 啟動特殊寶石（修改 board 資料）
           let activationResult: { clearedCells: [number, number][]; triggeredSpecials: [number, number][] };
           if (specialType === 'lineH' || specialType === 'lineV') {
@@ -1248,15 +1498,18 @@ export class GameIntegration {
           }
 
           const activatedCells = activationResult.clearedCells.map(([c, r]) => [c, r] as [number, number]);
+          recordCollectedFromSnapshot(activatedCells, directColourSnapshot);
           const actScore = specialActivationScore(activatedCells.length, chain, false);
           rulesEngine.score += actScore;
 
           // 播放啟動特效（擴展環）+ 紅色遮片標示影響區域
+          const directDur = getSpecialActivationDuration(specialType, false);
+          showSpecialFlavor(specialType, [[sCol, sRow]], 36);
           await playAnims([
             createSpecialActivationEffect(
-              sCol * CELL_SIZE + CELL_SIZE / 2, sRow * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+              sCol * CELL_SIZE + CELL_SIZE / 2, sRow * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer, directDur,
             ),
-            createBlastZoneOverlay(activatedCells, effectLayer),
+            createBlastZoneOverlay(activatedCells, effectLayer, directDur),
           ]);
 
           // 播放消除動畫（使用預先抓取的 sprite 引用）
@@ -1283,13 +1536,19 @@ export class GameIntegration {
 
           hud.setScore(rulesEngine.score);
           hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+          updateHudObjective();
 
           chain = await runCascadeLoop(chain);
 
         } else {
           // ── 有 match → 先處理基本消除（特殊寶石在 match 中會被 inMatchSpecials 處理）──
 
+          let normalSteps = 0;
           while (matches.length > 0) {
+            if (++normalSteps > MAX_CASCADE_LOOP_STEPS) {
+              console.warn('[normal-cascade] exceeded MAX_CASCADE_LOOP_STEPS, aborting');
+              break;
+            }
             chain++;
 
             const clearedSet = new Set<string>();
@@ -1299,6 +1558,7 @@ export class GameIntegration {
                 const k = `${c[0]},${c[1]}`;
                 if (!clearedSet.has(k)) { clearedSet.add(k); clearedCells.push([c[0], c[1]]); }
               }
+              addCollectToTracker(m.colour, m.cells.length);
             }
 
           // 先確認 spawnAt 位置，立刻賦予特殊寶石（不參與消除動畫）
@@ -1331,6 +1591,7 @@ export class GameIntegration {
           playMatchSfx(cellsToClear.length, chain);
           await playClearAnimsForCells(cellsToClear, chain);
           showScorePopup(stepScore, cellsToClear, chain);
+          showComboChainText(chain, cellsToClear);
 
           // ── 在清除前，啟動 match 中包含的特殊寶石（lineH/lineV/area）──
           const inMatchSpecials: [number, number][] = [];
@@ -1435,13 +1696,16 @@ export class GameIntegration {
             // 播放啟動特效 + 紅色遮片
             const actScore = specialActivationScore(actResult.clearedCells.length, chain, false);
             rulesEngine.score += actScore;
+            const inMatchPassiveDur = getSpecialActivationDuration(sType, true);
+            showSpecialFlavor(sType, [[sc, sr]], 30);
             await playAnims([
               createSpecialActivationEffect(
-                sc * CELL_SIZE + CELL_SIZE / 2, sr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer,
+                sc * CELL_SIZE + CELL_SIZE / 2, sr * CELL_SIZE + CELL_SIZE / 2, 0xffffff, effectLayer, inMatchPassiveDur,
               ),
               createBlastZoneOverlay(
                 actResult.clearedCells.map(([ac, ar]) => [ac, ar] as [number, number]),
                 effectLayer,
+                inMatchPassiveDur,
               ),
             ]);
 
@@ -1476,6 +1740,7 @@ export class GameIntegration {
 
           hud.setScore(rulesEngine.score);
           hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+          updateHudObjective();
 
           matches = detectMatches(board);
           }
@@ -1483,21 +1748,34 @@ export class GameIntegration {
       }
 
       // ── 階段 5：檢查關卡結束 ──
-      const objectiveTarget = spec.objective.type === 'score' ? spec.objective.target : Infinity;
+      // score tracker 已由 updateHudObjective 同步，這裡再同步一次確保最新
+      syncScoreToTracker(rulesEngine.tracker, rulesEngine.score);
+
+      const objectiveComplete = rulesEngine.tracker.isComplete();
       const outOfMoves = rulesEngine.movesRemaining !== Infinity && rulesEngine.movesRemaining <= 0;
 
-      if (rulesEngine.score >= objectiveTarget || outOfMoves) {
+      if (objectiveComplete || outOfMoves) {
         rulesEngine.settled = true;
-        const cleared = rulesEngine.score >= objectiveTarget;
+        const cleared = objectiveComplete;
+        const { calculateStars } = await import('../game/level/objective');
+        const mvRem = rulesEngine.movesRemaining === Infinity ? 0 : rulesEngine.movesRemaining;
+        // Add remaining moves bonus to score BEFORE calculating stars and emitting event
+        if (cleared) {
+          const { remainingMovesBonus } = await import('../game/rules/scoring');
+          rulesEngine.score += remainingMovesBonus(mvRem);
+        }
+        const stars = cleared
+          ? calculateStars(spec.stars, rulesEngine.score, mvRem, 0)
+          : 0;
         this.eventBus.emit({
           kind: 'level.resolved',
           result: {
             levelId: spec.id,
             cleared,
-            stars: cleared ? (rulesEngine.score >= spec.stars.three ? 3 : rulesEngine.score >= spec.stars.two ? 2 : 1) as 0|1|2|3 : 0,
+            stars,
             score: rulesEngine.score,
             chainMax: chain,
-            movesRemaining: rulesEngine.movesRemaining === Infinity ? 0 : rulesEngine.movesRemaining,
+            movesRemaining: mvRem,
             specialSpawnedCount: 0,
             durationMs: 0,
           },
@@ -1561,10 +1839,12 @@ export class GameIntegration {
       width,
       height,
       mode: spec.constraints.timeBudget ? 'time' : 'moves',
+      objective: spec.objective,
       onPause: () => this.transitionTo({ kind: 'pause', previous: this.currentState } as any),
     });
     hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
     hud.setScore(0);
+    updateHudObjective();
     this.setScreen(hud);
 
     // Wire up event listeners
@@ -1688,27 +1968,35 @@ export class GameIntegration {
 
   private async showLevelComplete(result?: import('../types').LevelResult): Promise<void> {
     const { createLevelCompleteScreen } = await import('../ui/screens/level-complete');
+    const { loadLevel } = await import('../game/level/level-spec');
+    await import('../game/level/levels/index');
     const { width, height } = this.getScreenSize();
+    const spec = loadLevel(result?.levelId ?? 1);
+    const wId = spec?.worldId ?? 1;
     const screen = createLevelCompleteScreen({
       width,
       height,
       result,
-      worldId: 1,
-      onNext: () => this.transitionTo({ kind: 'worldMap', worldId: 1 }),
+      worldId: wId,
+      onNext: () => this.transitionTo({ kind: 'worldMap', worldId: wId }),
       onReplay: () => this.transitionTo({ kind: 'game', levelId: result?.levelId ?? 1 }),
-      onMap: () => this.transitionTo({ kind: 'worldMap', worldId: 1 }),
+      onMap: () => this.transitionTo({ kind: 'worldMap', worldId: wId }),
     });
     this.setScreen(screen);
   }
 
   private async showLevelFail(result?: import('../types').LevelResult): Promise<void> {
     const { createLevelFailScreen } = await import('../ui/screens/level-fail');
+    const { loadLevel } = await import('../game/level/level-spec');
+    await import('../game/level/levels/index');
     const { width, height } = this.getScreenSize();
+    const spec = loadLevel(result?.levelId ?? 1);
+    const wId = spec?.worldId ?? 1;
     const screen = createLevelFailScreen({
       width,
       height,
       onRetry: () => this.transitionTo({ kind: 'game', levelId: result?.levelId ?? 1 }),
-      onMap: () => this.transitionTo({ kind: 'worldMap', worldId: 1 }),
+      onMap: () => this.transitionTo({ kind: 'worldMap', worldId: wId }),
     });
     this.setScreen(screen);
   }

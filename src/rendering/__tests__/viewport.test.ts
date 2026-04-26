@@ -8,7 +8,8 @@ import {
 // ─── 20.1 calculateViewport 單元測試 ────────────────────────
 
 describe('calculateViewport', () => {
-  const PADDING = 0.85;
+  const PADDING = 0.78;
+  const HUD_TOP_RESERVE = 72;
 
   it('should calculate correct scale for a standard 8×8 board on 1200×800 canvas', () => {
     const result = calculateViewport(1200, 800, 8, 8, 64);
@@ -18,36 +19,37 @@ describe('calculateViewport', () => {
     expect(result.scale).toBeCloseTo(expectedScale, 10);
   });
 
-  it('should center the board horizontally and vertically', () => {
+  it('should center the board horizontally and offset vertically for HUD', () => {
     const result = calculateViewport(1200, 800, 8, 8, 64);
     const boardPixelW = 8 * 64;
     const boardPixelH = 8 * 64;
     const expectedOffsetX = (1200 - boardPixelW * result.scale) / 2;
-    const expectedOffsetY = (800 - boardPixelH * result.scale) / 2;
+    const availableHeight = 800 - HUD_TOP_RESERVE;
+    const expectedOffsetY = HUD_TOP_RESERVE + (availableHeight - boardPixelH * result.scale) / 2;
     expect(result.offsetX).toBeCloseTo(expectedOffsetX, 10);
     expect(result.offsetY).toBeCloseTo(expectedOffsetY, 10);
   });
 
-  it('should produce equal margins on both sides (letterbox)', () => {
+  it('should produce equal margins on both sides horizontally (letterbox)', () => {
     const result = calculateViewport(1600, 900, 9, 7, 64);
-    // Offsets should be positive (board fits inside canvas)
+    // Horizontal offsets should be positive (board fits inside canvas)
     expect(result.offsetX).toBeGreaterThan(0);
-    expect(result.offsetY).toBeGreaterThan(0);
+    // Vertical offset should be at least HUD_TOP_RESERVE
+    expect(result.offsetY).toBeGreaterThanOrEqual(HUD_TOP_RESERVE);
   });
 
   it('should handle wide canvas (width >> height) — height-constrained', () => {
     const result = calculateViewport(2000, 600, 8, 8, 64);
-    const boardPixelW = 8 * 64;
     const boardPixelH = 8 * 64;
     // Height is the constraining dimension
-    const expectedScale = (Math.max(600, MIN_CANVAS_HEIGHT) / boardPixelH) * PADDING;
+    const effectiveH = Math.max(600, MIN_CANVAS_HEIGHT);
+    const expectedScale = (effectiveH / boardPixelH) * PADDING;
     expect(result.scale).toBeCloseTo(expectedScale, 10);
   });
 
   it('should handle tall canvas (height >> width) — width-constrained', () => {
     const result = calculateViewport(800, 2000, 8, 8, 64);
     const boardPixelW = 8 * 64;
-    // Width is below minimum, so effective width = MIN_CANVAS_WIDTH
     const boardPixelH = 8 * 64;
     const effectiveW = Math.max(800, MIN_CANVAS_WIDTH);
     const effectiveH = Math.max(2000, MIN_CANVAS_HEIGHT);
@@ -60,7 +62,6 @@ describe('calculateViewport', () => {
     const result = calculateViewport(640, 480, 8, 8, 64);
     const boardPixelW = 8 * 64;
     const boardPixelH = 8 * 64;
-    // Effective dimensions should be clamped to minimums
     const expectedScale =
       Math.min(MIN_CANVAS_WIDTH / boardPixelW, MIN_CANVAS_HEIGHT / boardPixelH) * PADDING;
     expect(result.scale).toBeCloseTo(expectedScale, 10);
@@ -99,7 +100,7 @@ describe('calculateViewport', () => {
     expect(result.offsetY + boardPixelH * result.scale).toBeLessThanOrEqual(800 + 0.001);
   });
 
-  it('should apply the 0.85 padding factor', () => {
+  it('should apply the 0.78 padding factor', () => {
     const canvasW = 1200;
     const canvasH = 800;
     const boardW = 8;
@@ -111,7 +112,7 @@ describe('calculateViewport', () => {
     const boardPixelH = boardH * cellSize;
     const scaleWithoutPadding = Math.min(canvasW / boardPixelW, canvasH / boardPixelH);
 
-    // Scale should be 85% of the unpadded scale
-    expect(result.scale).toBeCloseTo(scaleWithoutPadding * 0.85, 10);
+    // Scale should be 78% of the unpadded scale
+    expect(result.scale).toBeCloseTo(scaleWithoutPadding * 0.78, 10);
   });
 });

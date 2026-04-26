@@ -25,7 +25,7 @@ export const LEGAL_TRANSITIONS: Readonly<Record<AppStateKind, readonly AppStateK
   game:          ['pause', 'levelComplete', 'levelFail', 'settings'],
   pause:         ['game', 'menu', 'levelSelect', 'settings'],
   levelComplete: ['levelSelect', 'worldMap', 'game'],
-  levelFail:     ['game', 'levelSelect'],
+  levelFail:     ['game', 'levelSelect', 'worldMap'],
   endless:       ['pause', 'endlessEnd'],
   endlessEnd:    ['menu'],
   settings:      [], // 動態：由 returnTo 決定

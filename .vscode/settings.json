@@ -10,6 +10,7 @@
         "head *",
         "echo *",
         "cat *",
-        "test *"
+        "test *",
+        "git *"
     ]
 }

@@ -19,7 +19,10 @@ export const MIN_CANVAS_WIDTH = 1200;
 export const MIN_CANVAS_HEIGHT = 800;
 
 /** 留白係數，為 HUD 等元素保留空間 */
-const PADDING_FACTOR = 0.85;
+const PADDING_FACTOR = 0.78;
+
+/** 頂部 HUD 保留高度（px） */
+const HUD_TOP_RESERVE = 72;
 
 // ─── calculateViewport ────────────────────────────────────
 
@@ -53,9 +56,10 @@ export function calculateViewport(
   const scale =
     Math.min(effectiveCanvasW / boardPixelW, effectiveCanvasH / boardPixelH) * PADDING_FACTOR;
 
-  // 偏移量基於實際畫布尺寸（非 effective），確保視覺置中
+  // 水平置中，垂直方向為頂部 HUD 留出空間後置中
   const offsetX = (canvasWidth - boardPixelW * scale) / 2;
-  const offsetY = (canvasHeight - boardPixelH * scale) / 2;
+  const availableHeight = canvasHeight - HUD_TOP_RESERVE;
+  const offsetY = HUD_TOP_RESERVE + (availableHeight - boardPixelH * scale) / 2;
 
   return { scale, offsetX, offsetY };
 }

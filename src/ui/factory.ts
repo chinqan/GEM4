@@ -74,6 +74,9 @@ export function createButton(options: CreateButtonOptions): UIButton {
   const container = new Container() as UIButton;
   container.label = `btn-${text}`;
 
+  // 固定 hit area，避免子元素位移影響點擊區域
+  container.hitArea = { contains: (x: number, y: number) => x >= 0 && x <= btnWidth && y >= -4 && y <= btnHeight + 4 };
+
   // 背景
   const bg = new Graphics();
   drawButtonBg(bg, btnWidth, btnHeight, colours.fill, colours.fillAlpha, colours.stroke, colours.strokeWidth, colours.strokeAlpha);
@@ -95,13 +98,15 @@ export function createButton(options: CreateButtonOptions): UIButton {
   container.on('pointerover', () => {
     if (!enabled) return;
     bg.alpha = 0.85;
-    container.position.y -= 2;
+    bg.position.y = -2;
+    label.position.y = btnHeight / 2 - 2;
   });
 
   container.on('pointerout', () => {
     if (!enabled) return;
     bg.alpha = 1;
-    container.position.y += 2;
+    bg.position.y = 0;
+    label.position.y = btnHeight / 2;
   });
 
   container.on('pointerdown', () => {
@@ -119,6 +124,8 @@ export function createButton(options: CreateButtonOptions): UIButton {
     if (!enabled) return;
     container.scale.set(1);
     bg.alpha = 1;
+    bg.position.y = 0;
+    label.position.y = btnHeight / 2;
   });
 
   container.setEnabled = (e: boolean) => {
@@ -289,7 +296,123 @@ export interface UIObjectiveChip extends Container {
   setProgress(current: number, total: number): void;
 }
 
+/** 目標類型資訊，用於決定 chip 的 icon 與描述格式 */
+export interface ObjectiveDisplayInfo {
+  type: 'score' | 'collect' | 'clear' | 'drop' | 'multi';
+  /** 簡短描述（例如「達成分數」「收集紅色寶石」） */
+  label: string;
+  /** 對應的 icon */
+  icon: string;
+  /** 進度文字格式化函式 */
+  formatProgress: (current: number, total: number) => string;
+}
+
+/** 寶石色 emoji 對應 */
+const GEM_ICONS: Record<string, string> = {
+  R: '🔴', G: '🟢', B: '🔵', Y: '🟡', P: '🟣', W: '⚪', O: '🟠',
+};
+
+/** Blocker icon 對應 */
+const BLOCKER_ICONS: Record<string, string> = {
+  jelly: '🟪', lock: '🔒', generator: '⚙️', unstable: '💥',
+};
+
+/** 寶石色中文名 */
+const COLOUR_NAMES: Record<string, string> = {
+  R: '紅色', G: '綠色', B: '藍色', Y: '黃色', P: '紫色', W: '白色', O: '橙色',
+};
+
+/** Blocker 中文名 */
+const BLOCKER_NAMES: Record<string, string> = {
+  jelly: '果凍', lock: '鎖鏈', generator: '生成器', unstable: '不穩定方塊',
+};
+
+/**
+ * 從 Objective 型別產生 chip 顯示資訊。
+ * 匯出供外部使用（例如測試）。
+ */
+export function objectiveToDisplayInfo(objective: {
+  type: string;
+  target?: unknown;
+  objectives?: Array<{ type: string; target?: unknown }>;
+}): ObjectiveDisplayInfo {
+  switch (objective.type) {
+    case 'score': {
+      const target = objective.target as number;
+      return {
+        type: 'score',
+        label: '達成分數',
+        icon: '⭐',
+        formatProgress: (cur, tot) =>
+          `${cur.toLocaleString()} / ${tot.toLocaleString()} 分`,
+      };
+    }
+    case 'collect': {
+      const targets = objective.target as Array<{ colour: string; count: number }>;
+      if (targets.length === 1) {
+        const t = targets[0];
+        return {
+          type: 'collect',
+          label: `收集${COLOUR_NAMES[t.colour] ?? ''}寶石`,
+          icon: GEM_ICONS[t.colour] ?? '💎',
+          formatProgress: (cur, tot) => `${cur} / ${tot} 個`,
+        };
+      }
+      return {
+        type: 'collect',
+        label: '收集寶石',
+        icon: '💎',
+        formatProgress: (cur, tot) => `${cur} / ${tot} 個`,
+      };
+    }
+    case 'clear': {
+      const targets = objective.target as Array<{ blocker: string; count: number }>;
+      if (targets.length === 1) {
+        const t = targets[0];
+        return {
+          type: 'clear',
+          label: `清除${BLOCKER_NAMES[t.blocker] ?? '障礙'}`,
+          icon: BLOCKER_ICONS[t.blocker] ?? '🧱',
+          formatProgress: (cur, tot) => `${cur} / ${tot} 個`,
+        };
+      }
+      return {
+        type: 'clear',
+        label: '清除障礙',
+        icon: '🧱',
+        formatProgress: (cur, tot) => `${cur} / ${tot} 個`,
+      };
+    }
+    case 'drop': {
+      return {
+        type: 'drop',
+        label: '送達寶石',
+        icon: '⬇️',
+        formatProgress: (cur, tot) => `${cur} / ${tot} 個`,
+      };
+    }
+    case 'multi': {
+      return {
+        type: 'multi',
+        label: '完成目標',
+        icon: '🎯',
+        formatProgress: (cur, tot) => `${cur} / ${tot}`,
+      };
+    }
+    default:
+      return {
+        type: 'score',
+        label: '目標',
+        icon: '🎯',
+        formatProgress: (cur, tot) => `${cur}/${tot}`,
+      };
+  }
+}
+
 export interface CreateObjectiveChipOptions {
+  /** 目標顯示資訊（優先使用） */
+  displayInfo?: ObjectiveDisplayInfo;
+  /** 備用 icon（displayInfo 未提供時使用） */
   icon?: string;
   label?: string;
   current?: number;
@@ -298,21 +421,29 @@ export interface CreateObjectiveChipOptions {
 }
 
 /**
- * 建立目標 chip 元件（HUD 用，顯示 icon + 計數）。
+ * 建立目標 chip 元件（HUD 用）。
+ *
+ * 根據 displayInfo 顯示：
+ * - 對應目標類型的 icon
+ * - 描述標籤（例如「達成分數」「收集紅色寶石」）
+ * - 格式化的進度文字（例如「5,740 / 10,020 分」「3 / 15 個」）
  */
 export function createObjectiveChip(options: CreateObjectiveChipOptions = {}): UIObjectiveChip {
   const {
-    icon = '🎯',
-    label,
+    displayInfo,
+    icon = displayInfo?.icon ?? '🎯',
     current = 0,
     total = 1,
     accent = DEFAULT_ACCENT.accent,
   } = options;
 
+  const formatProgress = displayInfo?.formatProgress ?? ((cur: number, tot: number) => `${cur}/${tot}`);
+  const labelStr = displayInfo?.label ?? '';
+
   const container = new Container() as UIObjectiveChip;
   container.label = 'objective-chip';
 
-  const chipHeight = 32;
+  const chipHeight = labelStr ? 40 : 32;
   const chipPadding = SPACING.md;
 
   // 背景
@@ -328,20 +459,44 @@ export function createObjectiveChip(options: CreateObjectiveChipOptions = {}): U
   iconText.anchor.set(0, 0.5);
   container.addChild(iconText);
 
-  // 計數文字
+  // 標籤文字（目標類型描述）
+  const labelText = labelStr ? new Text({
+    text: labelStr,
+    style: makeTextStyle(FONT_SIZES.caption, TEXT_COLOURS.muted),
+  }) : null;
+  if (labelText) {
+    labelText.anchor.set(0, 1);
+    container.addChild(labelText);
+  }
+
+  // 進度文字
   const countText = new Text({
-    text: `${current}/${total}`,
+    text: formatProgress(current, total),
     style: makeTextStyle(FONT_SIZES.body, TEXT_COLOURS.primary),
   });
   countText.anchor.set(0, 0.5);
   container.addChild(countText);
 
   function updateLayout(cur: number, tot: number): void {
-    countText.text = `${cur}/${tot}`;
+    countText.text = formatProgress(cur, tot);
     const textX = iconText.x + iconText.width + SPACING.sm;
-    countText.position.set(textX, chipHeight / 2);
 
-    const chipWidth = textX + countText.width + chipPadding;
+    if (labelText) {
+      // 雙行佈局：上方標籤、下方進度
+      labelText.position.set(textX, chipHeight / 2 - 1);
+      countText.anchor.set(0, 0);
+      countText.position.set(textX, chipHeight / 2 + 1);
+    } else {
+      // 單行佈局
+      countText.anchor.set(0, 0.5);
+      countText.position.set(textX, chipHeight / 2);
+    }
+
+    const contentWidth = Math.max(
+      countText.width,
+      labelText?.width ?? 0,
+    );
+    const chipWidth = textX + contentWidth + chipPadding;
     bg.clear();
     bg.roundRect(0, 0, chipWidth, chipHeight, RADIUS.xs);
 
