@@ -21,6 +21,7 @@ import {
   specialActivationScore,
   comboScore,
   remainingMovesBonus,
+  remainingTimeBonus,
   chainMultiplier,
 } from '../rules/scoring';
 import { resolveCombo } from '../rules/combo-matrix';
@@ -119,6 +120,8 @@ export class RulesEngine {
   board: Board;
   score = 0;
   movesRemaining: number;
+  /** 計時關卡剩餘秒數；非計時關卡為 Infinity */
+  timeRemaining: number;
   chainCount = 0;
   cascadeDepth = 0;
   resolving = false;
@@ -147,6 +150,7 @@ export class RulesEngine {
     this.eventBus = config.eventBus;
     this.commandQueue = config.commandQueue;
     this.movesRemaining = config.spec.constraints.moveBudget ?? Infinity;
+    this.timeRemaining = config.spec.constraints.timeBudget ?? Infinity;
     this.tracker = createTracker(config.spec.objective);
     this.colours = [...config.spec.gems.colours];
   }
@@ -566,6 +570,22 @@ export class RulesEngine {
   // 的開頭設為 true，結尾設為 false。
   // advance() 中 swap 指令會在 resolving 時被拒絕。
 
+  // ─── 計時關卡時間遞減 ─────────────────────────────────
+
+  /**
+   * 計時關卡每幀呼叫，遞減剩餘時間並在歸零時結算失敗。
+   * 暫停 / resolving / 非計時關卡 / 已結算 → no-op。
+   */
+  tickTime(deltaSeconds: number): void {
+    if (this.settled || this.paused) return;
+    if (this.timeRemaining === Infinity) return;
+    if (deltaSeconds <= 0) return;
+    this.timeRemaining = Math.max(0, this.timeRemaining - deltaSeconds);
+    if (this.timeRemaining === 0) {
+      this.checkEndOfLevel();
+    }
+  }
+
   // ─── 15.5 End-of-level 時序 ───────────────────────────
 
   private checkEndOfLevel(): void {
@@ -577,19 +597,19 @@ export class RulesEngine {
     const objectiveComplete = this.tracker.isComplete();
     const outOfMoves =
       this.movesRemaining !== Infinity && this.movesRemaining <= 0;
+    const outOfTime =
+      this.timeRemaining !== Infinity && this.timeRemaining <= 0;
+
+    const movesRem = this.movesRemaining === Infinity ? 0 : this.movesRemaining;
+    const timeRem = this.timeRemaining === Infinity ? 0 : this.timeRemaining;
 
     if (objectiveComplete) {
-      // 關卡通過：加上剩餘手數獎勵
-      const bonus = remainingMovesBonus(this.movesRemaining === Infinity ? 0 : this.movesRemaining);
-      this.score += bonus;
+      // 關卡通過：加上剩餘手數 / 剩餘時間獎勵
+      this.score += remainingMovesBonus(movesRem);
+      this.score += remainingTimeBonus(timeRem);
       this.updateScoreInTracker();
 
-      const stars = calculateStars(
-        this.spec.stars,
-        this.score,
-        this.movesRemaining === Infinity ? 0 : this.movesRemaining,
-        0, // timeRemaining（手數模式為 0）
-      );
+      const stars = calculateStars(this.spec.stars, this.score, movesRem, timeRem);
 
       this.settled = true;
       this.eventBus.emit({
@@ -600,13 +620,14 @@ export class RulesEngine {
           stars,
           score: this.score,
           chainMax: Math.max(...this.recentChains, this.chainCount, 0),
-          movesRemaining: this.movesRemaining === Infinity ? 0 : this.movesRemaining,
+          movesRemaining: movesRem,
+          timeRemaining: timeRem,
           specialSpawnedCount: 0, // TODO: 追蹤
           durationMs: 0, // TODO: 追蹤
         },
       });
-    } else if (outOfMoves) {
-      // 手數用盡且目標未達成
+    } else if (outOfMoves || outOfTime) {
+      // 手數或時間用盡且目標未達成
       this.settled = true;
       this.eventBus.emit({
         kind: 'level.resolved',
@@ -617,6 +638,7 @@ export class RulesEngine {
           score: this.score,
           chainMax: Math.max(...this.recentChains, this.chainCount, 0),
           movesRemaining: 0,
+          timeRemaining: 0,
           specialSpawnedCount: 0,
           durationMs: 0,
         },
@@ -761,6 +783,7 @@ export class GameLoop {
 
     // 1. Rules step — 固定 60Hz
     while (this.accumulator >= FIXED_DT) {
+      this.rules.tickTime?.(FIXED_DT / 1000);
       this.rules.advance();
       this.accumulator -= FIXED_DT;
     }

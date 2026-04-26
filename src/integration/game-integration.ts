@@ -1753,19 +1753,22 @@ export class GameIntegration {
 
       const objectiveComplete = rulesEngine.tracker.isComplete();
       const outOfMoves = rulesEngine.movesRemaining !== Infinity && rulesEngine.movesRemaining <= 0;
+      const outOfTime = rulesEngine.timeRemaining !== Infinity && rulesEngine.timeRemaining <= 0;
 
-      if (objectiveComplete || outOfMoves) {
+      if (objectiveComplete || outOfMoves || outOfTime) {
         rulesEngine.settled = true;
         const cleared = objectiveComplete;
         const { calculateStars } = await import('../game/level/objective');
         const mvRem = rulesEngine.movesRemaining === Infinity ? 0 : rulesEngine.movesRemaining;
-        // Add remaining moves bonus to score BEFORE calculating stars and emitting event
+        const tmRem = rulesEngine.timeRemaining === Infinity ? 0 : rulesEngine.timeRemaining;
+        // Add remaining moves / time bonus to score BEFORE calculating stars and emitting event
         if (cleared) {
-          const { remainingMovesBonus } = await import('../game/rules/scoring');
+          const { remainingMovesBonus, remainingTimeBonus } = await import('../game/rules/scoring');
           rulesEngine.score += remainingMovesBonus(mvRem);
+          rulesEngine.score += remainingTimeBonus(tmRem);
         }
         const stars = cleared
-          ? calculateStars(spec.stars, rulesEngine.score, mvRem, 0)
+          ? calculateStars(spec.stars, rulesEngine.score, mvRem, tmRem)
           : 0;
         this.eventBus.emit({
           kind: 'level.resolved',
@@ -1775,7 +1778,8 @@ export class GameIntegration {
             stars,
             score: rulesEngine.score,
             chainMax: chain,
-            movesRemaining: mvRem,
+            movesRemaining: cleared ? mvRem : 0,
+            timeRemaining: cleared ? tmRem : 0,
             specialSpawnedCount: 0,
             durationMs: 0,
           },
@@ -1843,6 +1847,9 @@ export class GameIntegration {
       onPause: () => this.transitionTo({ kind: 'pause', previous: this.currentState } as any),
     });
     hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+    if (spec.constraints.timeBudget) {
+      hud.setTime(rulesEngine.timeRemaining === Infinity ? 0 : rulesEngine.timeRemaining);
+    }
     hud.setScore(0);
     updateHudObjective();
     this.setScreen(hud);
@@ -1893,6 +1900,9 @@ export class GameIntegration {
         render: (_alpha: number) => {
           boardRenderer.update(16.67);
           mergeFx.update(16);
+          if (spec.constraints.timeBudget && rulesEngine.timeRemaining !== Infinity) {
+            hud.setTime(rulesEngine.timeRemaining);
+          }
         },
       },
       { update: () => {} },

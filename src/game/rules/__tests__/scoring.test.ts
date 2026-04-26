@@ -6,6 +6,7 @@ import {
   specialActivationScore,
   comboScore,
   remainingMovesBonus,
+  remainingTimeBonus,
 } from '../scoring';
 import type { MatchShape } from '../../../types';
 
@@ -99,6 +100,24 @@ describe('remainingMovesBonus', () => {
   it('負數 → 0', () => {
     expect(remainingMovesBonus(-1)).toBe(0);
     expect(remainingMovesBonus(-10)).toBe(0);
+  });
+});
+
+describe('remainingTimeBonus', () => {
+  it('30 秒 → 3000', () => {
+    expect(remainingTimeBonus(30)).toBe(3000);
+  });
+
+  it('小數秒數無條件捨去（12.9 → 1200）', () => {
+    expect(remainingTimeBonus(12.9)).toBe(1200);
+  });
+
+  it('0 秒 → 0', () => {
+    expect(remainingTimeBonus(0)).toBe(0);
+  });
+
+  it('負數 → 0', () => {
+    expect(remainingTimeBonus(-5)).toBe(0);
   });
 });
 

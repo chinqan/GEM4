@@ -64,6 +64,8 @@ export interface LevelResult {
   score: number;
   chainMax: number;
   movesRemaining: number;
+  /** 通關時剩餘秒數（計時關卡用，非計時關卡為 0） */
+  timeRemaining?: number;
   specialSpawnedCount: number;
   durationMs: number;
 }

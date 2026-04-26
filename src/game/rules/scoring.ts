@@ -55,3 +55,8 @@ export function comboScore(type: ComboType, chain: number): number {
 export function remainingMovesBonus(moves: number): number {
   return Math.max(0, moves) * 1000;
 }
+
+/** 9.6 剩餘時間獎勵：100 × floor(seconds) */
+export function remainingTimeBonus(seconds: number): number {
+  return Math.max(0, Math.floor(seconds)) * 100;
+}

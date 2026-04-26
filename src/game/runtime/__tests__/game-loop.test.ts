@@ -474,6 +474,83 @@ describe('RulesEngine end-of-level', () => {
   });
 });
 
+// ─── 計時關卡 ──────────────────────────────────────────────
+
+describe('RulesEngine 計時關卡', () => {
+  it('timeBudget 初始化 timeRemaining；非計時關卡為 Infinity', () => {
+    const a = makeEngine({ constraints: { timeBudget: 60 } }).engine;
+    expect(a.timeRemaining).toBe(60);
+    const b = makeEngine({ constraints: { moveBudget: 10 } }).engine;
+    expect(b.timeRemaining).toBe(Infinity);
+  });
+
+  it('tickTime 遞減剩餘秒數；非計時關卡為 no-op', () => {
+    const { engine } = makeEngine({ constraints: { timeBudget: 10 } });
+    engine.tickTime(2.5);
+    expect(engine.timeRemaining).toBeCloseTo(7.5);
+    const movesEngine = makeEngine({ constraints: { moveBudget: 5 } }).engine;
+    movesEngine.tickTime(5);
+    expect(movesEngine.timeRemaining).toBe(Infinity);
+  });
+
+  it('時間歸零時 emit level.resolved (failed)', () => {
+    const { engine, bus } = makeEngine({
+      constraints: { timeBudget: 1 },
+      objective: { type: 'score', target: 999999 },
+    });
+    engine.tickTime(2);
+    expect(engine.timeRemaining).toBe(0);
+    const resolved = bus.events.filter((e) => e.kind === 'level.resolved') as Array<{
+      kind: 'level.resolved';
+      result: LevelResult;
+    }>;
+    expect(resolved.length).toBe(1);
+    expect(resolved[0].result.cleared).toBe(false);
+    expect(resolved[0].result.timeRemaining).toBe(0);
+  });
+
+  it('paused 期間 tickTime 不遞減', () => {
+    const { engine } = makeEngine({ constraints: { timeBudget: 10 } });
+    (engine as any).paused = true;
+    engine.tickTime(3);
+    expect(engine.timeRemaining).toBe(10);
+  });
+
+  it('通關時加上剩餘時間獎勵並用時間計算星等', () => {
+    const spec = makeSpec({
+      constraints: { timeBudget: 30 },
+      objective: { type: 'score', target: 1 },
+      stars: { one: 5, two: 15, three: 25, basis: 'timeRemaining' },
+    });
+    const rng = new Mulberry32(42);
+    const board = initBoard(spec, rng);
+    const cascadeRng = new Mulberry32(42 ^ 0x9abcdef0);
+    const queue = new CommandQueue();
+    const bus = mockEventBus();
+    const engine = new RulesEngine({ board, spec, cascadeRng, eventBus: bus, commandQueue: queue });
+
+    const swaps = findValidSwaps(board);
+    expect(swaps.length).toBeGreaterThan(0);
+    const [from, to] = swaps[0];
+    queue.enqueue({ kind: 'swap', from, to });
+    engine.advance();
+
+    const resolved = bus.events.filter((e) => e.kind === 'level.resolved') as Array<{
+      kind: 'level.resolved';
+      result: LevelResult;
+    }>;
+    if (resolved.length > 0) {
+      const r = resolved[0].result;
+      expect(r.cleared).toBe(true);
+      // timeRemaining 仍接近 30（沒呼叫 tickTime），時間獎勵 = 30 × 100 = 3000
+      expect(r.timeRemaining).toBe(30);
+      expect(r.score).toBeGreaterThanOrEqual(3000);
+      // basis=timeRemaining, 30 ≥ 25 → 三星
+      expect(r.stars).toBe(3);
+    }
+  });
+});
+
 // ─── Intensity 測試 ─────────────────────────────────────────
 
 describe('RulesEngine intensity', () => {
