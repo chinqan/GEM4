@@ -120,8 +120,11 @@ export function findValidSwaps(board: Board): [CellPos, CellPos][] {
     for (let row = 0; row < board.height; row++) {
       const cell = board.cells[col][row];
 
-      // 跳過：永久空格、無寶石、locked 寶石、lock blocker（不可移動）
-      if (cell.isEmpty || !cell.gem || cell.gem.locked) continue;
+      // 跳過：永久空格、完全空的格子（無 gem 也無 deliveryItem）
+      if (cell.isEmpty) continue;
+      if (!cell.gem && !cell.deliveryItem) continue;
+      // locked 寶石不可移動
+      if (cell.gem?.locked) continue;
       if (cell.blocker?.kind === 'lock') continue;
 
       // 只檢查右方和下方，避免重複
@@ -134,21 +137,31 @@ export function findValidSwaps(board: Board): [CellPos, CellPos][] {
         if (nc < 0 || nc >= board.width || nr < 0 || nr >= board.height) continue;
         const neighbor = board.cells[nc][nr];
 
-        // 跳過：永久空格、無寶石、locked 寶石、lock blocker
-        if (neighbor.isEmpty || !neighbor.gem || neighbor.gem.locked) continue;
+        // 跳過：永久空格、完全空的格子
+        if (neighbor.isEmpty) continue;
+        if (!neighbor.gem && !neighbor.deliveryItem) continue;
+        if (neighbor.gem?.locked) continue;
         if (neighbor.blocker?.kind === 'lock') continue;
 
-        // 模擬交換
+        // 至少一邊要有 gem 才可能產生消除
+        if (!cell.gem && !neighbor.gem) continue;
+
+        // 模擬交換（gem + deliveryItem 一起交換）
         const tempGem = cell.gem;
+        const tempDelivery = cell.deliveryItem;
         cell.gem = neighbor.gem;
+        cell.deliveryItem = neighbor.deliveryItem;
         neighbor.gem = tempGem;
+        neighbor.deliveryItem = tempDelivery;
 
         // 檢查是否產生消除
         const matches = detectMatches(board);
 
         // 還原交換
         neighbor.gem = cell.gem;
+        neighbor.deliveryItem = cell.deliveryItem;
         cell.gem = tempGem;
+        cell.deliveryItem = tempDelivery;
 
         if (matches.length > 0) {
           swaps.push([[col, row], [nc, nr]]);
@@ -216,7 +229,7 @@ function placeBLockers(board: Board, blockers: BlockerPlacement[]): void {
  * @param rng  boardInit RNG 串流
  */
 export function initBoard(spec: LevelSpec, rng: Mulberry32): Board {
-  const { width, height, empty, deliveryCells } = spec.board;
+  const { width, height, empty, deliveryCells, deliveryItems } = spec.board;
   const { colours, weights } = spec.gems;
 
   for (let attempt = 0; attempt < MAX_INIT_RETRIES; attempt++) {
@@ -229,6 +242,17 @@ export function initBoard(spec: LevelSpec, rng: Mulberry32): Board {
         const cell = getCell(board, [col, row]);
         if (cell) {
           cell.isDelivery = true;
+        }
+      }
+    }
+
+    // 2.5 放置傳送道具（獨立物件）
+    if (deliveryItems) {
+      let nextId = 1;
+      for (const [col, row] of deliveryItems) {
+        const cell = getCell(board, [col, row]);
+        if (cell) {
+          cell.deliveryItem = { id: nextId++ };
         }
       }
     }
@@ -267,6 +291,13 @@ export function initBoard(spec: LevelSpec, rng: Mulberry32): Board {
       if (cell) cell.isDelivery = true;
     }
   }
+  if (deliveryItems) {
+    let nextId = 1;
+    for (const [col, row] of deliveryItems) {
+      const cell = getCell(fallback, [col, row]);
+      if (cell) cell.deliveryItem = { id: nextId++ };
+    }
+  }
   if (spec.blockers) {
     placeBLockers(fallback, spec.blockers);
   }
@@ -295,8 +326,10 @@ function fillBoardNoMatches(
       const cell = board.cells[col][row];
 
       // 跳過：永久空格、已有寶石（preSeeded）、有 lock blocker 的格子不放寶石
+      // 有 deliveryItem 的格子也不放寶石（兩者互斥）
       if (cell.isEmpty) continue;
       if (cell.gem !== null) continue;
+      if (cell.deliveryItem !== null) continue;
 
       let chosenColour = pickWeightedColour(colours, weights, rng);
 
@@ -342,13 +375,15 @@ export function reshuffle(
         if (cell.isEmpty || !cell.gem) continue;
         // 保留特殊寶石和 locked 寶石
         if (cell.gem.special !== null || cell.gem.locked) continue;
+        // 有 deliveryItem 的格子不參與重洗（不應有 gem，但防禦性跳過）
+        if (cell.deliveryItem) continue;
 
         reshufflePositions.push([col, row]);
         reshuffleColours.push(cell.gem.colour!);
       }
     }
 
-    // 2. Fisher-Yates 洗牌顏色
+    // 2. Fisher-Yates 洗牌顏色（保留 deliveryItem 在原位）
     for (let i = reshuffleColours.length - 1; i > 0; i--) {
       const j = rng.int(0, i + 1);
       const temp = reshuffleColours[i];

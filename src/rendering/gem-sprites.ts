@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 import type { GemColour, SpecialGemType } from '../types';
 import {
   GEM_COLOURS,
@@ -59,14 +59,25 @@ export class GemSpriteFactory {
     const container = new Container() as GemSprite;
     container.label = `gem-${col}-${row}`;
 
+    // 獨立特殊道具(無顏色,僅特殊類型):繪製 emoji 道具
+    const isStandaloneSpecial = special !== null && colour === null;
+
     // 繪製主體
-    const body = this.drawBody(colour);
+    //  - 一般顏色寶石:彩色圓形
+    //  - colour gem(原 colour bomb):彩虹環(有 colour=null && special='colour' 也走這條,但
+    //    新規則下其他 special 也是 colour=null,因此交由 isStandaloneSpecial 分流)
+    const body = isStandaloneSpecial
+      ? this.drawSpecialItemBody()
+      : this.drawBody(colour);
     container.addChild(body);
     container.gemBody = body;
 
-    // 繪製特殊覆蓋層
+    // 覆蓋層:獨立道具用 emoji;一般寶石才會走原本的線條/星形覆蓋
     let overlay: Graphics | null = null;
-    if (special) {
+    if (isStandaloneSpecial) {
+      const emoji = this.makeSpecialEmoji(special!);
+      container.addChild(emoji);
+    } else if (special) {
       overlay = this.drawSpecialOverlay(special, colour);
       container.addChild(overlay);
     }
@@ -90,6 +101,44 @@ export class GemSpriteFactory {
     container.pivot.set(0, 0);
 
     return container;
+  }
+
+  /** 獨立特殊道具的底盤(深色圓 + 金邊) */
+  private drawSpecialItemBody(): Graphics {
+    const g = new Graphics();
+    g.circle(0, 0, GEM_RADIUS);
+    g.fill({ color: 0x1a1f3a, alpha: 0.95 });
+    g.circle(0, 0, GEM_RADIUS);
+    g.stroke({ color: 0xf6c453, width: 3, alpha: 0.95 });
+    // 內圈高光
+    g.circle(-GEM_RADIUS * 0.18, -GEM_RADIUS * 0.18, GEM_RADIUS * 0.5);
+    g.fill({ color: 0xffffff, alpha: 0.12 });
+    return g;
+  }
+
+  /** 取得 special type 對應 emoji */
+  private specialEmoji(special: SpecialGemType): string {
+    switch (special) {
+      case 'lineH': return '↔️';
+      case 'lineV': return '↕️';
+      case 'area':  return '💣';
+      case 'colour': return '🌈';
+    }
+  }
+
+  /** 製作 emoji Text */
+  private makeSpecialEmoji(special: SpecialGemType): Text {
+    const t = new Text({
+      text: this.specialEmoji(special),
+      style: {
+        fontSize: GEM_RADIUS * 1.4,
+        fill: 0xffffff,
+        align: 'center',
+      },
+    });
+    t.anchor.set(0.5);
+    t.position.set(0, 0);
+    return t;
   }
 
   /**

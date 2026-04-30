@@ -232,13 +232,18 @@ export class RulesEngine {
     }
 
     // 驗證：有寶石
-    if (!cellFrom.gem || !cellTo.gem) {
+    // 允許傳送道具與寶石交換（一邊有 gem，另一邊有 deliveryItem）
+    if (!cellFrom.gem && !cellFrom.deliveryItem) {
+      this.eventBus.emit({ kind: 'swap.invalid', from, to });
+      return;
+    }
+    if (!cellTo.gem && !cellTo.deliveryItem) {
       this.eventBus.emit({ kind: 'swap.invalid', from, to });
       return;
     }
 
     // 驗證：非 locked
-    if (cellFrom.gem.locked || cellTo.gem.locked) {
+    if (cellFrom.gem?.locked || cellTo.gem?.locked) {
       this.eventBus.emit({ kind: 'swap.invalid', from, to });
       return;
     }
@@ -250,15 +255,18 @@ export class RulesEngine {
     }
 
     // 檢查是否為特殊寶石組合
-    if (cellFrom.gem.special && cellTo.gem.special) {
+    if (cellFrom.gem?.special && cellTo.gem?.special) {
       this.processComboSwap(from, to);
       return;
     }
 
-    // 執行交換
+    // 執行交換（支援 gem ↔ deliveryItem 互換）
     const tempGem = cellFrom.gem;
+    const tempDelivery = cellFrom.deliveryItem;
     cellFrom.gem = cellTo.gem;
+    cellFrom.deliveryItem = cellTo.deliveryItem;
     cellTo.gem = tempGem;
+    cellTo.deliveryItem = tempDelivery;
 
     // 偵測消除
     const matches = detectMatches(this.board, { swapPos: to });
@@ -266,7 +274,9 @@ export class RulesEngine {
     if (matches.length === 0) {
       // 無消除 → 交換回來（無效交換）
       cellTo.gem = cellFrom.gem;
+      cellTo.deliveryItem = cellFrom.deliveryItem;
       cellFrom.gem = tempGem;
+      cellFrom.deliveryItem = tempDelivery;
       this.eventBus.emit({ kind: 'swap.invalid', from, to });
       return;
     }

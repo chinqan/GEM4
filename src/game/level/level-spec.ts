@@ -11,6 +11,8 @@ export interface LevelSpec {
     height: number;
     empty: CellPos[];
     deliveryCells?: CellPos[];
+    /** 傳送道具初始位置（獨立物件，會隨重力掉落至 deliveryCells 完成收集） */
+    deliveryItems?: CellPos[];
   };
   gems: {
     colours: GemColour[];

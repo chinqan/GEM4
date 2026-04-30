@@ -9,6 +9,7 @@ let _loadPromise: Promise<void> | null = null;
 
 function ensure(): AudioContext {
   if (!_ctx) _ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  if (_ctx.state === 'suspended') void _ctx.resume();
   return _ctx;
 }
 

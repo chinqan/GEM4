@@ -21,7 +21,7 @@
   "objective.score": "Reach {target} points",
   "objective.clear": "Clear {count} {blocker}",
   "objective.collect": "Collect {count} {colour} gems",
-  "objective.drop": "Deliver {count} gems",
+  "objective.drop": "Deliver {count} items",
 
   "blocker.jelly": "Jelly",
   "blocker.lock": "Lock",

@@ -63,7 +63,7 @@ export function formatObjectiveText(objective: Objective): string {
         .map((t) => `清除 ${t.count} 個${BLOCKER_NAMES[t.blocker]}`)
         .join('、');
     case 'drop':
-      return `送達 ${objective.target.count} 個寶石`;
+      return `送達 ${objective.target.count} 個道具`;
     case 'multi':
       return objective.objectives.map((o) => formatObjectiveText(o)).join('、');
   }
@@ -549,7 +549,7 @@ export class GameIntegration {
     this.activeViewportManager = viewportManager;
 
     // Draw grid background
-    await this.drawGridBackground(appRefs, board.width, board.height, CELL_SIZE);
+    await this.drawGridBackground(appRefs, board, CELL_SIZE);
 
     // Create board input
     const { BoardInput } = await import('../input/board-input');
@@ -578,6 +578,7 @@ export class GameIntegration {
 
     let tapStartCell: [number, number] | null = null;
     let selectedCell: [number, number] | null = null;
+    let dragState: { sprite: any; startCell: [number, number]; originX: number; originY: number } | null = null;
 
     const pixelToGrid = (localX: number, localY: number): [number, number] | null => {
       const col = Math.floor(localX / CELL_SIZE);
@@ -605,7 +606,7 @@ export class GameIntegration {
     const { matchScore, specialActivationScore, comboScore } = await import('../game/rules/scoring');
     const { resolveCombo, comboKey } = await import('../game/rules/combo-matrix');
     const { activateColourGem, activateLineBomb, activateAreaBomb, processSpecialActivations } = await import('../game/rules/special-gems');
-    const { CollectTracker } = await import('../game/level/objective');
+    const { CollectTracker, DropTracker } = await import('../game/level/objective');
     const { Howl } = await import('howler');
     const { SaveManager } = await import('../state/save-state');
     const { GEM_COLOURS } = await import('../rendering/design-tokens');
@@ -658,6 +659,17 @@ export class GameIntegration {
     const addCollectToTracker = (colour: import('../types').GemColour, count: number): void => {
       const walk = (t: any) => {
         if (t instanceof CollectTracker) t.addCollected(colour, count);
+        if (t && typeof t.getTrackers === 'function') {
+          for (const sub of t.getTrackers()) walk(sub);
+        }
+      };
+      walk(rulesEngine.tracker);
+    };
+
+    const addDroppedToTracker = (count: number): void => {
+      if (count <= 0) return;
+      const walk = (t: any) => {
+        if (t instanceof DropTracker) t.addDropped(count);
         if (t && typeof t.getTrackers === 'function') {
           for (const sub of t.getTrackers()) walk(sub);
         }
@@ -726,29 +738,325 @@ export class GameIntegration {
       }
     };
 
+    // ─── 輔助：重力 + 填充 + 掉落動畫（doActivate 與 doSwap 共用）───
+    const runGravityAndDrop = async () => {
+      // 重力前快照所有佔格物件的位置（寶石 + 傳送道具），用於掉落動畫
+      const itemsBefore: Map<number, Array<{ row: number; hasGem: boolean; hasDelivery: boolean }>> = new Map();
+      for (let c = 0; c < board.width; c++) {
+        const colItems: Array<{ row: number; hasGem: boolean; hasDelivery: boolean }> = [];
+        for (let r = 0; r < board.height; r++) {
+          const cell = board.cells[c][r];
+          if (cell.isEmpty) continue;
+          if (cell.gem || cell.deliveryItem) {
+            colItems.push({ row: r, hasGem: !!cell.gem, hasDelivery: !!cell.deliveryItem });
+          }
+        }
+        itemsBefore.set(c, colItems);
+      }
+
+      applyGravity(board);
+      fillFromTop(board, rngStreams.cascadeFill, [...spec.gems.colours]);
+
+      // 收集到達 delivery cell 的傳送道具（記錄位置用於特效）
+      const { collectDeliveryItems } = await import('../game/rules/cascade');
+      const deliveryCollectedPositions = collectDeliveryItems(board);
+      if (deliveryCollectedPositions.length > 0) addDroppedToTracker(deliveryCollectedPositions.length);
+
+      const dropDistances: Map<string, number> = new Map();
+      for (let c = 0; c < board.width; c++) {
+        const before = itemsBefore.get(c) || [];
+        const emptySlots: number[] = [];
+        for (let r = 0; r < board.height; r++) {
+          if (board.cells[c][r].isEmpty) continue;
+          emptySlots.push(r);
+        }
+        // 重力後佔格的物件數（寶石 + 傳送道具）
+        const numExisting = before.length;
+        const numTotal = emptySlots.length;
+        const numNew = numTotal - numExisting;
+        for (let i = 0; i < numExisting; i++) {
+          const oldRow = before[i].row;
+          const newRow = emptySlots[numNew + i];
+          if (newRow !== undefined && newRow !== oldRow) dropDistances.set(`${c},${newRow}`, newRow - oldRow);
+        }
+        for (let i = 0; i < numNew; i++) {
+          const newRow = emptySlots[i];
+          if (newRow !== undefined) dropDistances.set(`${c},${newRow}`, newRow + numNew - i);
+        }
+      }
+
+      boardRenderer.sync(board);
+
+      const dropAnims: Array<ReturnType<typeof createCascadeDropAnimation>> = [];
+      for (const [key, dist] of dropDistances) {
+        const [cs, rs] = key.split(',');
+        const c = parseInt(cs);
+        const r = parseInt(rs);
+        // 寶石 sprite 掉落動畫
+        const spr = boardRenderer.getSprite(c, r);
+        if (spr && dist > 0) {
+          const fromRow = r - dist;
+          spr.position.set(c * CELL_SIZE + CELL_SIZE / 2, fromRow * CELL_SIZE + CELL_SIZE / 2);
+          dropAnims.push(createCascadeDropAnimation({ sprite: spr, fromRow, toRow: r, col: c }));
+        }
+        // 傳送道具 overlay 掉落動畫
+        const deliverySpr = boardRenderer.getDeliverySprite(c, r);
+        if (deliverySpr && dist > 0) {
+          const fromRow = r - dist;
+          deliverySpr.position.set(c * CELL_SIZE + CELL_SIZE / 2, fromRow * CELL_SIZE + CELL_SIZE / 2);
+          dropAnims.push(createCascadeDropAnimation({ sprite: deliverySpr as any, fromRow, toRow: r, col: c }));
+        }
+      }
+
+      if (dropAnims.length > 0) {
+        await playAnims(dropAnims);
+      } else {
+        await wait(80);
+      }
+
+      // 傳送道具送達特效：在收集位置顯示「+1 送達」飛字
+      if (deliveryCollectedPositions.length > 0) {
+        for (const [dc, dr] of deliveryCollectedPositions) {
+          const popup = createScorePopup({
+            text: '+1 送達',
+            x: dc * CELL_SIZE + CELL_SIZE / 2,
+            y: dr * CELL_SIZE + CELL_SIZE / 2,
+            colour: 0xf6c453,
+            fontSize: 24,
+            floatDistance: 60,
+            duration: 900,
+          });
+          appRefs.layers.boardLayer.addChild(popup.container);
+        }
+
+        // 道具消失後空出的格子需要重力遞補 + 頂端補充
+        // 遞迴呼叫自身處理後續掉落（可能又有道具到達底部）
+        await runGravityAndDrop();
+      }
+    };
+
+    // 點擊發動:玩家點擊獨立特殊道具,不計手數,以該位置為發動中心
+    const doActivate = async (at: [number, number]) => {
+      if (isProcessing || rulesEngine.settled) return;
+      const cell0 = getCell(board, at);
+      const sp0 = cell0?.gem?.special;
+      if (!sp0) return;
+      isProcessing = true;
+      try {
+        const allCells: [number, number][] = [];
+        for (let c = 0; c < board.width; c++) {
+          for (let r = 0; r < board.height; r++) allCells.push([c, r]);
+        }
+        const colourSnapshot = snapshotColoursAt(allCells);
+
+        // 全盤特殊類型快照(被動觸發用)
+        const snap = new Map<string, 'lineH' | 'lineV' | 'area' | 'colour'>();
+        for (let c = 0; c < board.width; c++) {
+          for (let r = 0; r < board.height; r++) {
+            const cl = board.cells[c][r];
+            const sp = cl.gem?.special;
+            if (sp === 'lineH' || sp === 'lineV' || sp === 'area' || sp === 'colour') {
+              snap.set(`${c},${r}`, sp);
+            }
+          }
+        }
+
+        // 主動啟動
+        let activeResult;
+        if (sp0 === 'colour') {
+          // 從棋盤現有顏色隨機挑一色
+          const present = new Set<import('../types').GemColour>();
+          for (let c = 0; c < board.width; c++) {
+            for (let r = 0; r < board.height; r++) {
+              const g = board.cells[c][r].gem;
+              if (g?.colour) present.add(g.colour);
+            }
+          }
+          const pool = [...present].sort();
+          if (pool.length === 0) { isProcessing = false; return; }
+          const target = pool[rngStreams.cascadeFill.int(0, pool.length)];
+          activeResult = activateColourGem(board, at, target);
+        } else if (sp0 === 'lineH' || sp0 === 'lineV') {
+          activeResult = activateLineBomb(board, at);
+        } else {
+          activeResult = activateAreaBomb(board, at);
+        }
+
+        // 被動觸發
+        const passiveResult = processSpecialActivations(board, activeResult.clearedCells, snap, {
+          rng: rngStreams.cascadeFill,
+          colours: [...spec.gems.colours],
+        });
+        const seen = new Set<string>();
+        const allCleared: [number, number][] = [];
+        for (const p of [...activeResult.clearedCells, ...passiveResult.clearedCells]) {
+          const k = `${p[0]},${p[1]}`;
+          if (seen.has(k)) continue;
+          seen.add(k);
+          allCleared.push([p[0], p[1]]);
+        }
+
+        recordCollectedFromSnapshot(allCleared, colourSnapshot);
+
+        const chain = 1;
+        rulesEngine.score += specialActivationScore(allCleared.length, chain, sp0 === 'colour');
+
+        // 簡易視覺:啟動光環 + 清除動畫
+        const dur = getSpecialActivationDuration(sp0, false);
+        await playAnims([
+          createSpecialActivationEffect(
+            at[0] * CELL_SIZE + CELL_SIZE / 2,
+            at[1] * CELL_SIZE + CELL_SIZE / 2,
+            0xffffff, appRefs.layers.boardLayer, dur,
+          ),
+          createBlastZoneOverlay(allCleared, appRefs.layers.boardLayer, dur),
+        ]);
+
+        // 爆破音效在視覺標示後、寶石消除動畫前播放（與 swap 路徑一致）
+        playMatchSfx(allCleared.length, chain);
+
+        // 用既存 sprite 播 clear 動畫 + 顆粒粒子(用 colour snapshot 取得清除前顏色)
+        const clearAnims: Array<ReturnType<typeof createMatchClearAnimation>> = [];
+        for (const [c, r] of allCleared) {
+          const spr = boardRenderer.getSprite(c, r);
+          if (spr) clearAnims.push(createMatchClearAnimation(spr));
+          const colourKey = `${c},${r}`;
+          const cachedColour = colourSnapshot.get(colourKey);
+          if (cachedColour) {
+            const fxLevel = Math.min(chain - 1, 3);
+            mergeFx.spawn(
+              c * CELL_SIZE + CELL_SIZE / 2,
+              r * CELL_SIZE + CELL_SIZE / 2,
+              fxLevel,
+              GEM_COLOURS[cachedColour],
+            );
+          }
+        }
+        await playAnims(clearAnims);
+
+        // 重力下落 + 補位 + 掉落動畫
+        await runGravityAndDrop();
+
+        // 後續連鎖：含動畫的 cascade 循環（避免 silent runCascade 造成寶石突然換色）
+        let cascadeChain = chain;
+        let cascSteps = 0;
+        let cascMatches = detectMatches(board);
+        while (cascMatches.length > 0 && cascSteps++ < 50) {
+          cascadeChain++;
+          const cSet = new Set<string>();
+          const cCells: [number, number][] = [];
+          for (const m of cascMatches) {
+            for (const c of m.cells) {
+              const k = `${c[0]},${c[1]}`;
+              if (!cSet.has(k)) { cSet.add(k); cCells.push([c[0], c[1]]); }
+            }
+            addCollectToTracker(m.colour, m.cells.length);
+          }
+          const cascScore = cascMatches.reduce((s, m) => s + matchScore(m.shape, cascadeChain, 0), 0);
+          rulesEngine.score += cascScore;
+
+          // 在清除前快照 sprite 引用和顏色
+          const cascSprRefs = cCells.map(([c, r]) => {
+            const cl = getCell(board, [c, r]);
+            return {
+              spr: boardRenderer.getSprite(c, r),
+              c, r,
+              colour: cl?.gem?.colour ? GEM_COLOURS[cl.gem.colour] : null,
+            };
+          });
+
+          // 清除資料層
+          for (const [c, r] of cCells) board.cells[c][r].gem = null;
+
+          // 消除動畫 + 音效 + 粒子
+          playMatchSfx(cCells.length, cascadeChain);
+          const cascAnims = cascSprRefs
+            .filter(({ spr }) => !!spr)
+            .map(({ spr }) => createMatchClearAnimation(spr!));
+          for (const { c, r, colour } of cascSprRefs) {
+            if (colour !== null) {
+              mergeFx.spawn(
+                c * CELL_SIZE + CELL_SIZE / 2, r * CELL_SIZE + CELL_SIZE / 2,
+                Math.min(cascadeChain - 1, 3), colour,
+              );
+            }
+          }
+          await playAnims(cascAnims);
+
+          await runGravityAndDrop();
+          cascMatches = detectMatches(board);
+        }
+
+        hud.setScore(rulesEngine.score);
+        hud.setMoves(rulesEngine.movesRemaining === Infinity ? 99 : rulesEngine.movesRemaining);
+        updateHudObjective();
+
+        // 結關判定
+        syncScoreToTracker(rulesEngine.tracker, rulesEngine.score);
+        const objectiveComplete = rulesEngine.tracker.isComplete();
+        const outOfMoves = rulesEngine.movesRemaining !== Infinity && rulesEngine.movesRemaining <= 0;
+        const outOfTime = rulesEngine.timeRemaining !== Infinity && rulesEngine.timeRemaining <= 0;
+        if (objectiveComplete || outOfMoves || outOfTime) {
+          rulesEngine.settled = true;
+          const cleared = objectiveComplete;
+          const { calculateStars } = await import('../game/level/objective');
+          const mvRem = rulesEngine.movesRemaining === Infinity ? 0 : rulesEngine.movesRemaining;
+          const tmRem = rulesEngine.timeRemaining === Infinity ? 0 : rulesEngine.timeRemaining;
+          if (cleared) {
+            const { remainingMovesBonus, remainingTimeBonus } = await import('../game/rules/scoring');
+            rulesEngine.score += remainingMovesBonus(mvRem);
+            rulesEngine.score += remainingTimeBonus(tmRem);
+          }
+          const stars = cleared ? calculateStars(spec.stars, rulesEngine.score, mvRem, tmRem) : 0;
+          this.eventBus.emit({
+            kind: 'level.resolved',
+            result: {
+              levelId: spec.id, cleared, stars,
+              score: rulesEngine.score, chainMax: chain,
+              movesRemaining: cleared ? mvRem : 0,
+              timeRemaining: cleared ? tmRem : 0,
+              specialSpawnedCount: 0, durationMs: 0,
+            },
+          });
+        }
+      } catch (err) {
+        console.error('[doActivate] Unexpected error:', err);
+        boardRenderer.sync(board);
+      } finally {
+        isProcessing = false;
+      }
+    };
+
     const doSwap = async (from: [number, number], to: [number, number]) => {
       if (isProcessing || rulesEngine.settled) return;
       isProcessing = true;
 
       try {
 
-      const spriteA = boardRenderer.getSprite(from[0], from[1]);
-      const spriteB = boardRenderer.getSprite(to[0], to[1]);
+      const spriteA = boardRenderer.getSprite(from[0], from[1]) || boardRenderer.getDeliverySprite(from[0], from[1]);
+      const spriteB = boardRenderer.getSprite(to[0], to[1]) || boardRenderer.getDeliverySprite(to[0], to[1]);
 
       // ── 階段 1：Swap 滑動動畫（200ms）──
       if (spriteA && spriteB) {
         playSwap();
-        await playAnims([createSwapAnimation({ spriteA, spriteB, posA: from, posB: to })]);
+        await playAnims([createSwapAnimation({ spriteA: spriteA as any, spriteB: spriteB as any, posA: from, posB: to })]);
       }
 
-      // 在資料層執行交換
+      // 在資料層執行交換（支援 gem ↔ deliveryItem 互換）
       const cellFrom = getCell(board, from)!;
       const cellTo = getCell(board, to)!;
-      if (!cellFrom.gem || !cellTo.gem) { return; }
+
+      // 至少一邊要有 gem 或 deliveryItem
+      const fromHasContent = cellFrom.gem !== null || cellFrom.deliveryItem !== null;
+      const toHasContent = cellTo.gem !== null || cellTo.deliveryItem !== null;
+      if (!fromHasContent || !toHasContent) { isProcessing = false; return; }
 
       const tempGem = cellFrom.gem;
+      const tempDelivery = cellFrom.deliveryItem;
       cellFrom.gem = cellTo.gem;
+      cellFrom.deliveryItem = cellTo.deliveryItem;
       cellTo.gem = tempGem;
+      cellTo.deliveryItem = tempDelivery;
 
       // ── 交換類型偵測 ──
       const effectLayer = appRefs.layers.boardLayer;
@@ -941,66 +1249,6 @@ export class GameIntegration {
         return extraCleared;
       };
 
-      // ─── 輔助：重力 + 填充 + 掉落動畫 ───
-      const runGravityAndDrop = async () => {
-        const gemsBefore: Map<number, Array<{ row: number; gem: typeof board.cells[0][0]['gem'] }>> = new Map();
-        for (let c = 0; c < board.width; c++) {
-          const colGems: Array<{ row: number; gem: typeof board.cells[0][0]['gem'] }> = [];
-          for (let r = 0; r < board.height; r++) {
-            const cell = board.cells[c][r];
-            if (cell.gem && !cell.isEmpty) colGems.push({ row: r, gem: cell.gem });
-          }
-          gemsBefore.set(c, colGems);
-        }
-
-        applyGravity(board);
-        fillFromTop(board, rngStreams.cascadeFill, [...spec.gems.colours]);
-
-        const dropDistances: Map<string, number> = new Map();
-        for (let c = 0; c < board.width; c++) {
-          const before = gemsBefore.get(c) || [];
-          const emptySlots: number[] = [];
-          for (let r = 0; r < board.height; r++) {
-            if (board.cells[c][r].isEmpty) continue;
-            emptySlots.push(r);
-          }
-          const numExisting = before.length;
-          const numTotal = emptySlots.length;
-          const numNew = numTotal - numExisting;
-          for (let i = 0; i < numExisting; i++) {
-            const oldRow = before[i].row;
-            const newRow = emptySlots[numNew + i];
-            if (newRow !== undefined && newRow !== oldRow) dropDistances.set(`${c},${newRow}`, newRow - oldRow);
-          }
-          for (let i = 0; i < numNew; i++) {
-            const newRow = emptySlots[i];
-            // 新寶石在畫面外排隊：第 i 顆排在 row -(numNew - i)
-            // 掉落距離 = newRow + numNew - i，所有新寶石同時掉、速度一致
-            if (newRow !== undefined) dropDistances.set(`${c},${newRow}`, newRow + numNew - i);
-          }
-        }
-
-        boardRenderer.sync(board);
-
-        const dropAnims: Array<ReturnType<typeof createCascadeDropAnimation>> = [];
-        for (const [key, dist] of dropDistances) {
-          const [cs, rs] = key.split(',');
-          const c = parseInt(cs);
-          const r = parseInt(rs);
-          const spr = boardRenderer.getSprite(c, r);
-          if (!spr || dist <= 0) continue;
-          const fromRow = r - dist;
-          spr.position.set(c * CELL_SIZE + CELL_SIZE / 2, fromRow * CELL_SIZE + CELL_SIZE / 2);
-          dropAnims.push(createCascadeDropAnimation({ sprite: spr, fromRow, toRow: r, col: c }));
-        }
-
-        if (dropAnims.length > 0) {
-          await playAnims(dropAnims);
-        } else {
-          await wait(80);
-        }
-      };
-
       // ─── 輔助：cascade 循環 ───
       const MAX_CASCADE_LOOP_STEPS = 50;
       const runCascadeLoop = async (chainStart: number): Promise<number> => {
@@ -1032,6 +1280,8 @@ export class GameIntegration {
               spawnPos.add(spKey);
               const sc = getCell(board, m.spawnAt);
               if (sc?.gem) {
+                // 特殊道具脫離顏色:colour=null,變成獨立道具
+                sc.gem.colour = null;
                 sc.gem.special = m.spawnsSpecial;
               }
               cSet.delete(spKey);
@@ -1211,7 +1461,7 @@ export class GameIntegration {
 
       let chain = 0;
 
-      if (cellFrom.gem.special && cellTo.gem.special) {
+      if (cellFrom.gem?.special && cellTo.gem?.special) {
         // ═══════════════════════════════════════════════════
         // ── Combo 路徑（兩顆特殊寶石交換）──
         // ═══════════════════════════════════════════════════
@@ -1252,12 +1502,26 @@ export class GameIntegration {
         }
         const comboColourSnapshot = snapshotColoursAt(comboAllCells);
 
-        const comboResult = resolveCombo(board, from, to, rngStreams.cascadeFill);
+        // 玩家拖曳:以目的地 `to` 作為技能發動中心
+        const comboResult = resolveCombo(board, from, to, rngStreams.cascadeFill, to);
         if (!comboResult || comboResult.clearedCells.length === 0) {
           cellTo.gem = cellFrom.gem;
+          cellTo.deliveryItem = cellFrom.deliveryItem;
           cellFrom.gem = tempGem;
+          cellFrom.deliveryItem = tempDelivery;
           playInvalid();
           boardRenderer.sync(board);
+          // 播放歸位動畫
+          const rA = boardRenderer.getSprite(from[0], from[1]) || boardRenderer.getDeliverySprite(from[0], from[1]);
+          const rB = boardRenderer.getSprite(to[0], to[1]) || boardRenderer.getDeliverySprite(to[0], to[1]);
+          if (rA && rB) {
+            rA.position.set(to[0] * CELL_SIZE + CELL_SIZE / 2, to[1] * CELL_SIZE + CELL_SIZE / 2);
+            rB.position.set(from[0] * CELL_SIZE + CELL_SIZE / 2, from[1] * CELL_SIZE + CELL_SIZE / 2);
+            await playAnims([createSwapAnimation({
+              spriteA: rA as any, spriteB: rB as any,
+              posA: to, posB: from,
+            })]);
+          }
           return;
         }
 
@@ -1275,8 +1539,8 @@ export class GameIntegration {
 
         // Combo 啟動：在兩顆特殊寶石的中點播放擴張光環 + 紅色遮片，全程 ~1100ms
         const comboDur = getSpecialActivationDuration('combo', false);
-        const comboCx = ((from[0] + to[0]) / 2) * CELL_SIZE + CELL_SIZE / 2;
-        const comboCy = ((from[1] + to[1]) / 2) * CELL_SIZE + CELL_SIZE / 2;
+        const comboCx = to[0] * CELL_SIZE + CELL_SIZE / 2;
+        const comboCy = to[1] * CELL_SIZE + CELL_SIZE / 2;
         showSpecialFlavor('combo', [from, to], 44);
         await playAnims([
           createSpecialActivationEffect(comboCx, comboCy, 0xffffff, effectLayer, comboDur),
@@ -1318,14 +1582,14 @@ export class GameIntegration {
         chain = await runCascadeLoop(chain);
 
       } else if (
-        (cellFrom.gem.special === 'colour' && cellTo.gem.colour !== null) ||
-        (cellTo.gem.special === 'colour' && cellFrom.gem.colour !== null)
+        (cellFrom.gem?.special === 'colour' && cellTo.gem?.colour !== null) ||
+        (cellTo.gem?.special === 'colour' && cellFrom.gem?.colour !== null)
       ) {
         // ═══════════════════════════════════════════════════
         // ── Colour Gem 路徑 ──
         // ═══════════════════════════════════════════════════
-        const colourGemPos: [number, number] = cellFrom.gem.special === 'colour' ? from : to;
-        const normalPos: [number, number] = cellFrom.gem.special === 'colour' ? to : from;
+        const colourGemPos: [number, number] = cellFrom.gem?.special === 'colour' ? from : to;
+        const normalPos: [number, number] = cellFrom.gem?.special === 'colour' ? to : from;
         const normalCell = getCell(board, normalPos)!;
         const targetColour = normalCell.gem!.colour!;
 
@@ -1432,11 +1696,31 @@ export class GameIntegration {
         })();
 
         if (matches.length === 0 && !swappedSpecialPos) {
-          // 無 match 且無特殊寶石 → 無效交換
+          // 無 match 且無特殊寶石 → 無效交換（還原 gem 和 deliveryItem）
           cellTo.gem = cellFrom.gem;
+          cellTo.deliveryItem = cellFrom.deliveryItem;
           cellFrom.gem = tempGem;
+          cellFrom.deliveryItem = tempDelivery;
           playInvalid();
+
+          // 播放歸位動畫：兩顆寶石交換回原位
+          const revertSprA = boardRenderer.getSprite(from[0], from[1]) || boardRenderer.getDeliverySprite(from[0], from[1]);
+          const revertSprB = boardRenderer.getSprite(to[0], to[1]) || boardRenderer.getDeliverySprite(to[0], to[1]);
           boardRenderer.sync(board);
+          if (revertSprA && revertSprB) {
+            // sprite 目前在交換後的位置，需要從那裡動畫回原位
+            const revertA = boardRenderer.getSprite(from[0], from[1]) || boardRenderer.getDeliverySprite(from[0], from[1]);
+            const revertB = boardRenderer.getSprite(to[0], to[1]) || boardRenderer.getDeliverySprite(to[0], to[1]);
+            if (revertA && revertB) {
+              // 先把 sprite 放到對方位置（模擬交換後的狀態）
+              revertA.position.set(to[0] * CELL_SIZE + CELL_SIZE / 2, to[1] * CELL_SIZE + CELL_SIZE / 2);
+              revertB.position.set(from[0] * CELL_SIZE + CELL_SIZE / 2, from[1] * CELL_SIZE + CELL_SIZE / 2);
+              await playAnims([createSwapAnimation({
+                spriteA: revertA as any, spriteB: revertB as any,
+                posA: to, posB: from,
+              })]);
+            }
+          }
           return;
         }
 
@@ -1567,9 +1851,10 @@ export class GameIntegration {
             if (m.spawnsSpecial && m.spawnAt) {
               const spKey = `${m.spawnAt[0]},${m.spawnAt[1]}`;
               spawnPositions.add(spKey);
-              // 立刻在資料層賦予特殊寶石
+              // 立刻在資料層賦予特殊寶石（脫離顏色）
               const sc = getCell(board, m.spawnAt);
               if (sc?.gem) {
+                sc.gem.colour = null;
                 sc.gem.special = m.spawnsSpecial;
               }
               // 從 clearedSet 中移除（不會被清除）
@@ -1797,11 +2082,52 @@ export class GameIntegration {
     boardLayer.on('pointerdown', (e) => {
       const local = e.getLocalPosition(boardLayer);
       tapStartCell = pixelToGrid(local.x, local.y);
+
+      // 開始拖曳：記錄起始 sprite 和位置
+      if (tapStartCell && !isProcessing && !rulesEngine.settled) {
+        const [sc, sr] = tapStartCell;
+        const spr = boardRenderer.getSprite(sc, sr) || boardRenderer.getDeliverySprite(sc, sr);
+        if (spr) {
+          dragState = {
+            sprite: spr as any,
+            startCell: tapStartCell,
+            originX: sc * CELL_SIZE + CELL_SIZE / 2,
+            originY: sr * CELL_SIZE + CELL_SIZE / 2,
+          };
+        }
+      }
+    });
+
+    // 拖曳中：sprite 跟隨指標移動（限制在相鄰格範圍內）
+    boardLayer.on('pointermove', (e) => {
+      if (!dragState || isProcessing) return;
+      const local = e.getLocalPosition(boardLayer);
+      const dx = local.x - dragState.originX;
+      const dy = local.y - dragState.originY;
+      const maxDist = CELL_SIZE;
+
+      // 限制在一個格子距離內
+      const clampedDx = Math.max(-maxDist, Math.min(maxDist, dx));
+      const clampedDy = Math.max(-maxDist, Math.min(maxDist, dy));
+
+      // 鎖定主軸方向（只允許水平或垂直拖曳）
+      if (Math.abs(clampedDx) > Math.abs(clampedDy)) {
+        dragState.sprite.position.set(dragState.originX + clampedDx, dragState.originY);
+      } else {
+        dragState.sprite.position.set(dragState.originX, dragState.originY + clampedDy);
+      }
     });
 
     boardLayer.on('pointerup', (e) => {
       const local = e.getLocalPosition(boardLayer);
       const cell = pixelToGrid(local.x, local.y);
+
+      // 結束拖曳：歸位 sprite
+      if (dragState) {
+        dragState.sprite.position.set(dragState.originX, dragState.originY);
+        dragState = null;
+      }
+
       if (!cell || !tapStartCell) {
         tapStartCell = null;
         return;
@@ -1814,6 +2140,18 @@ export class GameIntegration {
           selectedCell = null;
           boardRenderer.setSelection(null);
         }
+        tapStartCell = null;
+        return;
+      }
+
+      // 同一格 → 先檢查是否為獨立特殊道具(點擊發動,不計手數)
+      const tappedCell = getCell(board, cell);
+      const tappedGem = tappedCell?.gem;
+      if (tappedGem?.special && tappedGem.colour === null) {
+        // 清除選取後直接發動
+        selectedCell = null;
+        boardRenderer.setSelection(null);
+        doActivate(cell);
         tapStartCell = null;
         return;
       }
@@ -1832,6 +2170,15 @@ export class GameIntegration {
       } else {
         selectedCell = cell;
         boardRenderer.setSelection(cell);
+      }
+      tapStartCell = null;
+    });
+
+    // 指標離開棋盤時歸位拖曳中的 sprite
+    boardLayer.on('pointerupoutside', () => {
+      if (dragState) {
+        dragState.sprite.position.set(dragState.originX, dragState.originY);
+        dragState = null;
       }
       tapStartCell = null;
     });
@@ -1943,13 +2290,19 @@ export class GameIntegration {
   }
 
   /** Draw a grid background for the board */
-  private async drawGridBackground(appRefs: AppRefs, cols: number, rows: number, cellSize: number): Promise<void> {
+  private async drawGridBackground(
+    appRefs: AppRefs,
+    board: import('../game/rules/board').Board,
+    cellSize: number,
+  ): Promise<void> {
     const { Graphics } = await import('pixi.js');
     const grid = new Graphics();
     grid.label = 'grid-bg';
 
-    for (let col = 0; col < cols; col++) {
-      for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < board.width; col++) {
+      for (let row = 0; row < board.height; row++) {
+        const cell = board.cells[col][row];
+        if (cell.isEmpty) continue;
         const x = col * cellSize;
         const y = row * cellSize;
         const isEven = (col + row) % 2 === 0;

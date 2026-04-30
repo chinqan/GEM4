@@ -205,6 +205,7 @@ registerLevel({
     height: 7,
     empty: [[2, 2], [3, 2], [4, 2], [3, 3], [3, 4]],
     deliveryCells: [[2, 6], [3, 6], [4, 6]],
+    deliveryItems: [[2, 0], [3, 0], [4, 0]],
   },
   gems: { colours: ['R', 'G', 'B', 'Y', 'P'] },
   constraints: { moveBudget: 25 },

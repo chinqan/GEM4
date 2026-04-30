@@ -108,6 +108,7 @@ describe('setCell', () => {
     const newCell: Cell = {
       gem: createGem('R'),
       blocker: null,
+      deliveryItem: null,
       isDelivery: true,
       isEmpty: false,
     };
@@ -124,6 +125,7 @@ describe('setCell', () => {
     const cell: Cell = {
       gem: null,
       blocker: null,
+      deliveryItem: null,
       isDelivery: false,
       isEmpty: false,
     };

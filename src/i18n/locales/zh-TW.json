@@ -21,7 +21,7 @@
   "objective.score": "達到 {target} 分",
   "objective.clear": "清除 {count} 個 {blocker}",
   "objective.collect": "收集 {count} 個{colour}寶石",
-  "objective.drop": "送達 {count} 個寶石",
+  "objective.drop": "送達 {count} 個道具",
 
   "blocker.jelly": "遺忘之霧",
   "blocker.lock": "固化記憶",

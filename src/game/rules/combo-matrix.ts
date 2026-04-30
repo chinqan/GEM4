@@ -211,7 +211,9 @@ function colourTransform(
   targetSpecial: 'line' | 'area',
   rng?: Mulberry32,
 ): ClearResult {
-  // 找出非 colour 的那顆寶石的顏色
+  // 找出非 colour 的那顆寶石的顏色;若兩顆都是 colourless special
+  // (例如 colour×line 或 colour×bomb 組合,partner 已是獨立道具),
+  // 則從棋盤上現有顏色中隨機挑一色
   const cellA = getCell(board, posA);
   const cellB = getCell(board, posB);
 
@@ -221,9 +223,23 @@ function colourTransform(
     targetColour = cellB.gem.colour;
   } else if (cellB?.gem?.special === 'colour' && cellA?.gem?.colour) {
     targetColour = cellA.gem.colour;
+  } else {
+    // partner 也是 colourless special:從盤面隨機取色
+    const present = new Set<GemColour>();
+    for (let c = 0; c < board.width; c++) {
+      for (let r = 0; r < board.height; r++) {
+        const cell = board.cells[c][r];
+        const g = cell.gem;
+        if (g && g.colour) present.add(g.colour);
+      }
+    }
+    const pool = [...present].sort();
+    if (pool.length > 0) {
+      const idx = rng ? rng.int(0, pool.length) : 0;
+      targetColour = pool[idx];
+    }
   }
 
-  // 如果找不到目標色（例如兩顆都是 colour），不應走到這裡
   if (!targetColour) {
     return { clearedCells: [], triggeredSpecials: [] };
   }
@@ -346,13 +362,15 @@ function fullBoardClear(board: Board): ClearResult {
  * 解析兩顆特殊寶石的組合效果。
  *
  * 若 posA 或 posB 的寶石不是特殊寶石，回傳 null。
- * 組合觸發位置為兩顆 Special 的中點格。
+ * 組合觸發中心：預設為兩 Special 的中點格；呼叫端可透過 originOverride
+ * 指定其他位置（玩家拖曳時改用目的地，作為「技能發動中心」）。
  */
 export function resolveCombo(
   board: Board,
   posA: CellPos,
   posB: CellPos,
   rng?: Mulberry32,
+  originOverride?: CellPos,
 ): ClearResult | null {
   const cellA = getCell(board, posA);
   const cellB = getCell(board, posB);
@@ -367,7 +385,7 @@ export function resolveCombo(
   const key = comboKey(specialA, specialB);
   if (!key) return null;
 
-  const origin = midpoint(posA, posB);
+  const origin = originOverride ?? midpoint(posA, posB);
 
   switch (key) {
     case 'line.line':

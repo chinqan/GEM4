@@ -14,6 +14,7 @@ export interface CascadeStep {
   matches: MatchDescriptor[];
   drops: ColumnDrop[]; // 每欄的掉落距離
   clearedCells: CellPos[];
+  deliveryCollected: CellPos[]; // 本步收集的傳送道具位置
 }
 
 /** 完整 cascade 結果 */
@@ -21,6 +22,7 @@ export interface CascadeResult {
   steps: CascadeStep[];
   totalChain: number;
   totalCleared: CellPos[];
+  totalDeliveryCollected: CellPos[]; // 整個 cascade 收集的傳送道具位置
   overrun: boolean; // 是否觸發安全上限
 }
 
@@ -29,8 +31,9 @@ const MAX_CASCADE_STEPS = 50;
 // ─── 8.1 重力下落 ───────────────────────────────────────────
 
 /**
- * 對棋盤執行重力下落：每欄從底部往上掃，將寶石向下填入空格。
+ * 對棋盤執行重力下落：每欄從底部往上掃，將寶石和傳送道具向下填入空格。
  * locked 寶石不移動。isEmpty 格子不參與（跳過）。
+ * 傳送道具與寶石互斥，各自獨立佔格，但都受重力影響。
  * 回傳每欄的最大掉落距離。
  */
 export function applyGravity(board: Board): ColumnDrop[] {
@@ -39,55 +42,15 @@ export function applyGravity(board: Board): ColumnDrop[] {
   for (let col = 0; col < board.width; col++) {
     let maxDrop = 0;
 
-    // writePos 指向當前最低的可寫入位置（從底部往上）
-    let writePos = board.height - 1;
-
-    // 從底部往上掃描
-    for (let row = board.height - 1; row >= 0; row--) {
-      const cell = board.cells[col][row];
-
-      // 跳過 isEmpty 格子 — 它們不參與重力
-      if (cell.isEmpty) {
-        // 遇到 isEmpty 時，writePos 也需要跳過這個位置
-        // 重置 writePos 到 isEmpty 上方繼續
-        if (writePos === row) {
-          writePos = row - 1;
-        }
-        continue;
-      }
-
-      if (cell.gem !== null) {
-        // locked 寶石不移動
-        if (cell.gem.locked) {
-          // locked 寶石佔據當前位置，writePos 需要跳到它上方
-          if (writePos >= row) {
-            writePos = row - 1;
-          }
-          continue;
-        }
-
-        // 有寶石：移動到 writePos
-        // 但 writePos 必須 >= row（不能往上移）且不能是 isEmpty
-        // 先找到有效的 writePos
-        // writePos 已經在正確位置了
-      } else {
-        // 空格（gem === null 且 !isEmpty）：跳過，讓 writePos 保持
-        continue;
-      }
-    }
-
-    // 重新用更清晰的演算法：收集非 locked 寶石，從底部填入非 isEmpty 空位
     // 先收集欄中所有非 isEmpty 的位置（從底到頂）
-    const slots: number[] = []; // 可用的 row 位置（非 isEmpty），從底到頂
+    const slots: number[] = [];
     for (let row = board.height - 1; row >= 0; row--) {
       if (!board.cells[col][row].isEmpty) {
         slots.push(row);
       }
     }
 
-    // 收集所有寶石（保持從底到頂的順序）
-    // locked 寶石需要留在原位
-    // 先處理 locked 寶石：它們佔據固定 slot
+    // locked 寶石佔據固定 slot
     const lockedPositions = new Set<number>();
     for (let row = 0; row < board.height; row++) {
       const cell = board.cells[col][row];
@@ -104,26 +67,35 @@ export function applyGravity(board: Board): ColumnDrop[] {
       }
     }
 
-    // 收集可移動的寶石（非 locked），從底到頂
-    const movableGems: { gem: typeof board.cells[0][0]['gem']; fromRow: number }[] = [];
+    // 收集可移動的物件（寶石或傳送道具，非 locked），從底到頂
+    // gem 與 deliveryItem 互斥，一格只會有其中一個
+    const movableItems: { gem: typeof board.cells[0][0]['gem']; deliveryItem: typeof board.cells[0][0]['deliveryItem']; fromRow: number }[] = [];
     for (let row = board.height - 1; row >= 0; row--) {
       const cell = board.cells[col][row];
-      if (!cell.isEmpty && cell.gem !== null && !cell.gem.locked) {
-        movableGems.push({ gem: cell.gem, fromRow: row });
+      if (cell.isEmpty) continue;
+      // 有寶石（非 locked）
+      if (cell.gem !== null && !cell.gem.locked) {
+        movableItems.push({ gem: cell.gem, deliveryItem: null, fromRow: row });
+      }
+      // 有傳送道具（無寶石）
+      else if (cell.deliveryItem !== null && cell.gem === null) {
+        movableItems.push({ gem: null, deliveryItem: cell.deliveryItem, fromRow: row });
       }
     }
 
     // 清空所有非 locked、非 isEmpty 的格子
     for (const s of freeSlots) {
       board.cells[col][s].gem = null;
+      board.cells[col][s].deliveryItem = null;
     }
 
-    // 將可移動寶石填入 freeSlots（從底部開始）
+    // 將可移動物件填入 freeSlots（從底部開始）
     maxDrop = 0;
-    for (let i = 0; i < movableGems.length && i < freeSlots.length; i++) {
+    for (let i = 0; i < movableItems.length && i < freeSlots.length; i++) {
       const targetRow = freeSlots[i];
-      const { gem, fromRow } = movableGems[i];
+      const { gem, deliveryItem, fromRow } = movableItems[i];
       board.cells[col][targetRow].gem = gem;
+      board.cells[col][targetRow].deliveryItem = deliveryItem;
       const drop = targetRow - fromRow;
       if (drop > maxDrop) {
         maxDrop = drop;
@@ -139,9 +111,10 @@ export function applyGravity(board: Board): ColumnDrop[] {
 // ─── 8.2 頂端補充 ───────────────────────────────────────────
 
 /**
- * 逐欄從頂部往下掃，找到 gem === null 且 !isEmpty 的格子，
+ * 逐欄從頂部往下掃，找到 gem === null 且 !isEmpty 且無 deliveryItem 的格子，
  * 用 rng.pick(colours) 生成新寶石填入。
  * 新寶石為普通寶石（無 special、無 locked）。
+ * 有 deliveryItem 的格子不補寶石（兩者互斥）。
  */
 export function fillFromTop(
   board: Board,
@@ -151,7 +124,7 @@ export function fillFromTop(
   for (let col = 0; col < board.width; col++) {
     for (let row = 0; row < board.height; row++) {
       const cell = board.cells[col][row];
-      if (cell.gem === null && !cell.isEmpty) {
+      if (cell.gem === null && !cell.isEmpty && cell.deliveryItem === null) {
         cell.gem = createGem(rng.pick(colours));
       }
     }
@@ -159,6 +132,25 @@ export function fillFromTop(
 }
 
 // ─── 8.3-8.5 完整 cascade 流程 ──────────────────────────────
+
+/**
+ * 檢查並收集已到達 delivery cell 的傳送道具。
+ * 傳送道具到達 isDelivery 標記的格子時即完成收集，從棋盤移除。
+ * 回傳收集到的道具位置陣列。
+ */
+export function collectDeliveryItems(board: Board): CellPos[] {
+  const collected: CellPos[] = [];
+  for (let col = 0; col < board.width; col++) {
+    for (let row = 0; row < board.height; row++) {
+      const cell = board.cells[col][row];
+      if (cell.isDelivery && cell.deliveryItem !== null) {
+        cell.deliveryItem = null;
+        collected.push([col, row]);
+      }
+    }
+  }
+  return collected;
+}
 
 /**
  * 執行完整 cascade 流程：
@@ -218,11 +210,13 @@ export function runCascade(
     }
 
     // 7. 生成特殊寶石（在清除之前）
+    //    特殊寶石為獨立道具：colour=null，不依附於消除前的顏色寶石
     for (const match of matches) {
       if (match.spawnsSpecial && match.spawnAt) {
         const [sc, sr] = match.spawnAt;
         const spawnCell = board.cells[sc][sr];
         if (spawnCell.gem) {
+          spawnCell.gem.colour = null;
           spawnCell.gem.special = match.spawnsSpecial;
           // 不清除這個格子（它會保留為特殊寶石）
           const spawnKey = `${sc},${sr}`;
@@ -249,6 +243,8 @@ export function runCascade(
     }
 
     // 9. 清除 matched cells 的 gem
+    //    gem 與 deliveryItem 互斥，matched cell 必定有 gem 無 deliveryItem，
+    //    所以清除 gem 不會影響任何 deliveryItem。
     const clearedCells: CellPos[] = [...matchedCells];
     for (const pos of matchedCells) {
       const [c, r] = pos;
@@ -272,23 +268,34 @@ export function runCascade(
       }
     }
 
-    // 11. 記錄 CascadeStep
+    // 11. 收集到達 delivery cell 的傳送道具
+    const deliveryCollected = collectDeliveryItems(board);
+
+    // 12. 記錄 CascadeStep
     steps.push({
       step: stepCount,
       chain,
       matches,
       drops,
       clearedCells,
+      deliveryCollected,
     });
 
-    // 12. 累計清除
+    // 13. 累計清除
     totalCleared.push(...clearedCells);
   }
+
+  // cascade 結束後再做一次收集（最後一次重力可能讓道具到達底部）
+  const finalDeliveryCollected = collectDeliveryItems(board);
+  const totalDeliveryCollected: CellPos[] = [];
+  for (const s of steps) totalDeliveryCollected.push(...s.deliveryCollected);
+  totalDeliveryCollected.push(...finalDeliveryCollected);
 
   return {
     steps,
     totalChain: chain,
     totalCleared,
+    totalDeliveryCollected,
     overrun,
   };
 }

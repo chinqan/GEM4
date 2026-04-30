@@ -208,7 +208,7 @@ describe('Bug 2 — formatObjectiveText', () => {
     );
   });
 
-  it('drop objective → 送達 {count} 個寶石', async () => {
+  it('drop objective → 送達 {count} 個道具', async () => {
     const { formatObjectiveText } = await import(
       '../../../integration/game-integration'
     );
@@ -217,7 +217,7 @@ describe('Bug 2 — formatObjectiveText', () => {
       fc.property(arbDropObjective, (objective) => {
         if (objective.type !== 'drop') return;
         const result = formatObjectiveText(objective);
-        expect(result).toBe(`送達 ${objective.target.count} 個寶石`);
+        expect(result).toBe(`送達 ${objective.target.count} 個道具`);
       }),
       { numRuns: 10 },
     );
@@ -238,7 +238,7 @@ describe('Bug 2 — formatObjectiveText', () => {
 
     const result = formatObjectiveText(multiObjective);
     expect(result).toContain('達成 5000 分');
-    expect(result).toContain('送達 3 個寶石');
+    expect(result).toContain('送達 3 個道具');
   });
 });
 

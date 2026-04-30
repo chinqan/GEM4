@@ -35,6 +35,7 @@ export interface SelectionState {
 export class BoardRenderer {
   private readonly factory = new GemSpriteFactory();
   private readonly sprites: Map<string, GemSprite> = new Map();
+  private readonly deliverySprites: Map<string, Graphics> = new Map();
   private readonly selectionRingGfx: Graphics;
   private readonly selectionGlowGfx: Graphics;
 
@@ -126,6 +127,48 @@ export class BoardRenderer {
         this.sprites.delete(key);
       }
     }
+
+    // ─── 同步傳送道具 overlay ───────────────────────────────
+    const activeDeliveryKeys = new Set<string>();
+
+    for (let col = 0; col < board.width; col++) {
+      for (let row = 0; row < board.height; row++) {
+        const cell = board.cells[col][row];
+        const key = cellKey(col, row);
+
+        if (!cell.deliveryItem) {
+          // 無傳送道具 → 移除 overlay
+          this.removeDeliverySprite(key);
+          continue;
+        }
+
+        activeDeliveryKeys.add(key);
+
+        // 建立或更新 delivery overlay
+        let overlay = this.deliverySprites.get(key);
+        if (!overlay) {
+          overlay = this.createDeliveryOverlay();
+          this.deliverySprites.set(key, overlay);
+          this.layers.gemLayer.addChild(overlay);
+        }
+
+        // 更新位置
+        overlay.position.set(
+          col * CELL_SIZE + CELL_SIZE / 2,
+          row * CELL_SIZE + CELL_SIZE / 2,
+        );
+        overlay.visible = true;
+      }
+    }
+
+    // 移除不再存在的 delivery overlay
+    for (const [key, overlay] of this.deliverySprites) {
+      if (!activeDeliveryKeys.has(key)) {
+        this.layers.gemLayer.removeChild(overlay);
+        overlay.destroy({ children: true });
+        this.deliverySprites.delete(key);
+      }
+    }
   }
 
   /**
@@ -176,6 +219,13 @@ export class BoardRenderer {
   }
 
   /**
+   * 取得指定格子的 delivery overlay（供動畫系統使用）。
+   */
+  getDeliverySprite(col: number, row: number): Graphics | undefined {
+    return this.deliverySprites.get(cellKey(col, row));
+  }
+
+  /**
    * 取得所有 sprite 的迭代器。
    */
   getAllSprites(): IterableIterator<GemSprite> {
@@ -191,6 +241,11 @@ export class BoardRenderer {
       sprite.destroy({ children: true });
     }
     this.sprites.clear();
+    for (const overlay of this.deliverySprites.values()) {
+      this.layers.gemLayer.removeChild(overlay);
+      overlay.destroy({ children: true });
+    }
+    this.deliverySprites.clear();
     this.setSelection(null);
     this.shimmerTime = 0;
   }
@@ -214,6 +269,41 @@ export class BoardRenderer {
       sprite.destroy({ children: true });
       this.sprites.delete(key);
     }
+  }
+
+  /** 移除單一 delivery overlay */
+  private removeDeliverySprite(key: string): void {
+    const overlay = this.deliverySprites.get(key);
+    if (overlay) {
+      this.layers.gemLayer.removeChild(overlay);
+      overlay.destroy({ children: true });
+      this.deliverySprites.delete(key);
+    }
+  }
+
+  /** 建立傳送道具 overlay（金色菱形 + 向下箭頭） */
+  private createDeliveryOverlay(): Graphics {
+    const g = new Graphics();
+    g.label = 'deliveryItem';
+    const s = CELL_SIZE * 0.3;
+
+    // 金色菱形
+    g.moveTo(0, -s);
+    g.lineTo(s, 0);
+    g.lineTo(0, s);
+    g.lineTo(-s, 0);
+    g.closePath();
+    g.fill({ color: 0xf6c453, alpha: 0.95 });
+    g.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+
+    // 小向下箭頭
+    const a = s * 0.35;
+    g.moveTo(-a, s * 0.15);
+    g.lineTo(0, s * 0.55);
+    g.lineTo(a, s * 0.15);
+    g.stroke({ color: 0xffffff, width: 1.5, alpha: 0.9 });
+
+    return g;
   }
 
   /** 更新 sprite 位置 */

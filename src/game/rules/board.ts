@@ -27,11 +27,17 @@ export type BlockerState =
     }
   | { kind: 'unstable'; countdown: number };
 
-/** 單一格子 */
+/** 傳送道具（獨立物件，不依附於寶石） */
+export interface DeliveryItem {
+  id: number; // 唯一識別碼
+}
+
+/** 單一格子 — gem 與 deliveryItem 互斥，不可同時存在 */
 export interface Cell {
   gem: Gem | null;
   blocker: BlockerState | null;
-  isDelivery: boolean;
+  deliveryItem: DeliveryItem | null; // 傳送道具（獨立物件，與 gem 互斥，隨重力掉落）
+  isDelivery: boolean; // 底部收集格標記
   isEmpty: boolean; // 永久空格
 }
 
@@ -62,6 +68,7 @@ function createCell(): Cell {
   return {
     gem: null,
     blocker: null,
+    deliveryItem: null,
     isDelivery: false,
     isEmpty: false,
   };
@@ -168,6 +175,7 @@ function cloneCell(cell: Cell): Cell {
   return {
     gem: cell.gem ? cloneGem(cell.gem) : null,
     blocker: cell.blocker ? cloneBlocker(cell.blocker) : null,
+    deliveryItem: cell.deliveryItem ? { id: cell.deliveryItem.id } : null,
     isDelivery: cell.isDelivery,
     isEmpty: cell.isEmpty,
   };

@@ -77,6 +77,8 @@ export interface BoardInputOptions {
   cellSize?: number;
   /** 拖曳觸發閾值（像素，預設為 cellSize 的 30%） */
   dragThreshold?: number;
+  /** 該格是否為獨立特殊道具（colour=null && special!=null）；用於決定 tap 是否直接發動 */
+  isSpecialAt?: (cell: CellPos) => boolean;
 }
 
 /**
@@ -94,6 +96,7 @@ export class BoardInput {
   private readonly commandQueue: CommandQueue;
   private readonly cellSize: number;
   private readonly dragThreshold: number;
+  private readonly isSpecialAt: (cell: CellPos) => boolean;
 
   private boardWidth: number;
   private boardHeight: number;
@@ -119,6 +122,7 @@ export class BoardInput {
     this.boardHeight = options.boardHeight;
     this.cellSize = options.cellSize ?? CELL_SIZE;
     this.dragThreshold = options.dragThreshold ?? this.cellSize * 0.3;
+    this.isSpecialAt = options.isSpecialAt ?? (() => false);
   }
 
   // ─── 公開 API ────────────────────────────────────────
@@ -297,6 +301,12 @@ export class BoardInput {
     }
 
     // 同一格的 tap
+    // 點擊到獨立特殊道具 → 直接發動（不計算移動）
+    if (this.isSpecialAt(cell)) {
+      this.clearSelection();
+      this.commandQueue.enqueue({ kind: 'activateSpecial', at: cell });
+      return;
+    }
     if (!this.selectedCell) {
       // 第一次 tap：選取
       this.selectedCell = cell;
