@@ -11,6 +11,32 @@
         "echo *",
         "cat *",
         "test *",
-        "git *"
-    ]
+        "git *",
+        "/Users/chinqan/opt/anaconda3/bin/python *",
+        "wc *",
+        "python3 *",
+        "GRAPHIFY_BIN=$(which *"
+    ],
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "**/dist/**": true,
+        "**/.git/objects/**": true,
+        "**/graphify-out/**": true,
+        "**/public/assets/sfx/**": true,
+        "**/public/assets/gems/**": true,
+        "**/test-results/**": true,
+        "**/playwright-report/**": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/graphify-out": true,
+        "**/package-lock.json": true,
+        "**/public/assets/sfx": true,
+        "**/public/assets/gems": true,
+        "**/*.wav": true,
+        "**/test-results": true,
+        "**/playwright-report": true,
+        "**/gdd/audits": true
+    }
 }

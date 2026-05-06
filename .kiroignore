@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Graph output (large generated files)
+graphify-out/
+
+# Git internals
+.git/
+
+# Other agent configs
+.claude/
+
+# OS files
+.DS_Store
+
+# Lock files
+package-lock.json
+
+# Binary / media assets (Kiro 無法有效解析)
+*.wav
+*.mp3
+*.ogg
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+
+# SVG art assets (大量圖檔，非程式邏輯)
+public/assets/gems/
+public/assets/particles/
+public/assets/sfx/
+public/assets/ui/
+public/assets/worlds/
+
+# GDD audits (歷史紀錄，日常不需要)
+gdd/audits/
+
+# E2E test artifacts
+test-results/
+playwright-report/

@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Graphify Update Reminder",
+  "description": "After the agent finishes a task, remind it to suggest a graph update if code files were modified",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "If you modified any source files during this task, remind the user they can run `/graphify . --update` to keep the knowledge graph current. For code-only changes this is free (AST only). Only mention this if files were actually changed — skip it for read-only questions."
+  }
+}
