@@ -15,7 +15,9 @@
         "/Users/chinqan/opt/anaconda3/bin/python *",
         "wc *",
         "python3 *",
-        "GRAPHIFY_BIN=$(which *"
+        "GRAPHIFY_BIN=$(which *",
+        "$(cat *",
+        "cp *"
     ],
     "files.watcherExclude": {
         "**/node_modules/**": true,

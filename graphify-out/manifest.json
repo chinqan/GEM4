@@ -11,26 +11,6 @@
     "mtime": 1776871690.8236592,
     "hash": "09916c2942575be16d67b5b64a724fa9"
   },
-  "/Users/chinqan/GEM4/e2e/settings-persistence.spec.ts": {
-    "mtime": 1776901837.9975078,
-    "hash": "6d5cd3ca82cbb26fae370e32c4df0f91"
-  },
-  "/Users/chinqan/GEM4/e2e/first-launch.spec.ts": {
-    "mtime": 1776901803.1463661,
-    "hash": "bed1abfac5f8780aa40d7d367de92a9b"
-  },
-  "/Users/chinqan/GEM4/e2e/cross-browser.spec.ts": {
-    "mtime": 1776901851.7929785,
-    "hash": "4d2ac3b9a6fd38175e8477d4ab375dfe"
-  },
-  "/Users/chinqan/GEM4/e2e/pause-resume.spec.ts": {
-    "mtime": 1776901826.1168041,
-    "hash": "5f1d3ffb3e766aff6a7b5fe72fb2060b"
-  },
-  "/Users/chinqan/GEM4/e2e/special-gems.spec.ts": {
-    "mtime": 1776901814.8669581,
-    "hash": "d57bed61c4dd8a70725ecb147294fe9e"
-  },
   "/Users/chinqan/GEM4/build-tools/perf-validation.mjs": {
     "mtime": 1776901784.1683044,
     "hash": "46f0a2a6444000cf0a6d5ba3e87ec5df"
@@ -147,6 +127,10 @@
     "mtime": 1776900526.6670246,
     "hash": "b9305e4adc6272cd2910deaa5ae92f02"
   },
+  "/Users/chinqan/GEM4/src/input/board-interaction.ts": {
+    "mtime": 1778084387.5457356,
+    "hash": "23d3e95491e97ef5633af8fc1e901532"
+  },
   "/Users/chinqan/GEM4/src/input/input-system.ts": {
     "mtime": 1776900420.5041995,
     "hash": "9985bbe022d12257dca1be81fa4a14d3"
@@ -155,9 +139,13 @@
     "mtime": 1777609272.5714028,
     "hash": "81e3016dd0ed5212e7a0aec24455c52b"
   },
+  "/Users/chinqan/GEM4/src/integration/screen-router.ts": {
+    "mtime": 1778084334.94489,
+    "hash": "48df1b4ad86c383743d9674175eb0b7a"
+  },
   "/Users/chinqan/GEM4/src/integration/game-integration.ts": {
-    "mtime": 1777609272.573052,
-    "hash": "990a01c41dd820f357d0d6a7c8c8fd77"
+    "mtime": 1778085043.8169625,
+    "hash": "d8d61b571673aa08f9d6cb85cf874470"
   },
   "/Users/chinqan/GEM4/src/integration/__tests__/special-activation.test.ts": {
     "mtime": 1776951891.1803672,
@@ -175,6 +163,10 @@
     "mtime": 1776876986.5372767,
     "hash": "a1124a0a8e2ce30a78d4478274401cab"
   },
+  "/Users/chinqan/GEM4/src/game/runtime/game-session.ts": {
+    "mtime": 1778082265.3892922,
+    "hash": "1f2c2caa04c23961218c57e17fcc4bce"
+  },
   "/Users/chinqan/GEM4/src/game/runtime/game-loop.ts": {
     "mtime": 1777609272.5691082,
     "hash": "a7830ed6f4e933449b9ceae5d271e58b"
@@ -190,6 +182,10 @@
   "/Users/chinqan/GEM4/src/game/runtime/__tests__/reshuffle.property.test.ts": {
     "mtime": 1776876690.930846,
     "hash": "91d42b5474731b0a251a6a036f0d499d"
+  },
+  "/Users/chinqan/GEM4/src/game/runtime/__tests__/game-session.test.ts": {
+    "mtime": 1778082393.9656913,
+    "hash": "7c1b5e8dc8f3934f7cc7013602cb431b"
   },
   "/Users/chinqan/GEM4/src/game/runtime/__tests__/game-loop.test.ts": {
     "mtime": 1777168767.094392,
@@ -387,6 +383,10 @@
     "mtime": 1776896464.2411954,
     "hash": "8ae8be70999c90e1b42dadbeeed4fc83"
   },
+  "/Users/chinqan/GEM4/src/rendering/board-animator.ts": {
+    "mtime": 1778084250.6787345,
+    "hash": "0839c9aaacb4ee8e4d7f5a833feaf679"
+  },
   "/Users/chinqan/GEM4/src/rendering/app-layers.ts": {
     "mtime": 1776895983.8618214,
     "hash": "7a0caaa86b00ed68ce376666b9462710"
@@ -510,253 +510,5 @@
   "/Users/chinqan/GEM4/gdd/registries/types.md": {
     "mtime": 1776781948.332272,
     "hash": "7af5b24e5a08d0cd215ee94dc67a4edf"
-  },
-  "/Users/chinqan/GEM4/gdd/audits/2026-04-22-progress-audit.md": {
-    "mtime": 1776781948.3302224,
-    "hash": "42add7072e2b8fbd67205fde850d4b7b"
-  },
-  "/Users/chinqan/GEM4/gdd/audits/2026-04-21-freeze-audit.md": {
-    "mtime": 1776781948.3292441,
-    "hash": "69387ae53425b87883f6b2ec6c533e32"
-  },
-  "/Users/chinqan/GEM4/gdd/audits/2026-04-23-freeze-readiness-audit.md": {
-    "mtime": 1776781948.33066,
-    "hash": "01020ca35797c2c292c222e2576961e2"
-  },
-  "/Users/chinqan/GEM4/public/assets/ui/icon-pause.svg": {
-    "mtime": 1776901693.710256,
-    "hash": "b32b9d6c9b510df9bb46c15554edd2ee"
-  },
-  "/Users/chinqan/GEM4/public/assets/ui/star-filled.svg": {
-    "mtime": 1776901693.7099764,
-    "hash": "c5c2f1e5417c972891bd1c1201e30726"
-  },
-  "/Users/chinqan/GEM4/public/assets/ui/icon-settings.svg": {
-    "mtime": 1776901693.7103686,
-    "hash": "5094b46b94d23e087b24d63ab62e4e77"
-  },
-  "/Users/chinqan/GEM4/public/assets/ui/button.svg": {
-    "mtime": 1776901693.709899,
-    "hash": "e9c2644d81efc4ad66681ca9ad1fffbe"
-  },
-  "/Users/chinqan/GEM4/public/assets/ui/icon-back.svg": {
-    "mtime": 1776901693.7104418,
-    "hash": "43234b7cbcdf9d5f2a867b320f1d6e64"
-  },
-  "/Users/chinqan/GEM4/public/assets/ui/star-empty.svg": {
-    "mtime": 1776901693.7100434,
-    "hash": "014e3758440ce6487584eee65d7ee2cc"
-  },
-  "/Users/chinqan/GEM4/public/assets/worlds/world-4-bg.svg": {
-    "mtime": 1776901693.7113793,
-    "hash": "a400923c21f89c9a5d66f542aa0c94c4"
-  },
-  "/Users/chinqan/GEM4/public/assets/worlds/world-2-bg.svg": {
-    "mtime": 1776901693.711253,
-    "hash": "aa2bcd059bb6d45ea67d06d35a786516"
-  },
-  "/Users/chinqan/GEM4/public/assets/worlds/world-1-bg.svg": {
-    "mtime": 1776901693.7111883,
-    "hash": "716790502ff65d99127066950ce25dea"
-  },
-  "/Users/chinqan/GEM4/public/assets/worlds/world-3-bg.svg": {
-    "mtime": 1776901693.7113144,
-    "hash": "f8faa323dd15544cb08031983ba1f102"
-  },
-  "/Users/chinqan/GEM4/public/assets/particles/particle-spark.svg": {
-    "mtime": 1776901693.7108316,
-    "hash": "1034debc5339bf7c1aa2c548e50728a3"
-  },
-  "/Users/chinqan/GEM4/public/assets/particles/particle-glow.svg": {
-    "mtime": 1776901693.7109857,
-    "hash": "f70a6359da6e2147230ded42dc7e299b"
-  },
-  "/Users/chinqan/GEM4/public/assets/particles/particle-ring.svg": {
-    "mtime": 1776901693.7109067,
-    "hash": "705fcfc48103b750598a9c64998add18"
-  },
-  "/Users/chinqan/GEM4/public/assets/particles/particle-circle.svg": {
-    "mtime": 1776901693.7106512,
-    "hash": "c53f478a7b0523502f4fd0efe178750e"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-o-area.svg": {
-    "mtime": 1776901693.7095325,
-    "hash": "eefda9427c07da0f5cc6b6dc0c6f969e"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-g-base.svg": {
-    "mtime": 1776901693.7070847,
-    "hash": "b41786b845feb69c78fc26c6bc1c014b"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-p-lineH.svg": {
-    "mtime": 1776901693.708658,
-    "hash": "d29792eff269dcf1143f6cbcedb2ec5a"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-y-base.svg": {
-    "mtime": 1776901693.7081707,
-    "hash": "c1704740306a61a96753e58cd43b27ed"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-p-area.svg": {
-    "mtime": 1776901693.7088013,
-    "hash": "cf50e4d89ac6914deed8f3db2cc81d2a"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-r-base.svg": {
-    "mtime": 1776901693.7064958,
-    "hash": "9d81cfdcde2fae30b2e0d244e7849c59"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-p-colour.svg": {
-    "mtime": 1776901693.7088616,
-    "hash": "e071566d4a34f5e82be5e0e88deebf1c"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-w-colour.svg": {
-    "mtime": 1776901693.7091787,
-    "hash": "3999eaea7f966a86f6fc45a070f2e79d"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-b-lineH.svg": {
-    "mtime": 1776901693.70781,
-    "hash": "0934ca3f13dbc5d25d46303e98eed5a3"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-w-area.svg": {
-    "mtime": 1776901693.7091196,
-    "hash": "bbc386723fdb3a69b8f004dda9435c16"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-w-lineH.svg": {
-    "mtime": 1776901693.7089934,
-    "hash": "0fadc34c52993ad98f914178fe8ac5fc"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-y-lineV.svg": {
-    "mtime": 1776901693.7083735,
-    "hash": "dfcf8fbff556b7e9cd3658add139a621"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-o-lineH.svg": {
-    "mtime": 1776901693.7092986,
-    "hash": "7aaaf5f2ae965607490ae6c128166f1c"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-g-lineV.svg": {
-    "mtime": 1776901693.707349,
-    "hash": "2bec6f64617a08bca75a93c9bb92adcc"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-b-area.svg": {
-    "mtime": 1776901693.7080307,
-    "hash": "7ec18a976b04456a71aaa584396b2fc5"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-r-lineV.svg": {
-    "mtime": 1776901693.706814,
-    "hash": "2603628f90f3c5266bbda52fbc582d8f"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-r-colour.svg": {
-    "mtime": 1776901693.7069852,
-    "hash": "8da1a10d63167348a24524b8de9e18f2"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-b-colour.svg": {
-    "mtime": 1776901693.7080967,
-    "hash": "6bef227142ce270406d35ceedbcbf8dc"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-p-base.svg": {
-    "mtime": 1776901693.7085855,
-    "hash": "fb91d54c4b3903eed07dfd2cbf3b49ad"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-b-lineV.svg": {
-    "mtime": 1776901693.7079597,
-    "hash": "81248ec3fcd2127acb83209f2f9d76f5"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-w-lineV.svg": {
-    "mtime": 1776901693.7090573,
-    "hash": "38dc325f5ddb488e69934d32548ba2e5"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-y-area.svg": {
-    "mtime": 1776901693.7084432,
-    "hash": "536e8a0d44338b7941205280a7ba39f2"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-y-lineH.svg": {
-    "mtime": 1776901693.7082372,
-    "hash": "6c8df2172f295f85b58669205417b24c"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-o-lineV.svg": {
-    "mtime": 1776901693.7093656,
-    "hash": "caea8992f784a2bdacc994bfcf6a7113"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-o-colour.svg": {
-    "mtime": 1776901693.7096064,
-    "hash": "9fc101a8652d7a0db8f088b61871afd9"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-r-area.svg": {
-    "mtime": 1776901693.7068992,
-    "hash": "bb9f5c1330ce8f88395f303c0a66671a"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-g-lineH.svg": {
-    "mtime": 1776901693.7071757,
-    "hash": "2295825bd298bcfd29e664151722ce8c"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-r-lineH.svg": {
-    "mtime": 1776901693.7067292,
-    "hash": "004a76f37226299556e2a0be5a7b1343"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-g-colour.svg": {
-    "mtime": 1776901693.7076385,
-    "hash": "36e03dd4dd8b77f9814834ed68fd65ef"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-g-area.svg": {
-    "mtime": 1776901693.7074523,
-    "hash": "8315e87a2a088b7f61384173c2084737"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-y-colour.svg": {
-    "mtime": 1776901693.7085147,
-    "hash": "965cee532b6bce2766630dcd3780654f"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-o-base.svg": {
-    "mtime": 1776901693.7092376,
-    "hash": "0cf80d1867331854da127a56f522d26e"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-b-base.svg": {
-    "mtime": 1776901693.7077305,
-    "hash": "fddeb3c61354536d594403e4892960f9"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-w-base.svg": {
-    "mtime": 1776901693.7089238,
-    "hash": "ca7d8c74aed8e62c02df70b433aab1eb"
-  },
-  "/Users/chinqan/GEM4/public/assets/gems/gem-p-lineV.svg": {
-    "mtime": 1776901693.708738,
-    "hash": "cd6ab6a0266ff82b685fcf35b97d44f0"
-  },
-  "/Users/chinqan/GEM4/public/assets/sfx/chain.wav": {
-    "mtime": 1776951891.1754923,
-    "hash": "611da7a0336aee80816b6ad0676700f2"
-  },
-  "/Users/chinqan/GEM4/public/assets/sfx/cascade.wav": {
-    "mtime": 1776951891.1753242,
-    "hash": "34fdf3b0c5bfec569ac789531658c8d5"
-  },
-  "/Users/chinqan/GEM4/public/assets/sfx/level-fail.wav": {
-    "mtime": 1776951891.1764019,
-    "hash": "280db5f2be775eb113fabd5fcf001303"
-  },
-  "/Users/chinqan/GEM4/public/assets/sfx/combo.wav": {
-    "mtime": 1776951891.175743,
-    "hash": "c6b1ccf6b705d6c60fbe49ed3b53e854"
-  },
-  "/Users/chinqan/GEM4/public/assets/sfx/level-complete.wav": {
-    "mtime": 1776951891.176183,
-    "hash": "33233ad16f7ae071837a77386c468b86"
-  },
-  "/Users/chinqan/GEM4/public/assets/sfx/special-spawn.wav": {
-    "mtime": 1776951891.1767228,
-    "hash": "2c983d3d772797f7a10c17c90bcfb2c9"
-  },
-  "/Users/chinqan/GEM4/public/assets/sfx/click.wav": {
-    "mtime": 1776951891.175571,
-    "hash": "791e60cd1d685de22dec4a00d2228347"
-  },
-  "/Users/chinqan/GEM4/public/assets/sfx/invalid.wav": {
-    "mtime": 1776951891.1758876,
-    "hash": "83fd221bb156b480a05a8316e6eae9d2"
-  },
-  "/Users/chinqan/GEM4/public/assets/sfx/swap.wav": {
-    "mtime": 1776951891.1768343,
-    "hash": "0c820bbe947fba21889f1544bb4fc810"
-  },
-  "/Users/chinqan/GEM4/public/assets/sfx/match.wav": {
-    "mtime": 1776951891.176541,
-    "hash": "c09ea05acb2d493efc98702dd465ae6a"
   }
 }
