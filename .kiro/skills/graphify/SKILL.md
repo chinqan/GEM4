@@ -60,10 +60,17 @@ Follow these steps in order. Do not skip steps.
 # Detect the correct Python interpreter (handles pipx, venv, system installs)
 GRAPHIFY_BIN=$(which graphify 2>/dev/null)
 if [ -n "$GRAPHIFY_BIN" ]; then
-    PYTHON=$(head -1 "$GRAPHIFY_BIN" | tr -d '#!')
-    case "$PYTHON" in
-        *[!a-zA-Z0-9/_.-]*) PYTHON="python3" ;;
-    esac
+    # Extract interpreter from shebang: strip #! prefix, trim whitespace
+    PYTHON=$(head -1 "$GRAPHIFY_BIN" | sed 's/^#![[:space:]]*//' | tr -d '[:space:]')
+    # Validate: must be an absolute path that exists
+    if [ ! -x "$PYTHON" ]; then
+        # Fallback: ask the graphify binary itself which python it uses
+        PYTHON=$("$GRAPHIFY_BIN" -c "import sys; print(sys.executable)" 2>/dev/null | tr -d '[:space:]')
+    fi
+    # Final fallback if still invalid
+    if [ -z "$PYTHON" ] || [ ! -x "$PYTHON" ]; then
+        PYTHON="python3"
+    fi
 else
     PYTHON="python3"
 fi

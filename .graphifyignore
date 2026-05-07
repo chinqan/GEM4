@@ -44,3 +44,12 @@ gdd/audits/
 
 # E2E tests (與核心架構關聯低)
 e2e/
+
+# Build tool 內部函式（獨立腳本，不參與 src/ import 圖）
+build-tools/generate-sfx.mjs
+build-tools/generate-placeholders.mjs
+
+# 配置檔（被 build tool 讀取，非 TypeScript import）
+playwright.config.ts
+vite.config.ts
+eslint.config.mjs

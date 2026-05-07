@@ -33,3 +33,9 @@ When asked about how modules connect, what depends on what, or where something i
 3. Cite source_file and source_location from graph nodes when referencing specific code.
 
 For Traditional Chinese summaries and Suggested Questions action plans, also follow `.kiro/steering/graphify-action-plan.md`.
+
+### When to trigger the Action Plan
+
+After a **full** `/graphify` run (not `--update`) that produces new Suggested Questions:
+- Inform the user: "GRAPH_REPORT.md 包含新的 Suggested Questions。使用 `#graphify-action-plan` 可產出完整的繁體中文行動計畫。"
+- If the user explicitly asks for analysis or action plan, activate the action-plan steering rules.

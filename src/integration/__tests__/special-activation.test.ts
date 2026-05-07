@@ -13,19 +13,9 @@ import {
   processSpecialActivations,
 } from '../../game/rules/special-gems';
 import { comboScore, specialActivationScore } from '../../game/rules/scoring';
+import { placeGem } from '../../game/__tests__/test-helpers';
 
 // ─── 測試工具 ───────────────────────────────────────────────
-
-/** 在棋盤上放置寶石 */
-function placeGem(
-  board: Board,
-  col: number,
-  row: number,
-  colour: GemColour,
-  special: SpecialGemType | null = null,
-): void {
-  board.cells[col][row].gem = createGem(colour, special);
-}
 
 /** 放置 Colour Gem（colour 為 null） */
 function placeColourGem(board: Board, col: number, row: number): void {

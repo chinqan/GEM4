@@ -15,19 +15,9 @@ import {
   processSpecialActivations,
   type PassiveSpecialType,
 } from '../special-gems';
+import { placeGem } from '../../__tests__/test-helpers';
 
 // ─── 測試工具 ───────────────────────────────────────────────
-
-/** 在棋盤上放置寶石的便利函式 */
-function placeGem(
-  board: Board,
-  col: number,
-  row: number,
-  colour: GemColour,
-  special: 'lineH' | 'lineV' | 'area' | 'colour' | null = null,
-): void {
-  board.cells[col][row].gem = createGem(colour, special);
-}
 
 /** 將 CellPos[] 轉為排序後的字串集合，方便比較 */
 function posSet(positions: CellPos[]): string[] {

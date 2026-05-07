@@ -10,17 +10,9 @@ import {
   determineSpecial,
   detectMatches,
 } from '../match-detect';
+import { placeGem } from '../../__tests__/test-helpers';
 
 // ─── 輔助函式 ───────────────────────────────────────────────
-
-/** 在棋盤上放置寶石 */
-function placeGem(board: Board, col: number, row: number, colour: GemColour, gem?: Partial<Gem>): void {
-  const g = createGem(colour);
-  if (gem?.locked) g.locked = true;
-  if (gem?.special) g.special = gem.special;
-  if (gem?.unstable) g.unstable = gem.unstable;
-  board.cells[col][row].gem = g;
-}
 
 /** 快速填充一整列 */
 function fillRow(board: Board, row: number, colours: (GemColour | null)[]): void {

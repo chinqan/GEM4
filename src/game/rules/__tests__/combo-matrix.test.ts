@@ -9,19 +9,9 @@ import {
 } from '../board';
 import type { Board } from '../board';
 import { comboKey, resolveCombo, midpoint } from '../combo-matrix';
+import { placeGem } from '../../__tests__/test-helpers';
 
 // ─── 測試工具 ───────────────────────────────────────────────
-
-/** 在棋盤上放置寶石的便利函式 */
-function placeGem(
-  board: Board,
-  col: number,
-  row: number,
-  colour: GemColour,
-  special: SpecialGemType | null = null,
-): void {
-  board.cells[col][row].gem = createGem(colour, special);
-}
 
 /** 放置 Colour Gem（colour 為 null） */
 function placeColourGem(board: Board, col: number, row: number): void {

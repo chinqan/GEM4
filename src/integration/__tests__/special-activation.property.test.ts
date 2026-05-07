@@ -17,6 +17,7 @@ import {
   processSpecialActivations,
 } from '../../game/rules/special-gems';
 import { resolveCombo, comboKey } from '../../game/rules/combo-matrix';
+import { placeGem } from '../../game/__tests__/test-helpers';
 
 // ─── 測試工具 ───────────────────────────────────────────────
 
@@ -38,17 +39,6 @@ const COMBO_BASE: Record<ComboType, number> = {
   'colour.bomb': 7000,
   'colour.colour': 10000,
 };
-
-/** 在棋盤上放置寶石 */
-function placeGem(
-  board: Board,
-  col: number,
-  row: number,
-  colour: GemColour,
-  special: SpecialGemType | null = null,
-): void {
-  board.cells[col][row].gem = createGem(colour, special);
-}
 
 /** 放置 Colour Gem（colour 為 null） */
 function placeColourGem(board: Board, col: number, row: number): void {

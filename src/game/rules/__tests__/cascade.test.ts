@@ -6,6 +6,7 @@ import type { Board, Gem } from '../board';
 import { Mulberry32 } from '../rng';
 import { applyGravity, fillFromTop, runCascade } from '../cascade';
 import { detectMatches } from '../match-detect';
+import { setGem, getColour } from '../../__tests__/test-helpers';
 
 // ─── 工具函式 ───────────────────────────────────────────────
 
@@ -18,16 +19,6 @@ function fillBoard(board: Board, colours: GemColour[][]): void {
       }
     }
   }
-}
-
-/** 設定單一格子的寶石 */
-function setGem(board: Board, col: number, row: number, colour: GemColour, special?: Gem['special']): void {
-  board.cells[col][row].gem = createGem(colour, special ?? null);
-}
-
-/** 取得格子的寶石顏色 */
-function getColour(board: Board, col: number, row: number): GemColour | null {
-  return board.cells[col][row].gem?.colour ?? null;
 }
 
 // ─── 8.6 單元測試 ───────────────────────────────────────────
