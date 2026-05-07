@@ -4,6 +4,11 @@
 //
 // Handles: tap-to-select, tap-tap-swap, drag-swap, tap-activate.
 // Emits high-level intents (swap, activate) via callbacks.
+//
+// Drag behaviour: once the player drags past a directional threshold,
+// the swap is immediately committed (both gems animate together).
+// No single-gem dragging visual — the interaction confirms a direction
+// then triggers the full two-gem swap animation.
 
 import type { Container } from 'pixi.js';
 import type { CellPos } from '../types';
@@ -35,6 +40,11 @@ export interface BoardInteractionCallbacks {
   onSelectionChange?: (cell: CellPos | null) => void;
 }
 
+// ─── Constants ──────────────────────────────────────────────
+
+/** Minimum drag distance (in pixels) to confirm a directional swap */
+const DRAG_THRESHOLD_RATIO = 0.25; // 25% of cell size
+
 // ─── Board Interaction ──────────────────────────────────────
 
 /**
@@ -42,8 +52,12 @@ export interface BoardInteractionCallbacks {
  *
  * Supports three interaction modes:
  * 1. Tap-tap: select a cell, then tap an adjacent cell to swap
- * 2. Drag: press and drag to an adjacent cell to swap
+ * 2. Drag: press and drag past threshold to confirm direction → swap fires immediately
  * 3. Tap-activate: tap a standalone special gem to activate it
+ *
+ * Drag behaviour:
+ * - No single-gem visual dragging. Once the drag direction is confirmed
+ *   (past threshold), onSwap fires and both gems animate together.
  */
 export class BoardInteraction {
   private readonly config: BoardInteractionConfig;
@@ -51,12 +65,8 @@ export class BoardInteraction {
 
   private tapStartCell: CellPos | null = null;
   private selectedCell: CellPos | null = null;
-  private dragState: {
-    sprite: any;
-    startCell: CellPos;
-    originX: number;
-    originY: number;
-  } | null = null;
+  private dragOriginPixel: { x: number; y: number } | null = null;
+  private dragCommitted = false;
 
   private boundPointerDown: (e: any) => void;
   private boundPointerMove: (e: any) => void;
@@ -109,7 +119,8 @@ export class BoardInteraction {
 
     this.tapStartCell = null;
     this.selectedCell = null;
-    this.dragState = null;
+    this.dragOriginPixel = null;
+    this.dragCommitted = false;
     this.callbacks = {};
   }
 
@@ -124,68 +135,97 @@ export class BoardInteraction {
   // ─── Private: Event Handlers ────────────────────────────
 
   private onPointerDown(e: any): void {
-    const { boardLayer } = this.config;
-    const local = e.getLocalPosition(boardLayer);
-    this.tapStartCell = this.pixelToGrid(local.x, local.y);
+    if (this.config.isProcessing()) return;
 
-    if (this.tapStartCell && !this.config.isProcessing()) {
-      const [sc, sr] = this.tapStartCell;
-      const spr = this.config.getSprite(sc, sr);
-      if (spr) {
-        this.dragState = {
-          sprite: spr,
-          startCell: this.tapStartCell,
-          originX: sc * this.config.cellSize + this.config.cellSize / 2,
-          originY: sr * this.config.cellSize + this.config.cellSize / 2,
-        };
-      }
-    }
-  }
-
-  private onPointerMove(e: any): void {
-    if (!this.dragState || this.config.isProcessing()) return;
-
-    const { boardLayer, cellSize } = this.config;
-    const local = e.getLocalPosition(boardLayer);
-    const dx = local.x - this.dragState.originX;
-    const dy = local.y - this.dragState.originY;
-    const maxDist = cellSize;
-
-    const clampedDx = Math.max(-maxDist, Math.min(maxDist, dx));
-    const clampedDy = Math.max(-maxDist, Math.min(maxDist, dy));
-
-    // Lock to primary axis
-    if (Math.abs(clampedDx) > Math.abs(clampedDy)) {
-      this.dragState.sprite.position.set(this.dragState.originX + clampedDx, this.dragState.originY);
-    } else {
-      this.dragState.sprite.position.set(this.dragState.originX, this.dragState.originY + clampedDy);
-    }
-  }
-
-  private onPointerUp(e: any): void {
     const { boardLayer } = this.config;
     const local = e.getLocalPosition(boardLayer);
     const cell = this.pixelToGrid(local.x, local.y);
 
-    // Reset drag sprite position
-    if (this.dragState) {
-      this.dragState.sprite.position.set(this.dragState.originX, this.dragState.originY);
-      this.dragState = null;
+    if (!cell) return;
+
+    this.tapStartCell = cell;
+    this.dragOriginPixel = { x: local.x, y: local.y };
+    this.dragCommitted = false;
+  }
+
+  private onPointerMove(e: any): void {
+    // If already committed a drag swap this gesture, or processing, ignore
+    if (this.dragCommitted || this.config.isProcessing()) return;
+    if (!this.tapStartCell || !this.dragOriginPixel) return;
+
+    const { boardLayer, cellSize } = this.config;
+    const local = e.getLocalPosition(boardLayer);
+    const dx = local.x - this.dragOriginPixel.x;
+    const dy = local.y - this.dragOriginPixel.y;
+
+    const threshold = cellSize * DRAG_THRESHOLD_RATIO;
+
+    // Check if drag exceeds threshold in a clear direction
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    if (absDx < threshold && absDy < threshold) return;
+
+    // Determine primary direction
+    let targetCell: CellPos;
+    const [col, row] = this.tapStartCell;
+
+    if (absDx > absDy) {
+      // Horizontal
+      targetCell = dx > 0 ? [col + 1, row] : [col - 1, row];
+    } else {
+      // Vertical
+      targetCell = dy > 0 ? [col, row + 1] : [col, row - 1];
     }
 
-    if (!cell || !this.tapStartCell) {
-      this.tapStartCell = null;
+    // Validate target is within bounds
+    if (!this.isInBounds(targetCell)) {
+      // Dragging towards edge — ignore, wait for release or different direction
       return;
     }
 
-    // Drag swap: down and up in different adjacent cells
+    // Commit the drag swap immediately
+    this.dragCommitted = true;
+    this.selectedCell = null;
+    this.callbacks.onSelectionChange?.(null);
+    this.callbacks.onSwap?.(this.tapStartCell, targetCell);
+  }
+
+  private onPointerUp(e: any): void {
+    // If drag already committed a swap, just reset state
+    if (this.dragCommitted) {
+      this.tapStartCell = null;
+      this.dragOriginPixel = null;
+      this.dragCommitted = false;
+      return;
+    }
+
+    if (this.config.isProcessing()) {
+      this.tapStartCell = null;
+      this.dragOriginPixel = null;
+      return;
+    }
+
+    const { boardLayer } = this.config;
+    const local = e.getLocalPosition(boardLayer);
+    const cell = this.pixelToGrid(local.x, local.y);
+
+    if (!cell || !this.tapStartCell) {
+      this.tapStartCell = null;
+      this.dragOriginPixel = null;
+      return;
+    }
+
+    // If pointer up is on a different cell (slow drag that didn't hit threshold)
+    // treat as adjacent swap if valid
     if (this.tapStartCell[0] !== cell[0] || this.tapStartCell[1] !== cell[1]) {
       if (this.isAdjacent(this.tapStartCell, cell)) {
-        this.callbacks.onSwap?.(this.tapStartCell, cell);
         this.selectedCell = null;
         this.callbacks.onSelectionChange?.(null);
+        this.callbacks.onSwap?.(this.tapStartCell, cell);
       }
       this.tapStartCell = null;
+      this.dragOriginPixel = null;
       return;
     }
 
@@ -195,6 +235,7 @@ export class BoardInteraction {
       this.callbacks.onSelectionChange?.(null);
       this.callbacks.onActivate?.(cell);
       this.tapStartCell = null;
+      this.dragOriginPixel = null;
       return;
     }
 
@@ -218,14 +259,13 @@ export class BoardInteraction {
     }
 
     this.tapStartCell = null;
+    this.dragOriginPixel = null;
   }
 
   private onPointerUpOutside(): void {
-    if (this.dragState) {
-      this.dragState.sprite.position.set(this.dragState.originX, this.dragState.originY);
-      this.dragState = null;
-    }
     this.tapStartCell = null;
+    this.dragOriginPixel = null;
+    this.dragCommitted = false;
   }
 
   // ─── Private: Utilities ─────────────────────────────────
@@ -236,6 +276,11 @@ export class BoardInteraction {
     const row = Math.floor(localY / cellSize);
     if (col < 0 || col >= boardWidth || row < 0 || row >= boardHeight) return null;
     return [col, row];
+  }
+
+  private isInBounds(cell: CellPos): boolean {
+    const { boardWidth, boardHeight } = this.config;
+    return cell[0] >= 0 && cell[0] < boardWidth && cell[1] >= 0 && cell[1] < boardHeight;
   }
 
   private isAdjacent(a: CellPos, b: CellPos): boolean {

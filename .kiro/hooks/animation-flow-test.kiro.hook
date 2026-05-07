@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Animation Flow Tests",
+  "description": "Runs animation flow integration tests when cascade, animation, or renderer files are modified. Catches timing/ordering bugs where gems change color before falling or sync happens at wrong time.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/rendering/board-animator.ts",
+      "src/rendering/board-renderer.ts",
+      "src/game/runtime/game-session.ts",
+      "src/game/rules/cascade.ts",
+      "src/game/rules/special-gems.ts",
+      "src/game/rules/combo-matrix.ts",
+      "src/rendering/animations.ts"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "npx vitest run src/rendering/__tests__/animation-flow.test.ts --reporter=verbose"
+  }
+}

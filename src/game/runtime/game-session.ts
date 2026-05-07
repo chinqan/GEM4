@@ -66,6 +66,23 @@ export interface CascadeStep {
   passiveActivations: SpecialActivationEvent[];
   score: number;
   gravity: GravityResult;
+  /** Board snapshot BEFORE clears (for rendering the correct state during clear animation) */
+  preClearSnapshot: BoardSnapshot;
+  /** Board snapshot AFTER gravity + fill (for gravity drop animation) */
+  boardSnapshot: BoardSnapshot;
+}
+
+/** Lightweight board snapshot for animation rendering */
+export interface BoardSnapshot {
+  width: number;
+  height: number;
+  cells: BoardSnapshotCell[][];
+}
+
+export interface BoardSnapshotCell {
+  gem: { colour: GemColour | null; special: SpecialGemType | null } | null;
+  isEmpty: boolean;
+  deliveryItem: boolean;
 }
 
 /** Swap type discriminator */
@@ -85,6 +102,8 @@ export interface SwapResult {
     passiveActivations: SpecialActivationEvent[];
     /** Gravity result from the initial activation clear (before cascade) */
     gravity: GravityResult;
+    /** Board snapshot after gravity + fill (for correct animation rendering) */
+    boardSnapshot: BoardSnapshot;
   };
   /** Cascade steps after the initial clear */
   cascadeSteps: CascadeStep[];
@@ -104,6 +123,8 @@ export interface ActivateResult {
   passiveActivations: SpecialActivationEvent[];
   /** Gravity result from the initial activation clear (before cascade) */
   gravity: GravityResult;
+  /** Board snapshot after gravity + fill (for correct animation rendering) */
+  boardSnapshot: BoardSnapshot;
   cascadeSteps: CascadeStep[];
   totalScore: number;
   endCondition: EndCondition | null;
@@ -287,6 +308,26 @@ export class GameSessionController {
       return subs.map((t) => t.getSummary());
     }
     return [this.tracker.getSummary()];
+  }
+
+  // ─── Private: Board Snapshot ─────────────────────────────
+
+  private snapshotBoard(): BoardSnapshot {
+    const { width, height, cells } = this.board;
+    const snap: BoardSnapshotCell[][] = [];
+    for (let col = 0; col < width; col++) {
+      const column: BoardSnapshotCell[] = [];
+      for (let row = 0; row < height; row++) {
+        const cell = cells[col][row];
+        column.push({
+          gem: cell.gem ? { colour: cell.gem.colour, special: cell.gem.special } : null,
+          isEmpty: cell.isEmpty,
+          deliveryItem: cell.deliveryItem !== null,
+        });
+      }
+      snap.push(column);
+    }
+    return { width, height, cells: snap };
   }
 
   // ─── Private: Colour Snapshot ───────────────────────────
@@ -609,6 +650,7 @@ export class GameSessionController {
       }
 
       // Clear all matched cells (excluding spawn positions)
+      const preClearSnapshot = this.snapshotBoard();
       for (const [c, r] of clearedCells) {
         if (clearedSet.has(`${c},${r}`)) {
           const cl = getCell(this.board, [c, r]);
@@ -635,6 +677,8 @@ export class GameSessionController {
         passiveActivations,
         score: stepScore,
         gravity,
+        preClearSnapshot,
+        boardSnapshot: this.snapshotBoard(),
       });
 
       matches = detectMatches(this.board);
@@ -666,7 +710,7 @@ export class GameSessionController {
       }
       const pool = [...present].sort();
       if (pool.length === 0) {
-        return { valid: false, type: special, pos: at, clearedCells: [], score: 0, passiveActivations: [], gravity: { drops: [], deliveryCollected: [] }, cascadeSteps: [], totalScore: 0, endCondition: null };
+        return { valid: false, type: special, pos: at, clearedCells: [], score: 0, passiveActivations: [], gravity: { drops: [], deliveryCollected: [] }, boardSnapshot: { width: this.board.width, height: this.board.height, cells: [] }, cascadeSteps: [], totalScore: 0, endCondition: null };
       }
       const target = pool[this.rngStreams.cascadeFill.int(0, pool.length)];
       activeResult = activateColourGem(this.board, at, target);
@@ -704,6 +748,7 @@ export class GameSessionController {
 
     // Gravity
     const gravity = this.runGravity();
+    const activateSnapshot = this.snapshotBoard();
 
     // Cascade
     const cascadeSteps = this.runCascadeLoop(chain);
@@ -733,6 +778,7 @@ export class GameSessionController {
       score,
       passiveActivations: passiveEvents,
       gravity,
+      boardSnapshot: activateSnapshot,
       cascadeSteps,
       totalScore,
       endCondition,
@@ -796,11 +842,14 @@ export class GameSessionController {
 
     this._movesRemaining--;
 
-    if (matches.length === 0 && swappedSpecialPos) {
-      return this.doDirectBombSwap(from, to, swappedSpecialPos, scoreBeforeSwap);
+    // Special gem always activates its ability when swapped,
+    // regardless of whether normal matches also exist.
+    // Any concurrent matches are also cleared alongside the activation.
+    if (swappedSpecialPos) {
+      return this.doDirectBombSwap(from, to, swappedSpecialPos, scoreBeforeSwap, matches);
     }
 
-    // Normal match path
+    // Normal match path (no special involved)
     return this.doNormalSwap(from, to, matches, scoreBeforeSwap);
   }
 
@@ -850,6 +899,7 @@ export class GameSessionController {
 
     // Gravity + cascade
     const comboGravity = this.runGravity();
+    const comboSnapshot = this.snapshotBoard();
     const cascadeSteps = this.runCascadeLoop(chain);
 
     const clearedInfos = this.toClearedCellInfos(comboClearedCells, colourSnapshot);
@@ -866,6 +916,7 @@ export class GameSessionController {
         score: comboPoints,
         passiveActivations: passiveEvents,
         gravity: comboGravity,
+        boardSnapshot: comboSnapshot,
       },
       cascadeSteps,
       totalScore: this._score - scoreBeforeSwap,
@@ -909,6 +960,7 @@ export class GameSessionController {
 
     // Gravity + cascade
     const colourGravity = this.runGravity();
+    const colourBoardSnapshot = this.snapshotBoard();
     const cascadeSteps = this.runCascadeLoop(chain);
 
     const clearedInfos = this.toClearedCellInfos(colourClearedCells, colourSnapshot);
@@ -925,6 +977,7 @@ export class GameSessionController {
         score: activationPoints,
         passiveActivations: passiveEvents,
         gravity: colourGravity,
+        boardSnapshot: colourBoardSnapshot,
       },
       cascadeSteps,
       totalScore: this._score - scoreBeforeSwap,
@@ -938,17 +991,23 @@ export class GameSessionController {
     from: CellPos, to: CellPos,
     bombPos: CellPos,
     scoreBeforeSwap: number,
+    concurrentMatches: MatchDescriptor[] = [],
   ): SwapResult {
     const chain = 1;
     const specialCell = getCell(this.board, bombPos)!;
     const specialType = specialCell.gem!.special! as 'lineH' | 'lineV' | 'area';
 
-    // Snapshot
+    // Snapshot all potentially affected cells (bomb targets + match cells)
     const targetCells = this.getBlastTargets(bombPos, specialType);
-    const colourSnapshot = this.snapshotColoursAt(targetCells);
-    const specialSnapshot = this.snapshotSpecials(targetCells);
+    const matchCells: CellPos[] = [];
+    for (const m of concurrentMatches) {
+      for (const c of m.cells) matchCells.push([c[0], c[1]]);
+    }
+    const allAffectedCells = [...targetCells, ...matchCells];
+    const colourSnapshot = this.snapshotColoursAt(allAffectedCells);
+    const specialSnapshot = this.snapshotSpecials(allAffectedCells);
 
-    // Activate
+    // Activate bomb
     let activationResult: { clearedCells: CellPos[]; triggeredSpecials: CellPos[] };
     if (specialType === 'lineH' || specialType === 'lineV') {
       activationResult = activateLineBomb(this.board, bombPos);
@@ -956,9 +1015,34 @@ export class GameSessionController {
       activationResult = activateAreaBomb(this.board, bombPos);
     }
 
-    const activatedCells = activationResult.clearedCells.map(([c, r]) => [c, r] as CellPos);
+    // Also clear concurrent match cells (color match fires simultaneously)
+    const clearedSet = new Set<string>();
+    const activatedCells: CellPos[] = [];
+    for (const [c, r] of activationResult.clearedCells) {
+      const k = `${c},${r}`;
+      if (!clearedSet.has(k)) { clearedSet.add(k); activatedCells.push([c, r]); }
+    }
+    // Clear match cells that weren't already cleared by the bomb
+    for (const m of concurrentMatches) {
+      this.addCollectToTracker(m.colour, m.cells.length);
+      for (const [c, r] of m.cells) {
+        const k = `${c},${r}`;
+        if (!clearedSet.has(k)) {
+          clearedSet.add(k);
+          activatedCells.push([c, r]);
+          const cell = getCell(this.board, [c, r]);
+          if (cell) cell.gem = null;
+        }
+      }
+    }
+
     this.recordCollected(activatedCells, colourSnapshot);
-    const actScore = specialActivationScore(activatedCells.length, chain, false);
+
+    // Score: bomb activation + match score
+    let actScore = specialActivationScore(activationResult.clearedCells.length, chain, false);
+    for (const m of concurrentMatches) {
+      actScore += matchScore(m.shape, chain, 0);
+    }
     this._score += actScore;
 
     // Passive activations
@@ -967,6 +1051,7 @@ export class GameSessionController {
 
     // Gravity + cascade
     const bombGravity = this.runGravity();
+    const bombSnapshot = this.snapshotBoard();
     const cascadeSteps = this.runCascadeLoop(chain);
 
     const clearedInfos = this.toClearedCellInfos(activatedCells, colourSnapshot);
@@ -983,6 +1068,7 @@ export class GameSessionController {
         score: actScore,
         passiveActivations: passiveEvents,
         gravity: bombGravity,
+        boardSnapshot: bombSnapshot,
       },
       cascadeSteps,
       totalScore: this._score - scoreBeforeSwap,
@@ -1109,6 +1195,7 @@ export class GameSessionController {
       }
 
       // Clear cells
+      const preClearSnapshot = this.snapshotBoard();
       for (const [c, r] of clearedCells) {
         if (clearedSet.has(`${c},${r}`)) {
           const cl = getCell(this.board, [c, r]);
@@ -1134,6 +1221,8 @@ export class GameSessionController {
         passiveActivations,
         score: stepScore,
         gravity,
+        preClearSnapshot,
+        boardSnapshot: this.snapshotBoard(),
       });
 
       matches = detectMatches(this.board);

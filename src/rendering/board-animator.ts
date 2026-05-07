@@ -138,8 +138,8 @@ export class BoardAnimator {
       // Passive activations
       await this.playPassiveActivations(passiveActivations, 1);
 
-      // Sync renderer after initial activation
-      this.boardRenderer.sync(board);
+      // Sync renderer from snapshot after initial activation
+      this.boardRenderer.syncFromSnapshot(result.initialActivation.boardSnapshot);
 
       // Gravity animation using the actual gravity result
       await this.playGravityFromResult(gravity, board);
@@ -191,8 +191,8 @@ export class BoardAnimator {
     // Passive activations
     await this.playPassiveActivations(passiveActivations, 1);
 
-    // Sync board after activation clears (board already has gravity applied)
-    this.boardRenderer.sync(board);
+    // Sync from snapshot after activation clears
+    this.boardRenderer.syncFromSnapshot(result.boardSnapshot);
 
     // Gravity animation using the actual gravity result
     await this.playGravityFromResult(gravity, board);
@@ -220,10 +220,9 @@ export class BoardAnimator {
 
   private async animateCascadeSteps(steps: CascadeStep[], board: Board): Promise<void> {
     for (const step of steps) {
-      // Sync board to show spawn positions (new specials)
-      if (step.spawnPositions.length > 0) {
-        this.boardRenderer.sync(board);
-      }
+      // Sync to pre-clear state: shows gems in correct positions with correct colors
+      // (includes newly spawned specials, but before any clears happen)
+      this.boardRenderer.syncFromSnapshot(step.preClearSnapshot);
 
       // Match SFX
       playMatchSfx(step.clearedCells.length, step.chain);
@@ -256,10 +255,10 @@ export class BoardAnimator {
       // Passive activations
       await this.playPassiveActivations(step.passiveActivations, step.chain);
 
-      // Sync board after all clears
-      this.boardRenderer.sync(board);
+      // Now sync to post-gravity snapshot (creates new gems at final positions)
+      this.boardRenderer.syncFromSnapshot(step.boardSnapshot);
 
-      // Gravity drop animation
+      // Gravity drop animation (moves new/fallen gems from fromRow to toRow)
       await this.playGravityFromResult(step.gravity, board);
     }
   }

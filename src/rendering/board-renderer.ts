@@ -2,6 +2,7 @@ import { Graphics } from 'pixi.js';
 import type { Board } from '../game/rules/board';
 import type { CellPos } from '../types';
 import type { LayerRefs } from './app-layers';
+import type { BoardSnapshot } from '../game/runtime/game-session';
 import { GemSpriteFactory, computeShimmerAlpha } from './gem-sprites';
 import type { GemSprite } from './gem-sprites';
 import {
@@ -168,6 +169,108 @@ export class BoardRenderer {
         overlay.destroy({ children: true });
         this.deliverySprites.delete(key);
       }
+    }
+  }
+
+  /**
+   * Sync from a lightweight board snapshot (used during cascade animation
+   * to render the correct intermediate state rather than the final board state).
+   */
+  syncFromSnapshot(snapshot: BoardSnapshot): void {
+    this.boardWidth = snapshot.width;
+    this.boardHeight = snapshot.height;
+
+    const activeKeys = new Set<string>();
+
+    for (let col = 0; col < snapshot.width; col++) {
+      for (let row = 0; row < snapshot.height; row++) {
+        const cell = snapshot.cells[col][row];
+        const key = cellKey(col, row);
+
+        if (cell.isEmpty || !cell.gem) {
+          this.removeSprite(key);
+          continue;
+        }
+
+        activeKeys.add(key);
+
+        // Remove old sprite and rebuild
+        this.removeSprite(key);
+        const sprite = this.factory.create(
+          cell.gem.colour,
+          cell.gem.special,
+          col,
+          row,
+        );
+        this.sprites.set(key, sprite);
+        this.layers.gemLayer.addChild(sprite);
+      }
+    }
+
+    // Remove sprites that no longer exist
+    for (const [key, sprite] of this.sprites) {
+      if (!activeKeys.has(key)) {
+        this.layers.gemLayer.removeChild(sprite);
+        sprite.destroy({ children: true });
+        this.sprites.delete(key);
+      }
+    }
+
+    // Sync delivery overlays
+    const activeDeliveryKeys = new Set<string>();
+
+    for (let col = 0; col < snapshot.width; col++) {
+      for (let row = 0; row < snapshot.height; row++) {
+        const cell = snapshot.cells[col][row];
+        const key = cellKey(col, row);
+
+        if (!cell.deliveryItem) {
+          this.removeDeliverySprite(key);
+          continue;
+        }
+
+        activeDeliveryKeys.add(key);
+
+        let overlay = this.deliverySprites.get(key);
+        if (!overlay) {
+          overlay = this.createDeliveryOverlay();
+          this.deliverySprites.set(key, overlay);
+          this.layers.gemLayer.addChild(overlay);
+        }
+
+        overlay.position.set(
+          col * CELL_SIZE + CELL_SIZE / 2,
+          row * CELL_SIZE + CELL_SIZE / 2,
+        );
+        overlay.visible = true;
+      }
+    }
+
+    for (const [key, overlay] of this.deliverySprites) {
+      if (!activeDeliveryKeys.has(key)) {
+        this.layers.gemLayer.removeChild(overlay);
+        overlay.destroy({ children: true });
+        this.deliverySprites.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Update a single cell's sprite from a board snapshot.
+   * Used to show newly spawned special gems before the clear animation.
+   */
+  updateCell(col: number, row: number, snapshot: BoardSnapshot): void {
+    const key = cellKey(col, row);
+    const cell = snapshot.cells[col]?.[row];
+    if (!cell) return;
+
+    // Remove existing sprite at this position
+    this.removeSprite(key);
+
+    if (cell.gem) {
+      const sprite = this.factory.create(cell.gem.colour, cell.gem.special, col, row);
+      this.sprites.set(key, sprite);
+      this.layers.gemLayer.addChild(sprite);
     }
   }
 

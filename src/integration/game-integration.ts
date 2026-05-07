@@ -129,6 +129,7 @@ export class GameIntegration {
   private currentState: AppState = { kind: 'splash' };
   private subsystems: SubsystemRefs;
   private cleanupFns: Array<() => void> = [];
+  private sessionCleanupFns: Array<() => void> = [];
 
   // ─── Extracted subsystems ─────────────────────────────────
   private screenRouter: ScreenRouter | null = null;
@@ -143,6 +144,7 @@ export class GameIntegration {
   private activeBoardInput: BoardInput | null = null;
   private activeInputSystem: InputSystem | null = null;
   private activeViewportManager: ViewportManager | null = null;
+  private activeHud: Container | null = null;
 
   constructor(config: GameIntegrationConfig) {
     this.config = config;
@@ -495,6 +497,7 @@ export class GameIntegration {
     hud.setScore(0);
     this.updateHud(hud, session, spec);
     this.screenRouter!.clearScreen();
+    this.activeHud = hud;
     this.subsystems.app?.layers.uiLayer.addChild(hud);
 
     // --- Wire level.resolved event ---
@@ -533,7 +536,7 @@ export class GameIntegration {
         }
       }, 1500);
     });
-    this.cleanupFns.push(unsubResolved);
+    this.sessionCleanupFns.push(unsubResolved);
 
     // --- Create Game Loop ---
     const { GameLoop } = await import('../game/runtime/game-loop');
@@ -610,6 +613,20 @@ export class GameIntegration {
 
     this.activeRulesEngine = null;
     this.activeSession = null;
+
+    // Destroy HUD so it doesn't stack on replay
+    if (this.activeHud) {
+      this.activeHud.destroy({ children: true });
+      this.activeHud = null;
+    }
+
+    // Run and clear per-session cleanup (event subscriptions, etc.)
+    for (let i = this.sessionCleanupFns.length - 1; i >= 0; i--) {
+      try {
+        this.sessionCleanupFns[i]();
+      } catch { /* non-critical */ }
+    }
+    this.sessionCleanupFns = [];
 
     // Clear board layer children and events
     if (this.subsystems.app) {
