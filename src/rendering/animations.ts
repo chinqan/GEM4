@@ -212,7 +212,10 @@ export function createMatchClearAnimation(sprite: Container): Animation {
       this.elapsed += dtMs;
       const progress = Math.min(this.elapsed / this.duration, 1);
 
-      // 使用 smoothstep 讓縮放更自然
+      // Sprite may be destroyed mid-animation (e.g. boardRenderer.sync
+      // rebuilt sprites after a board snapshot change). Bail out cleanly.
+      if (!sprite.scale) return true;
+
       const t = smoothstep(progress);
       const scale = 1 - t;
 
@@ -223,6 +226,7 @@ export function createMatchClearAnimation(sprite: Container): Animation {
     },
 
     complete(): void {
+      if (!sprite.scale) return;
       sprite.scale.set(0, 0);
       sprite.alpha = 0;
       sprite.visible = false;

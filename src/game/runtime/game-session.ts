@@ -586,6 +586,12 @@ export class GameSessionController {
         specialSnapshot.delete(`${sp[0]},${sp[1]}`);
       }
 
+      // Capture preClearSnapshot BEFORE in-match activations run. The
+      // renderer syncs to this state and needs every gem still visible —
+      // including in-match special blast targets — so each activation's
+      // own effect+shrink can play with sprites still on screen.
+      const preClearSnapshot = this.snapshotBoard();
+
       for (const [c, r] of clearedCells) {
         const k = `${c},${r}`;
         if (!clearedSet.has(k) || spawnPosSet.has(k)) continue;
@@ -650,7 +656,6 @@ export class GameSessionController {
       }
 
       // Clear all matched cells (excluding spawn positions)
-      const preClearSnapshot = this.snapshotBoard();
       for (const [c, r] of clearedCells) {
         if (clearedSet.has(`${c},${r}`)) {
           const cl = getCell(this.board, [c, r]);
@@ -902,7 +907,16 @@ export class GameSessionController {
     const comboSnapshot = this.snapshotBoard();
     const cascadeSteps = this.runCascadeLoop(chain);
 
-    const clearedInfos = this.toClearedCellInfos(comboClearedCells, colourSnapshot);
+    // Merge all cleared cells: combo blast + passive chain cells
+    const allCleared: CellPos[] = [...comboClearedCells];
+    const allClearedSet = new Set<string>(comboClearedCells.map(([c, r]) => `${c},${r}`));
+    for (const pe of passiveEvents) {
+      for (const [c, r] of pe.clearedCells) {
+        const k = `${c},${r}`;
+        if (!allClearedSet.has(k)) { allClearedSet.add(k); allCleared.push([c, r]); }
+      }
+    }
+    const clearedInfos = this.toClearedCellInfos(allCleared, colourSnapshot);
     const endCondition = this.checkEndCondition();
 
     return {
@@ -963,7 +977,16 @@ export class GameSessionController {
     const colourBoardSnapshot = this.snapshotBoard();
     const cascadeSteps = this.runCascadeLoop(chain);
 
-    const clearedInfos = this.toClearedCellInfos(colourClearedCells, colourSnapshot);
+    // Merge all cleared cells: colour blast + passive chain cells
+    const allCleared: CellPos[] = [...colourClearedCells];
+    const allClearedSet = new Set<string>(colourClearedCells.map(([c, r]) => `${c},${r}`));
+    for (const pe of passiveEvents) {
+      for (const [c, r] of pe.clearedCells) {
+        const k = `${c},${r}`;
+        if (!allClearedSet.has(k)) { allClearedSet.add(k); allCleared.push([c, r]); }
+      }
+    }
+    const clearedInfos = this.toClearedCellInfos(allCleared, colourSnapshot);
     const endCondition = this.checkEndCondition();
 
     return {
@@ -997,15 +1020,18 @@ export class GameSessionController {
     const specialCell = getCell(this.board, bombPos)!;
     const specialType = specialCell.gem!.special! as 'lineH' | 'lineV' | 'area';
 
-    // Snapshot all potentially affected cells (bomb targets + match cells)
-    const targetCells = this.getBlastTargets(bombPos, specialType);
-    const matchCells: CellPos[] = [];
-    for (const m of concurrentMatches) {
-      for (const c of m.cells) matchCells.push([c[0], c[1]]);
+    // Snapshot ALL cells for colour tracking — passive chain reactions can
+    // clear cells far beyond the initial blast zone, and the animator needs
+    // colour info for every cleared cell to render particle effects.
+    const allCells: CellPos[] = [];
+    for (let c = 0; c < this.board.width; c++) {
+      for (let r = 0; r < this.board.height; r++) allCells.push([c, r]);
     }
-    const allAffectedCells = [...targetCells, ...matchCells];
-    const colourSnapshot = this.snapshotColoursAt(allAffectedCells);
-    const specialSnapshot = this.snapshotSpecials(allAffectedCells);
+    const colourSnapshot = this.snapshotColoursAt(allCells);
+
+    // Snapshot specials across the whole board so passive chain reactions
+    // can discover triggered specials beyond the initial blast zone.
+    const specialSnapshot = this.snapshotSpecials();
 
     // Activate bomb
     let activationResult: { clearedCells: CellPos[]; triggeredSpecials: CellPos[] };
@@ -1054,7 +1080,17 @@ export class GameSessionController {
     const bombSnapshot = this.snapshotBoard();
     const cascadeSteps = this.runCascadeLoop(chain);
 
-    const clearedInfos = this.toClearedCellInfos(activatedCells, colourSnapshot);
+    // Merge all cleared cells: initial blast + passive chain cells.
+    // This gives the animator complete colour info for particle effects.
+    const allCleared: CellPos[] = [...activatedCells];
+    const allClearedSet = new Set<string>(activatedCells.map(([c, r]) => `${c},${r}`));
+    for (const pe of passiveEvents) {
+      for (const [c, r] of pe.clearedCells) {
+        const k = `${c},${r}`;
+        if (!allClearedSet.has(k)) { allClearedSet.add(k); allCleared.push([c, r]); }
+      }
+    }
+    const clearedInfos = this.toClearedCellInfos(allCleared, colourSnapshot);
     const endCondition = this.checkEndCondition();
 
     return {
@@ -1132,6 +1168,10 @@ export class GameSessionController {
       const specialSnapshot = this.snapshotSpecials(clearedCells);
       for (const sp of spawnPositions) specialSnapshot.delete(`${sp[0]},${sp[1]}`);
 
+      // Capture preClearSnapshot BEFORE in-match activations run, so the
+      // renderer can sync to a state where every gem is still visible.
+      const preClearSnapshot = this.snapshotBoard();
+
       const specialActivations: SpecialActivationEvent[] = [];
       for (const [c, r] of clearedCells) {
         const k = `${c},${r}`;
@@ -1195,7 +1235,6 @@ export class GameSessionController {
       }
 
       // Clear cells
-      const preClearSnapshot = this.snapshotBoard();
       for (const [c, r] of clearedCells) {
         if (clearedSet.has(`${c},${r}`)) {
           const cl = getCell(this.board, [c, r]);

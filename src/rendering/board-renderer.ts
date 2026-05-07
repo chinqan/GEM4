@@ -322,6 +322,20 @@ export class BoardRenderer {
   }
 
   /**
+   * Swap the sprite-map keys for two cells. The swap-slide animation moves
+   * sprites visually; this keeps the lookup table in sync so subsequent
+   * getSprite(c,r) returns the sprite that's actually at that cell.
+   */
+  swapSpriteKeys(a: CellPos, b: CellPos): void {
+    const ka = cellKey(a[0], a[1]);
+    const kb = cellKey(b[0], b[1]);
+    const sa = this.sprites.get(ka);
+    const sb = this.sprites.get(kb);
+    if (sa) this.sprites.set(kb, sa); else this.sprites.delete(kb);
+    if (sb) this.sprites.set(ka, sb); else this.sprites.delete(ka);
+  }
+
+  /**
    * 取得指定格子的 delivery overlay（供動畫系統使用）。
    */
   getDeliverySprite(col: number, row: number): Graphics | undefined {

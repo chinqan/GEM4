@@ -1,77 +1,78 @@
-# Graph Report - .  (2026-05-07)
+# Graph Report - .  (2026-05-08)
 
 ## Corpus Check
-- 133 files · ~141,650 words
+- 134 files · ~143,203 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1295 nodes · 2381 edges · 152 communities (76 shown, 76 thin omitted)
-- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 238 edges (avg confidence: 0.81)
+- 1459 nodes · 3381 edges · 152 communities (75 shown, 77 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 252 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_Level Objectives & Scoring|Level Objectives & Scoring]]
-- [[_COMMUNITY_Board Input Controller|Board Input Controller]]
-- [[_COMMUNITY_Synth SFX Engine|Synth SFX Engine]]
-- [[_COMMUNITY_Screen Router & Navigation|Screen Router & Navigation]]
-- [[_COMMUNITY_Special Gems & Rules|Special Gems & Rules]]
-- [[_COMMUNITY_Adaptive Music System|Adaptive Music System]]
+- [[_COMMUNITY_Game Rules & Tests|Game Rules & Tests]]
+- [[_COMMUNITY_Objective & Level Tracking|Objective & Level Tracking]]
+- [[_COMMUNITY_Audio Synthesis & SFX|Audio Synthesis & SFX]]
+- [[_COMMUNITY_Board Input & Interaction|Board Input & Interaction]]
+- [[_COMMUNITY_Screen Router & Integration|Screen Router & Integration]]
+- [[_COMMUNITY_Special Gems Logic|Special Gems Logic]]
 - [[_COMMUNITY_Accessibility & Rendering Config|Accessibility & Rendering Config]]
-- [[_COMMUNITY_Board Utilities & Hints|Board Utilities & Hints]]
-- [[_COMMUNITY_Particle Effects|Particle Effects]]
-- [[_COMMUNITY_Telemetry & Analytics|Telemetry & Analytics]]
-- [[_COMMUNITY_Board & Cascade Tests|Board & Cascade Tests]]
-- [[_COMMUNITY_Visual Filters & Layers|Visual Filters & Layers]]
-- [[_COMMUNITY_Cascade & Gem Creation|Cascade & Gem Creation]]
-- [[_COMMUNITY_Blocker Mechanics|Blocker Mechanics]]
-- [[_COMMUNITY_Audio System Core|Audio System Core]]
-- [[_COMMUNITY_Game Rules Tests|Game Rules Tests]]
 - [[_COMMUNITY_Board Renderer|Board Renderer]]
-- [[_COMMUNITY_UI Factory & Screens|UI Factory & Screens]]
-- [[_COMMUNITY_Game Integration Layer|Game Integration Layer]]
-- [[_COMMUNITY_Endless Mode Runner|Endless Mode Runner]]
-- [[_COMMUNITY_Combo Matrix Tests|Combo Matrix Tests]]
-- [[_COMMUNITY_Event Bus & Pools|Event Bus & Pools]]
-- [[_COMMUNITY_Settings Form|Settings Form]]
-- [[_COMMUNITY_UI Component Factory|UI Component Factory]]
-- [[_COMMUNITY_Match Detection Logic|Match Detection Logic]]
-- [[_COMMUNITY_Asset Load Controller|Asset Load Controller]]
-- [[_COMMUNITY_Debug & State Machine|Debug & State Machine]]
-- [[_COMMUNITY_GDD Overview & Audio|GDD Overview & Audio]]
-- [[_COMMUNITY_SFX Generation Scripts|SFX Generation Scripts]]
-- [[_COMMUNITY_i18n Translation|i18n Translation]]
-- [[_COMMUNITY_Gem Sprite Factory|Gem Sprite Factory]]
-- [[_COMMUNITY_Board Interaction Handler|Board Interaction Handler]]
-- [[_COMMUNITY_Combo Matrix Transforms|Combo Matrix Transforms]]
-- [[_COMMUNITY_Objective Trackers|Objective Trackers]]
-- [[_COMMUNITY_GDD Art & UI Design|GDD Art & UI Design]]
-- [[_COMMUNITY_Hint Timer System|Hint Timer System]]
-- [[_COMMUNITY_Game Loop Tests|Game Loop Tests]]
-- [[_COMMUNITY_GDD Game Flow & State|GDD Game Flow & State]]
-- [[_COMMUNITY_Adaptive Music Tests|Adaptive Music Tests]]
-- [[_COMMUNITY_Placeholder Asset Generation|Placeholder Asset Generation]]
-- [[_COMMUNITY_Special Activation Tests|Special Activation Tests]]
-- [[_COMMUNITY_Level Spec & Registry|Level Spec & Registry]]
-- [[_COMMUNITY_Jelly Overlay|Jelly Overlay]]
-- [[_COMMUNITY_Debug Clock & Stats|Debug Clock & Stats]]
-- [[_COMMUNITY_Audio Architecture|Audio Architecture]]
-- [[_COMMUNITY_Telemetry & Tutorial|Telemetry & Tutorial]]
-- [[_COMMUNITY_GDD Technical Foundation|GDD Technical Foundation]]
-- [[_COMMUNITY_Game Loop & Integration|Game Loop & Integration]]
-- [[_COMMUNITY_Game Type Definitions|Game Type Definitions]]
-- [[_COMMUNITY_Animator & Command Pattern|Animator & Command Pattern]]
-- [[_COMMUNITY_Level Spec & Loading|Level Spec & Loading]]
-- [[_COMMUNITY_Filters Tests|Filters Tests]]
-- [[_COMMUNITY_Build Budget Validation|Build Budget Validation]]
-- [[_COMMUNITY_Special Overlay Rendering|Special Overlay Rendering]]
-- [[_COMMUNITY_Blocker Concepts|Blocker Concepts]]
-- [[_COMMUNITY_World Level Definitions|World Level Definitions]]
-- [[_COMMUNITY_App State & Edge Cases|App State & Edge Cases]]
-- [[_COMMUNITY_Rendering Modules|Rendering Modules]]
-- [[_COMMUNITY_GDD Registries|GDD Registries]]
-- [[_COMMUNITY_Board Animator Tests|Board Animator Tests]]
+- [[_COMMUNITY_Particle Effects|Particle Effects]]
+- [[_COMMUNITY_Visual Filters & Shaders|Visual Filters & Shaders]]
+- [[_COMMUNITY_Telemetry Events|Telemetry Events]]
+- [[_COMMUNITY_Board & Cascade Core|Board & Cascade Core]]
+- [[_COMMUNITY_Audio System|Audio System]]
+- [[_COMMUNITY_Endless Mode|Endless Mode]]
+- [[_COMMUNITY_State Event Pools|State Event Pools]]
+- [[_COMMUNITY_Community 15|Community 15]]
+- [[_COMMUNITY_Community 16|Community 16]]
+- [[_COMMUNITY_Community 17|Community 17]]
+- [[_COMMUNITY_Community 18|Community 18]]
+- [[_COMMUNITY_Community 19|Community 19]]
+- [[_COMMUNITY_Community 20|Community 20]]
+- [[_COMMUNITY_Community 21|Community 21]]
+- [[_COMMUNITY_Community 22|Community 22]]
+- [[_COMMUNITY_Community 23|Community 23]]
+- [[_COMMUNITY_Community 24|Community 24]]
+- [[_COMMUNITY_Community 25|Community 25]]
+- [[_COMMUNITY_Community 26|Community 26]]
+- [[_COMMUNITY_Community 27|Community 27]]
+- [[_COMMUNITY_Community 28|Community 28]]
+- [[_COMMUNITY_Community 29|Community 29]]
+- [[_COMMUNITY_Community 30|Community 30]]
+- [[_COMMUNITY_Community 31|Community 31]]
+- [[_COMMUNITY_Community 32|Community 32]]
+- [[_COMMUNITY_Community 33|Community 33]]
+- [[_COMMUNITY_Community 34|Community 34]]
+- [[_COMMUNITY_Community 35|Community 35]]
+- [[_COMMUNITY_Community 36|Community 36]]
+- [[_COMMUNITY_Community 37|Community 37]]
+- [[_COMMUNITY_Community 38|Community 38]]
+- [[_COMMUNITY_Community 39|Community 39]]
+- [[_COMMUNITY_Community 40|Community 40]]
+- [[_COMMUNITY_Community 41|Community 41]]
+- [[_COMMUNITY_Community 42|Community 42]]
+- [[_COMMUNITY_Community 43|Community 43]]
+- [[_COMMUNITY_Community 44|Community 44]]
+- [[_COMMUNITY_Community 45|Community 45]]
+- [[_COMMUNITY_Community 46|Community 46]]
+- [[_COMMUNITY_Community 47|Community 47]]
+- [[_COMMUNITY_Community 48|Community 48]]
+- [[_COMMUNITY_Community 49|Community 49]]
+- [[_COMMUNITY_Community 50|Community 50]]
+- [[_COMMUNITY_Community 51|Community 51]]
+- [[_COMMUNITY_Community 53|Community 53]]
+- [[_COMMUNITY_Community 54|Community 54]]
+- [[_COMMUNITY_Community 55|Community 55]]
+- [[_COMMUNITY_Community 56|Community 56]]
+- [[_COMMUNITY_Community 57|Community 57]]
+- [[_COMMUNITY_Community 58|Community 58]]
+- [[_COMMUNITY_Community 59|Community 59]]
 - [[_COMMUNITY_Community 60|Community 60]]
 - [[_COMMUNITY_Community 61|Community 61]]
+- [[_COMMUNITY_Community 62|Community 62]]
+- [[_COMMUNITY_Community 63|Community 63]]
 - [[_COMMUNITY_Community 64|Community 64]]
 - [[_COMMUNITY_Community 65|Community 65]]
 - [[_COMMUNITY_Community 66|Community 66]]
@@ -82,9 +83,10 @@
 - [[_COMMUNITY_Community 71|Community 71]]
 - [[_COMMUNITY_Community 72|Community 72]]
 - [[_COMMUNITY_Community 73|Community 73]]
-- [[_COMMUNITY_Community 74|Community 74]]
 - [[_COMMUNITY_Community 75|Community 75]]
+- [[_COMMUNITY_Community 76|Community 76]]
 - [[_COMMUNITY_Community 77|Community 77]]
+- [[_COMMUNITY_Community 78|Community 78]]
 - [[_COMMUNITY_Community 79|Community 79]]
 - [[_COMMUNITY_Community 80|Community 80]]
 - [[_COMMUNITY_Community 81|Community 81]]
@@ -92,9 +94,11 @@
 - [[_COMMUNITY_Community 83|Community 83]]
 - [[_COMMUNITY_Community 84|Community 84]]
 - [[_COMMUNITY_Community 85|Community 85]]
-- [[_COMMUNITY_Community 86|Community 86]]
-- [[_COMMUNITY_Community 87|Community 87]]
-- [[_COMMUNITY_Community 88|Community 88]]
+- [[_COMMUNITY_Community 93|Community 93]]
+- [[_COMMUNITY_Community 94|Community 94]]
+- [[_COMMUNITY_Community 95|Community 95]]
+- [[_COMMUNITY_Community 96|Community 96]]
+- [[_COMMUNITY_Community 97|Community 97]]
 - [[_COMMUNITY_Community 98|Community 98]]
 - [[_COMMUNITY_Community 99|Community 99]]
 - [[_COMMUNITY_Community 100|Community 100]]
@@ -123,14 +127,14 @@
 - [[_COMMUNITY_Community 123|Community 123]]
 - [[_COMMUNITY_Community 124|Community 124]]
 - [[_COMMUNITY_Community 125|Community 125]]
-- [[_COMMUNITY_Community 126|Community 126]]
-- [[_COMMUNITY_Community 127|Community 127]]
-- [[_COMMUNITY_Community 128|Community 128]]
 - [[_COMMUNITY_Community 129|Community 129]]
 - [[_COMMUNITY_Community 130|Community 130]]
+- [[_COMMUNITY_Community 131|Community 131]]
+- [[_COMMUNITY_Community 133|Community 133]]
 - [[_COMMUNITY_Community 134|Community 134]]
 - [[_COMMUNITY_Community 135|Community 135]]
 - [[_COMMUNITY_Community 136|Community 136]]
+- [[_COMMUNITY_Community 137|Community 137]]
 - [[_COMMUNITY_Community 138|Community 138]]
 - [[_COMMUNITY_Community 139|Community 139]]
 - [[_COMMUNITY_Community 140|Community 140]]
@@ -139,289 +143,285 @@
 - [[_COMMUNITY_Community 143|Community 143]]
 - [[_COMMUNITY_Community 144|Community 144]]
 - [[_COMMUNITY_Community 145|Community 145]]
-- [[_COMMUNITY_Community 146|Community 146]]
-- [[_COMMUNITY_Community 147|Community 147]]
-- [[_COMMUNITY_Community 148|Community 148]]
-- [[_COMMUNITY_Community 149|Community 149]]
-- [[_COMMUNITY_Community 150|Community 150]]
+- [[_COMMUNITY_Community 151|Community 151]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `getCell()` - 50 edges
-2. `GameSessionController` - 36 edges
-3. `createGem()` - 27 edges
-4. `detectMatches()` - 26 edges
-5. `BoardRenderer` - 26 edges
-6. `KeybindManager` - 23 edges
-7. `AudioSystem` - 23 edges
-8. `GameIntegration` - 22 edges
-9. `RulesEngine` - 22 edges
-10. `AudioBuses` - 22 edges
+1. `getCell()` - 69 edges
+2. `createGem()` - 46 edges
+3. `GameSessionController` - 39 edges
+4. `createBoard()` - 37 edges
+5. `detectMatches()` - 36 edges
+6. `Mulberry32` - 36 edges
+7. `createButton()` - 29 edges
+8. `AudioBuses` - 28 edges
+9. `BoardRenderer` - 28 edges
+10. `BoardAnimator` - 28 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `createFilledBoard()` --calls--> `createBoard()`  [INFERRED]
-  integration/__tests__/special-activation.test.ts → /Users/chinqan/GEM4/src/game/rules/board.ts
-- `createFilledBoard()` --calls--> `placeGem()`  [INFERRED]
-  integration/__tests__/special-activation.test.ts → game/__tests__/test-helpers.ts
-- `createFilledBoard()` --calls--> `createBoard()`  [INFERRED]
-  integration/__tests__/special-activation.property.test.ts → /Users/chinqan/GEM4/src/game/rules/board.ts
-- `initBoard()` --calls--> `makeSession()`  [INFERRED]
-  /Users/chinqan/GEM4/src/game/runtime/reshuffle.ts → src/game/runtime/__tests__/game-session.test.ts
-- `createBoard()` --calls--> `createFilledBoard()`  [INFERRED]
-  /Users/chinqan/GEM4/src/game/rules/board.ts → game/rules/__tests__/combo-matrix.test.ts
+- `GameSessionController.runGravity` --references--> `Deterministic rules with seeded RNG`  [INFERRED]
+  src/game/runtime/game-session.ts → CLAUDE.md
+- `createGem()` --calls--> `placeGem()`  [INFERRED]
+  src/game/rules/board.ts → /Users/chinqan/GEM4/src/game/rules/__tests__/special-gems.test.ts
+- `GameSessionController` --implements--> `game subsystem (pure logic)`  [INFERRED]
+  src/game/runtime/game-session.ts → CLAUDE.md
+- `BoardAnimator` --implements--> `rendering subsystem (PixiJS)`  [INFERRED]
+  src/rendering/board-animator.ts → CLAUDE.md
+- `placeGem()` --calls--> `createGem()`  [INFERRED]
+  /Users/chinqan/GEM4/src/integration/__tests__/special-activation.property.test.ts → src/game/rules/board.ts
 
-## Communities (152 total, 76 thin omitted)
+## Hyperedges (group relationships)
+- **** — game_session_swapresult, game_session_cascadestep, game_session_boardsnapshot, board_animator_animateswap, board_animator_animatecascadesteps [EXTRACTED 1.00]
+- **** — game_session_runcascadeloop, game_session_handlepassiveactivations, game_session_rungravity, board_animator_animatecascadesteps, board_animator_playoneactivation [INFERRED 0.85]
 
-### Community 0 - "Level Objectives & Scoring"
+## Communities (152 total, 77 thin omitted)
+
+### Community 0 - "Game Rules & Tests"
 Cohesion: 0.05
-Nodes (15): calculateStars(), ClearTracker, CollectTracker, createTracker(), DropTracker, MultiTracker, ScoreTracker, chainMultiplier() (+7 more)
+Nodes (112): breakLock(), createBlockerByKind(), isLocked(), processBlockersOnClear(), processJellyOnClear(), tickGenerators(), tickUnstables(), cloneBlocker() (+104 more)
 
-### Community 1 - "Board Input Controller"
+### Community 1 - "Objective & Level Tracking"
 Cohesion: 0.05
-Nodes (8): BoardInput, screenToGrid(), InputSystem, defaultKeybinds(), eventToKeyCode(), KeybindManager, calculateViewport(), ViewportManager
+Nodes (23): calculateStars(), ClearTracker, CollectTracker, createTracker(), DropTracker, MultiTracker, ScoreTracker, chainMultiplier() (+15 more)
 
-### Community 2 - "Synth SFX Engine"
-Cohesion: 0.09
-Nodes (25): ensure(), getNoiseBuffer(), loadAllBuffers(), play(), playCascade(), playCombo(), playInvalid(), playLevelComplete() (+17 more)
-
-### Community 3 - "Screen Router & Navigation"
-Cohesion: 0.08
-Nodes (21): ScreenRouter, loadLevel(), createCreditsScreen(), createGameHUD(), createLevelCompleteScreen(), createLevelFailScreen(), createLevelSelectCard(), createMainMenuScreen() (+13 more)
-
-### Community 4 - "Special Gems & Rules"
-Cohesion: 0.15
-Nodes (17): getCell(), specialActivationScore(), activateAreaBomb(), activateColourGem(), activateLineBomb(), areaBombTargets(), clearCell(), clearPositions() (+9 more)
-
-### Community 5 - "Adaptive Music System"
+### Community 2 - "Audio Synthesis & SFX"
 Cohesion: 0.07
-Nodes (4): AdaptiveMusic, AudioBuses, clampVolume(), SfxCatalog
+Nodes (34): ensure(), getNoiseBuffer(), loadAllBuffers(), play(), playCascade(), playCombo(), playInvalid(), playLevelComplete() (+26 more)
+
+### Community 3 - "Board Input & Interaction"
+Cohesion: 0.05
+Nodes (10): BoardInput, screenToGrid(), InputSystem, mapPointerSource(), mapPointerType(), defaultKeybinds(), eventToKeyCode(), KeybindManager (+2 more)
+
+### Community 4 - "Screen Router & Integration"
+Cohesion: 0.08
+Nodes (26): ScreenRouter, createToast(), loadLevel(), createCreditsScreen(), createGameHUD(), createLevelCompleteScreen(), createLevelFailScreen(), createLevelSelectCard() (+18 more)
+
+### Community 5 - "Special Gems Logic"
+Cohesion: 0.14
+Nodes (17): activateAreaBomb(), activateColourGem(), activateLineBomb(), areaBombTargets(), clearCell(), clearPositions(), findPassiveActivations(), lineBombTargets() (+9 more)
 
 ### Community 6 - "Accessibility & Rendering Config"
-Cohesion: 0.08
-Nodes (19): createAccessibilityConfig(), getColourPalette(), getContrastConfig(), checkStorageStatus(), EdgeCaseManager, getSaveTimestamp(), safeGetItem(), safeSetItem() (+11 more)
+Cohesion: 0.11
+Nodes (27): createAccessibilityConfig(), detectPrefersReducedMotion(), getColourPalette(), getContrastConfig(), getGemColour(), getMotionConfig(), onPrefersReducedMotionChange(), checkStorageStatus() (+19 more)
 
-### Community 7 - "Board Utilities & Hints"
-Cohesion: 0.17
-Nodes (17): cloneBoard(), detectMatches(), findHint(), scoreSwap(), fillBoardNoMatches(), findValidSwaps(), initBoard(), pickWeightedColour() (+9 more)
+### Community 7 - "Board Renderer"
+Cohesion: 0.11
+Nodes (4): BoardRenderer, cellKey(), computeShimmerAlpha(), GemSpriteFactory
 
 ### Community 8 - "Particle Effects"
-Cohesion: 0.12
-Nodes (6): emitChainGlow(), emitSpecialSpawnRing(), getRingTex(), MergeParticleSystem, Particle, ParticlePool
+Cohesion: 0.1
+Nodes (8): emitChainGlow(), emitSpecialSpawnRing(), getRingTex(), MergeParticleSystem, Particle, ParticlePool, MockContainer, MockGraphics
 
-### Community 10 - "Board & Cascade Tests"
+### Community 9 - "Visual Filters & Shaders"
+Cohesion: 0.13
+Nodes (14): applyBloom(), applyGlowBlur(), createSaturationPulse(), createShockwaveEffect(), easeOutCubic(), FilterManager, lerpValue(), removeBloom() (+6 more)
+
+### Community 10 - "Telemetry Events"
+Cohesion: 0.11
+Nodes (4): getTelemetry(), resetTelemetry(), TelemetryRecorder, TutorialStepTracker
+
+### Community 11 - "Board & Cascade Core"
 Cohesion: 0.09
 Nodes (6): cloneBoard, detectMatches, findValidSwaps, createRngStreams, Mulberry32, RngStreams
 
-### Community 11 - "Visual Filters & Layers"
-Cohesion: 0.13
-Nodes (10): createLayerHierarchy(), applyBloom(), applyGlowBlur(), createShockwaveEffect(), FilterManager, removeBloom(), removeGlowBlur(), bootstrapApp() (+2 more)
-
-### Community 12 - "Cascade & Gem Creation"
-Cohesion: 0.17
-Nodes (11): createGem(), applyGravity(), collectDeliveryItems(), fillFromTop(), runCascade(), createRngStreams(), Mulberry32, fillBoard() (+3 more)
-
-### Community 13 - "Blocker Mechanics"
-Cohesion: 0.19
-Nodes (16): breakLock(), createBlockerByKind(), isLocked(), processBlockersOnClear(), processJellyOnClear(), tickGenerators(), tickUnstables(), computeShimmerAlpha() (+8 more)
-
-### Community 15 - "Game Rules Tests"
+### Community 13 - "Endless Mode"
 Cohesion: 0.16
-Nodes (15): scanHorizontal(), scanVertical(), fillCol(), fillRow(), placeGem(), posKey(), createFilledBoard(), detectSwapType() (+7 more)
+Nodes (8): calculateDifficulty(), checkEndlessEndCondition(), createEndlessEndScreenData(), EndlessRunner, getDifficultyParams(), getLeaderboardRank(), updateEndlessBestRecords(), updateLeaderboard()
 
-### Community 17 - "UI Factory & Screens"
+### Community 14 - "State Event Pools"
+Cohesion: 0.17
+Nodes (6): createCascadeStepPool(), createIntensityPool(), createMatchLandedPool(), EventBusImpl, EventPool, createTestPool()
+
+### Community 16 - "Community 16"
 Cohesion: 0.13
 Nodes (19): BUTTON_SIZES, STAR_COLOURS, createButton(), createCreditsScreen(), createLevelCompleteScreen(), createLevelSelectCard(), createMainMenuScreen(), createProgressBar() (+11 more)
 
-### Community 19 - "Endless Mode Runner"
-Cohesion: 0.13
-Nodes (7): calculateDifficulty(), checkEndlessEndCondition(), createEndlessEndScreenData(), EndlessRunner, getLeaderboardRank(), updateEndlessBestRecords(), updateLeaderboard()
-
-### Community 20 - "Combo Matrix Tests"
-Cohesion: 0.24
-Nodes (17): isValidPos(), clearCell(), clearPositions(), colourTransform(), comboKey(), crossClear(), fullBoardClear(), largeAreaClear() (+9 more)
-
-### Community 21 - "Event Bus & Pools"
-Cohesion: 0.14
-Nodes (5): createCascadeStepPool(), createIntensityPool(), createMatchLandedPool(), EventBusImpl, EventPool
-
-### Community 23 - "UI Component Factory"
+### Community 20 - "Community 20"
 Cohesion: 0.12
 Nodes (16): createButton (referenced), createObjectiveChip (referenced), createStarDisplay (referenced), objectiveToDisplayInfo (referenced), CreateGameHUDOptions (interface), GameHUD (interface), ObjectiveProgress (interface), createGameHUD() (+8 more)
 
-### Community 24 - "Match Detection Logic"
-Cohesion: 0.26
-Nodes (16): classifyGroup(), classifyMergedShape(), classifySingleRun(), determineSpawnAt(), determineSpecial(), findSharedCells(), getCenterCell(), getIntersectionCell() (+8 more)
+### Community 21 - "Community 21"
+Cohesion: 0.18
+Nodes (19): BoardAnimator.animateActivation, BoardAnimator.animateCascadeSteps, BoardAnimator.animateSwap, BoardAnimator.buildColourMap, BoardAnimator.playAnims, BoardAnimator.playClearSequence, BoardAnimator.playGravityFromResult, BoardAnimator.playOneActivation (+11 more)
 
-### Community 26 - "Debug & State Machine"
+### Community 22 - "Community 22"
+Cohesion: 0.34
+Nodes (6): canTransition(), getValidTargets(), IllegalTransitionError, transition(), arbSimpleState(), makeState()
+
+### Community 23 - "Community 23"
+Cohesion: 0.18
+Nodes (4): ClockScaleController, createStatsPanel(), createDebugPanel(), createDefaultMetrics()
+
+### Community 24 - "Community 24"
 Cohesion: 0.25
-Nodes (6): createDebugPanel(), createDefaultMetrics(), canTransition(), getValidTargets(), IllegalTransitionError, transition()
+Nodes (3): getAllLevelIds(), getLevelsByWorld(), registerLevel()
 
-### Community 27 - "GDD Overview & Audio"
+### Community 25 - "Community 25"
+Cohesion: 0.22
+Nodes (5): detectBrowserLocale(), getTranslator(), initTranslator(), t(), Translator
+
+### Community 26 - "Community 26"
 Cohesion: 0.16
 Nodes (14): 01 Game Overview, 07 Audio Design, Anti-Frustration Stance (no pity), Chain audio tiers, Special Combo Matrix, Howler.js library choice, Intensity calculation, P2 Cascade Is The Reward (+6 more)
 
-### Community 28 - "SFX Generation Scripts"
+### Community 27 - "Community 27"
+Cohesion: 0.34
+Nodes (14): Deterministic rules with seeded RNG, GameSessionController.checkEndCondition, GameSessionController.doActivate, GameSessionController.doColourSwap, GameSessionController.doComboSwap, GameSessionController.doDirectBombSwap, GameSessionController.doNormalSwap, GameSessionController.doSwap (+6 more)
+
+### Community 28 - "Community 28"
 Cohesion: 0.22
 Nodes (6): chainBlast(), comboBlast(), gemShatter(), levelComplete(), mix(), rockCrush()
 
-### Community 29 - "i18n Translation"
-Cohesion: 0.19
-Nodes (5): detectBrowserLocale(), getTranslator(), initTranslator(), t(), Translator
-
-### Community 32 - "Combo Matrix Transforms"
+### Community 32 - "Community 32"
 Cohesion: 0.18
 Nodes (11): colour.line/bomb colourTransform, comboKey normaliser, line.line crossClear, colour.colour fullBoardClear, bomb.bomb 5x5 clear, resolveCombo dispatcher, bomb.line wideCrossClear, chainMultiplier (cap 4.0) (+3 more)
 
-### Community 33 - "Objective Trackers"
+### Community 33 - "Community 33"
 Cohesion: 0.31
 Nodes (11): calculateStars (1/2/3 thresholds), ClearTracker, CollectTracker, createTracker factory, DropTracker, MultiTracker, ObjectiveTracker interface, objective preservation property tests (+3 more)
 
-### Community 34 - "GDD Art & UI Design"
-Cohesion: 0.25
-Nodes (11): 02 Scene & Level Design, 04 Art Style & Narrative, 05 UI/UX Design, 09 Testing, Boss Special Rules Schema, Design Tokens (color/type/spacing), 7-Color Gem Archetypes, Lumina / Dreamwarden lore (+3 more)
-
-### Community 36 - "Game Loop Tests"
+### Community 34 - "Community 34"
 Cohesion: 0.24
-Nodes (3): makeEngine(), makeSpec(), mockEventBus()
+Nodes (11): 03 Technical Foundation, 09 Testing, Cascade Timing Model, Command Queue, Determinism CI Test, Typed Event Bus (GameEvent), Fixed-Timestep Game Loop, Module Boundary Rules (+3 more)
 
-### Community 37 - "GDD Game Flow & State"
+### Community 36 - "Community 36"
+Cohesion: 0.29
+Nodes (10): 02 Scene & Level Design, 04 Art Style & Narrative, 05 UI/UX Design, Boss Special Rules Schema, Design Tokens (color/type/spacing), 7-Color Gem Archetypes, Lumina / Dreamwarden lore, Teaching Cadence (1 mech per level) (+2 more)
+
+### Community 37 - "Community 37"
 Cohesion: 0.22
 Nodes (10): 06 Game Flow, AppState (state machine), Chain Multiplier formula, End-of-Level Cascade Timing Intent, Move-Counting Table, Onboarding Flow (180s no-text), P1 Instantly Learnable, RunState phases (+2 more)
 
-### Community 39 - "Placeholder Asset Generation"
+### Community 39 - "Community 39"
 Cohesion: 0.61
 Nodes (8): ensureDir(), generateGems(), generateGemSvg(), generateParticleImages(), generateUiImages(), generateWorldBackgrounds(), main(), writeSvg()
 
-### Community 40 - "Special Activation Tests"
-Cohesion: 0.39
-Nodes (7): createFilledBoard(), doSwap(), doSwapSimulation(), doSwapWithCascadeError(), placeColourGem(), placeGem(), posSet()
-
-### Community 44 - "Audio Architecture"
+### Community 41 - "Community 41"
 Cohesion: 0.28
 Nodes (9): AdaptiveMusic (vertical layers), AudioSystem orchestrator, AudioSystem EventBus listeners, AudioBuses (master/music/sfx), BusSnapshot save state, EventBus, SfxCatalog (Howler voice cap), playMatchSfx (chain→level mapping) (+1 more)
 
-### Community 45 - "Telemetry & Tutorial"
+### Community 42 - "Community 42"
 Cohesion: 0.22
 Nodes (7): TelemetryRecorder, TutorialStepTracker, LevelEventData, SessionStartData, TelemetryEvent, TelemetryEventKind, TutorialMilestone
 
-### Community 46 - "GDD Technical Foundation"
-Cohesion: 0.31
-Nodes (9): 03 Technical Foundation, Cascade Timing Model, Command Queue, Determinism CI Test, Typed Event Bus (GameEvent), Fixed-Timestep Game Loop, Module Boundary Rules, Performance Budgets (+1 more)
+### Community 44 - "Community 44"
+Cohesion: 0.57
+Nodes (6): collectFiles(), estimateGzipSize(), formatBytes(), getFileSize(), getTotalSize(), main()
 
-### Community 48 - "Game Type Definitions"
-Cohesion: 0.29
-Nodes (8): BlockerKind, BlockerPlacement, CellPos, GemColour, MatchDescriptor, MatchShape, Objective (discriminated union), SpecialGemType
+### Community 45 - "Community 45"
+Cohesion: 0.57
+Nodes (6): createSpecialOverlayGraphics(), drawAreaOverlay(), drawColourOverlay(), drawLineHOverlay(), drawLineVOverlay(), getSpecialIndicatorColour()
 
-### Community 49 - "Animator & Command Pattern"
-Cohesion: 0.36
-Nodes (8): Board Animator Pattern, Board Interaction Handler, Command Pattern (Swap/Activate), Event Bus Decoupling, Game Integration Orchestrator, Game Session Controller, Lazy Import Pattern, Screen Router Pattern
+### Community 46 - "Community 46"
+Cohesion: 0.54
+Nodes (4): createLayerHierarchy(), bootstrapApp(), detectBackend(), setupResizeHandler()
 
-### Community 50 - "Level Spec & Loading"
+### Community 47 - "Community 47"
+Cohesion: 0.43
+Nodes (4): createGame(), formatObjectiveText(), createSfxTestPanel(), main()
+
+### Community 48 - "Community 48"
 Cohesion: 0.25
 Nodes (7): getAllLevelIds (referenced), loadLevel (referenced), CollectTracker (referenced), DropTracker (referenced), MultiTracker (referenced), ScoreTracker (referenced), remainingMovesBonus (referenced)
 
-### Community 51 - "Filters Tests"
-Cohesion: 0.25
-Nodes (4): MockBlurFilter, MockColorMatrixFilter, MockContainer, MockGraphics
+### Community 49 - "Community 49"
+Cohesion: 0.29
+Nodes (8): BlockerKind, BlockerPlacement, CellPos, GemColour, MatchDescriptor, MatchShape, Objective (discriminated union), SpecialGemType
 
-### Community 52 - "Build Budget Validation"
-Cohesion: 0.48
-Nodes (6): collectFiles(), estimateGzipSize(), formatBytes(), getFileSize(), getTotalSize(), main()
+### Community 50 - "Community 50"
+Cohesion: 0.36
+Nodes (8): Board Animator Pattern, Board Interaction Handler, Command Pattern (Swap/Activate), Event Bus Decoupling, Game Integration Orchestrator, Game Session Controller, Lazy Import Pattern, Screen Router Pattern
 
-### Community 53 - "Special Overlay Rendering"
-Cohesion: 0.48
-Nodes (5): createSpecialOverlayGraphics(), drawAreaOverlay(), drawColourOverlay(), drawLineHOverlay(), drawLineVOverlay()
+### Community 51 - "Community 51"
+Cohesion: 0.67
+Nodes (5): main(), printBudgets(), validateDrawCalls(), validateFps(), validateMemoryDrift()
 
-### Community 54 - "Blocker Concepts"
+### Community 53 - "Community 53"
 Cohesion: 0.29
 Nodes (7): breakLock, JellyOverlay (per-cell layer map), processBlockersOnClear, processJellyOnClear, blocker tests (CP-10, CP-4), tickGenerators, tickUnstables (3x3 + 300 penalty)
 
-### Community 55 - "World Level Definitions"
+### Community 54 - "Community 54"
 Cohesion: 0.48
 Nodes (7): levels index (side-effect imports), World 1 levels (L1-L20), World 2 levels, World 3 levels, World 4 levels, LevelSpec interface, level registry (registerLevel/loadLevel)
 
-### Community 56 - "App State & Edge Cases"
+### Community 55 - "Community 55"
 Cohesion: 0.29
 Nodes (7): AppState, BoardInput, EdgeCases, EventBus, events.test, InputSystem, StateMachine
 
-### Community 57 - "Rendering Modules"
+### Community 56 - "Community 56"
 Cohesion: 0.29
 Nodes (7): RenderingAccessibility, Animations, BoardRenderer, RenderingFilters, GemSprites, Particles, SpecialOverlay
 
-### Community 58 - "GDD Registries"
-Cohesion: 0.29
-Nodes (7): GDD Registries Index, Numbers Registry, Open Questions Registry, Placeholders Registry, Terms Registry, Types Registry, Rationale: one canonical chapter per concept
+### Community 57 - "Community 57"
+Cohesion: 0.6
+Nodes (4): check(), collectFiles(), formatBytes(), main()
 
-### Community 59 - "Board Animator Tests"
-Cohesion: 0.29
-Nodes (3): MockContainer, MockGraphics, MockSprite
+### Community 59 - "Community 59"
+Cohesion: 0.33
+Nodes (6): GDD Registries Index, Open Questions Registry, Placeholders Registry, Terms Registry, Types Registry, Rationale: one canonical chapter per concept
 
 ### Community 60 - "Community 60"
-Cohesion: 0.6
-Nodes (5): main(), printBudgets(), validateDrawCalls(), validateFps(), validateMemoryDrift()
-
-### Community 61 - "Community 61"
 Cohesion: 0.4
 Nodes (6): bootstrapApp() — Pixi init + WebGPU detect, detectBackend() helper, setupResizeHandler (ResizeObserver), main() entry point, createSfxTestPanel (debug DOM panel), WebGPU/WebGL backend detection
 
-### Community 64 - "Community 64"
-Cohesion: 0.33
-Nodes (3): MockColorMatrixFilter, MockContainer, MockGraphics
+### Community 61 - "Community 61"
+Cohesion: 0.47
+Nodes (6): BoardAnimator, Gem (Match-3 PixiJS game), game subsystem (pure logic), rendering subsystem (PixiJS), state subsystem (EventBus + AppState), GameSessionController
 
-### Community 66 - "Community 66"
+### Community 62 - "Community 62"
+Cohesion: 0.8
+Nodes (3): buildManifest(), listFiles(), main()
+
+### Community 63 - "Community 63"
 Cohesion: 0.4
 Nodes (5): Asset Generation Pipeline, Atlas Packing System, Build Pipeline, Performance Budget System, SFX Synthesis Pipeline
 
-### Community 68 - "Community 68"
-Cohesion: 0.83
-Nodes (3): buildManifest(), listFiles(), main()
-
-### Community 69 - "Community 69"
+### Community 64 - "Community 64"
 Cohesion: 0.5
 Nodes (3): CommandQueue, GameEventBus, RulesEngine
 
-### Community 70 - "Community 70"
+### Community 65 - "Community 65"
 Cohesion: 0.5
 Nodes (4): applyGravity, collectDeliveryItems, fillFromTop, runCascade (gravity→fill→detect)
 
-### Community 71 - "Community 71"
+### Community 66 - "Community 66"
 Cohesion: 0.5
 Nodes (4): Board, Cell, Gem, scanHorizontal
 
-### Community 72 - "Community 72"
+### Community 67 - "Community 67"
 Cohesion: 0.5
 Nodes (4): SettingsForm (DOM overlay), ui-dom overlay barrel, settings barrel, SettingsFormCallbacks
 
-### Community 73 - "Community 73"
+### Community 68 - "Community 68"
 Cohesion: 0.5
 Nodes (4): ClockScaleController, ClockControl interface, createDebugPanel (Tweakpane), DebugMetrics interface
 
-### Community 74 - "Community 74"
-Cohesion: 0.83
-Nodes (4): LoadController class, fetchWithRetry exponential backoff, runSplashPreload(), LoadController spec
-
-### Community 75 - "Community 75"
+### Community 69 - "Community 69"
 Cohesion: 0.5
 Nodes (4): 08 Additional Specs, i18n full-locale load strategy, SaveState schema, Telemetry Event List
 
+### Community 70 - "Community 70"
+Cohesion: 0.83
+Nodes (4): LoadController class, fetchWithRetry exponential backoff, runSplashPreload(), LoadController spec
+
 ## Knowledge Gaps
-- **170 isolated node(s):** `Stats`, `setupResizeHandler (ResizeObserver)`, `createSfxTestPanel (debug DOM panel)`, `UI factory`, `UIButton` (+165 more)
+- **175 isolated node(s):** `setupResizeHandler (ResizeObserver)`, `createSfxTestPanel (debug DOM panel)`, `UI factory`, `UIButton`, `UIProgressBar` (+170 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **76 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **77 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `BoardInput` connect `Board Input Controller` to `Game Loop & Integration`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
-- **Why does `BoardRenderer` connect `Board Renderer` to `Synth SFX Engine`, `Blocker Mechanics`, `Community 62`, `Game Loop & Integration`?**
-  _High betweenness centrality (0.033) - this node is a cross-community bridge._
-- **Why does `GameIntegration` connect `Game Integration Layer` to `Community 62`, `Game Loop & Integration`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Why does `BoardRenderer` connect `Board Renderer` to `Game Rules & Tests`, `Audio Synthesis & SFX`, `Community 52`, `Community 47`?**
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+- **Why does `LoadController` connect `Community 19` to `Community 47`?**
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `BoardAnimator` connect `Audio Synthesis & SFX` to `Community 52`, `Community 47`?**
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Are the 30 inferred relationships involving `getCell()` (e.g. with `.executeActivation()` and `.snapshotColoursAt()`) actually correct?**
   _`getCell()` has 30 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 11 inferred relationships involving `createGem()` (e.g. with `placeGem()` and `placeGem()`) actually correct?**
-  _`createGem()` has 11 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 12 inferred relationships involving `createGem()` (e.g. with `placeGem()` and `placeGem()`) actually correct?**
+  _`createGem()` has 12 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 7 inferred relationships involving `createBoard()` (e.g. with `createFilledBoard()` and `createFilledBoard()`) actually correct?**
+  _`createBoard()` has 7 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 10 inferred relationships involving `detectMatches()` (e.g. with `scoreSwap()` and `.runCascadeLoop()`) actually correct?**
   _`detectMatches()` has 10 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `Stats`, `setupResizeHandler (ResizeObserver)`, `createSfxTestPanel (debug DOM panel)` to the rest of the system?**
-  _170 weakly-connected nodes found - possible documentation gaps or missing edges._

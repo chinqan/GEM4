@@ -30,7 +30,12 @@ import {
   createSpecialActivationEffect,
   createBlastZoneOverlay,
 } from './animations';
-import { CELL_SIZE, GEM_COLOURS, getSpecialActivationDuration } from './design-tokens';
+import {
+  CELL_SIZE,
+  GEM_COLOURS,
+  MATCH_CLEAR_DURATION_MS,
+  getSpecialActivationDuration,
+} from './design-tokens';
 import { MergeParticleSystem } from './particles';
 import { createScorePopup } from '../ui/juice/score-popup';
 import {
@@ -54,6 +59,38 @@ export interface BoardAnimatorConfig {
 
 const STALL_TIMEOUT_MS = 10_000;
 const GRAVITY_WAIT_MS = 80;
+
+// ─── Radiation timeline tuning ──────────────────────────────
+// Lightning-like outward radiation from each special's centre. Each cell's
+// match-clear fires when the wave reaches it: arriveAt = startTime +
+// chebyshev(source, cell) * CELL_RADIATION_SPEED_MS.
+const CELL_RADIATION_SPEED_MS = 30;
+// Stagger between simultaneous in-match (root) activations so multiple
+// roots don't perfectly overlap.
+const ROOT_STAGGER_MS = 80;
+// Score popup is delayed past the wave's last cell so the number lands after
+// the visual reads "everything blew up", not in the middle of it.
+const SCORE_POPUP_TAIL_MS = 80;
+// Extra buffer past the last shrink completion before resolving the timeline,
+// so the next syncFromSnapshot doesn't destroy sprites mid-animation.
+const TIMELINE_TAIL_GRACE_MS = 80;
+
+// Area bomb charge-up duration (ms): red zone highlight before explosion.
+const AREA_BOMB_CHARGE_MS = 350;
+
+// A normalised activation event used by the radiation scheduler. Matches
+// SpecialActivationEvent shape but allows 'combo' for the swap initial path.
+interface RadiationEvent {
+  pos: CellPos;
+  type: SpecialActivationKind;
+  clearedCells: CellPos[];
+  score: number;
+}
+
+interface ScheduledTask {
+  time: number;
+  fn: () => void;
+}
 
 // ─── Board Animator ─────────────────────────────────────────
 
@@ -101,47 +138,54 @@ export class BoardAnimator {
 
     // Play initial swap slide
     await this.playSwapSlide(from, to);
+    // Swap-slide moved sprites visually but didn't update the sprite-map
+    // keys. Sync them now so getSprite(c,r) returns the sprite that's
+    // actually at (c,r) — otherwise downstream shrink/effects fall on
+    // the wrong cells.
+    this.boardRenderer.swapSpriteKeys(from, to);
 
     // Handle initial activation (combo/colour/directBomb)
     if (result.initialActivation) {
-      const { type, pos, clearedCells, score, passiveActivations, gravity } = result.initialActivation;
+      const { type, pos, clearedCells, passiveActivations, gravity, score } = result.initialActivation;
 
       if (type === 'combo') {
         playCombo();
       }
 
-      // Play activation effect
-      const kind = type as SpecialActivationKind;
-      const dur = getSpecialActivationDuration(kind, false);
-      const [cx, cy] = this.cellToPixel(pos);
+      // The initial activation's clearedCells is the FULL set (initial blast +
+      // every passive blast). For radiation we need just the initial blast.
+      // IMPORTANT: keep each chained special's own pos inside the parent's
+      // wave — that's what triggers the chain in scheduleEvent. Only strip
+      // the chained's own blast cells (those belong to the chained's wave).
+      const passiveBlastCells = new Set<string>();
+      for (const p of passiveActivations) {
+        for (const [c, r] of p.clearedCells) passiveBlastCells.add(`${c},${r}`);
+      }
+      const initialBlast: CellPos[] = clearedCells
+        .filter(c => !passiveBlastCells.has(`${c.pos[0]},${c.pos[1]}`))
+        .map(c => c.pos);
 
-      this.showFlavorText(kind, [pos]);
+      const root: RadiationEvent = {
+        pos,
+        type: type as SpecialActivationKind,
+        clearedCells: initialBlast,
+        score,
+      };
 
-      await this.playAnims([
-        createSpecialActivationEffect(cx, cy, 0xffffff, this.layers.boardLayer, dur),
-        createBlastZoneOverlay(
-          clearedCells.map(c => c.pos),
-          this.layers.boardLayer,
-          dur,
-        ),
-      ]);
+      const colourByPos = new Map<string, GemColour | null>();
+      for (const c of clearedCells) {
+        if (c.colour) colourByPos.set(`${c.pos[0]},${c.pos[1]}`, c.colour);
+      }
 
-      // SFX
-      playMatchSfx(clearedCells.length, 1);
+      await this.playRadiationTimeline(
+        [root],
+        passiveActivations.map(this.toRadiationEvent),
+        [],
+        colourByPos,
+        1,
+      );
 
-      // Clear animations + particles
-      await this.playClearSequence(clearedCells, 1);
-
-      // Score popup
-      this.showScorePopup(score, clearedCells.map(c => c.pos), 1);
-
-      // Passive activations
-      await this.playPassiveActivations(passiveActivations, 1);
-
-      // Sync renderer from snapshot after initial activation
       this.boardRenderer.syncFromSnapshot(result.initialActivation.boardSnapshot);
-
-      // Gravity animation using the actual gravity result
       await this.playGravityFromResult(gravity, board);
     } else {
       // Normal swap: play swap SFX
@@ -166,38 +210,35 @@ export class BoardAnimator {
 
     const { type, pos, clearedCells, score, passiveActivations, gravity, cascadeSteps } = result;
 
-    // Activation effect
-    const dur = getSpecialActivationDuration(type, false);
-    const [cx, cy] = this.cellToPixel(pos);
+    // Build root event = initial activation's own blast. Keep chained
+    // specials' own positions in the parent's wave so scheduleEvent can
+    // detect them and fire the chain; only strip cells that came from a
+    // chained's blast.
+    const passiveBlastCells = new Set<string>();
+    for (const p of passiveActivations) {
+      for (const [c, r] of p.clearedCells) passiveBlastCells.add(`${c},${r}`);
+    }
+    const initialBlast: CellPos[] = clearedCells
+      .filter(c => !passiveBlastCells.has(`${c.pos[0]},${c.pos[1]}`))
+      .map(c => c.pos);
 
-    await this.playAnims([
-      createSpecialActivationEffect(cx, cy, 0xffffff, this.layers.boardLayer, dur),
-      createBlastZoneOverlay(
-        clearedCells.map(c => c.pos),
-        this.layers.boardLayer,
-        dur,
-      ),
-    ]);
+    const root: RadiationEvent = { pos, type, clearedCells: initialBlast, score };
 
-    // SFX
-    playMatchSfx(clearedCells.length, 1);
+    const colourByPos = new Map<string, GemColour | null>();
+    for (const c of clearedCells) {
+      if (c.colour) colourByPos.set(`${c.pos[0]},${c.pos[1]}`, c.colour);
+    }
 
-    // Clear animations + particles
-    await this.playClearSequence(clearedCells, 1);
+    await this.playRadiationTimeline(
+      [root],
+      passiveActivations.map(this.toRadiationEvent),
+      [],
+      colourByPos,
+      1,
+    );
 
-    // Score popup
-    this.showScorePopup(score, clearedCells.map(c => c.pos), 1);
-
-    // Passive activations
-    await this.playPassiveActivations(passiveActivations, 1);
-
-    // Sync from snapshot after activation clears
     this.boardRenderer.syncFromSnapshot(result.boardSnapshot);
-
-    // Gravity animation using the actual gravity result
     await this.playGravityFromResult(gravity, board);
-
-    // Cascade steps
     await this.animateCascadeSteps(cascadeSteps, board);
   }
 
@@ -220,47 +261,224 @@ export class BoardAnimator {
 
   private async animateCascadeSteps(steps: CascadeStep[], board: Board): Promise<void> {
     for (const step of steps) {
-      // Sync to pre-clear state: shows gems in correct positions with correct colors
-      // (includes newly spawned specials, but before any clears happen)
+      // Sync to pre-clear state: every gem still visible (including in-match
+      // special blast targets — game-session captures preClearSnapshot before
+      // running the in-match clears).
       this.boardRenderer.syncFromSnapshot(step.preClearSnapshot);
 
-      // Match SFX
-      playMatchSfx(step.clearedCells.length, step.chain);
+      // Pure-match cells = step.clearedCells minus every cell any activation
+      // will clear. These shrink at T+0; activations radiate from their own
+      // pos with per-cell delay.
+      const allActivationCells = new Set<string>();
+      for (const e of step.specialActivations) {
+        allActivationCells.add(`${e.pos[0]},${e.pos[1]}`);
+        for (const [c, r] of e.clearedCells) allActivationCells.add(`${c},${r}`);
+      }
+      for (const e of step.passiveActivations) {
+        allActivationCells.add(`${e.pos[0]},${e.pos[1]}`);
+        for (const [c, r] of e.clearedCells) allActivationCells.add(`${c},${r}`);
+      }
+      const pureMatchCells = step.clearedCells.filter(
+        c => !allActivationCells.has(`${c.pos[0]},${c.pos[1]}`),
+      );
 
-      // Clear animations
-      await this.playClearSequence(step.clearedCells, step.chain);
+      const colourByPos = this.buildColourMap(step.preClearSnapshot, step.clearedCells);
 
-      // Score popup
+      if (pureMatchCells.length > 0) {
+        playMatchSfx(pureMatchCells.length, step.chain);
+      }
       this.showScorePopup(step.score, step.clearedCells.map(c => c.pos), step.chain);
-
-      // Chain combo text
       this.showComboChainText(step.chain, step.clearedCells.map(c => c.pos));
 
-      // In-match special activations
-      for (const activation of step.specialActivations) {
-        const dur = getSpecialActivationDuration(activation.type, true);
-        const [ax, ay] = this.cellToPixel(activation.pos);
+      await this.playRadiationTimeline(
+        step.specialActivations.map(this.toRadiationEvent),
+        step.passiveActivations.map(this.toRadiationEvent),
+        pureMatchCells,
+        colourByPos,
+        step.chain,
+      );
 
-        this.showFlavorText(activation.type, [activation.pos], 30);
-
-        await this.playAnims([
-          createSpecialActivationEffect(ax, ay, 0xffffff, this.layers.boardLayer, dur),
-          createBlastZoneOverlay(activation.clearedCells, this.layers.boardLayer, dur),
-        ]);
-
-        playMatchSfx(activation.clearedCells.length, step.chain);
-        this.showScorePopup(activation.score, activation.clearedCells, step.chain);
-      }
-
-      // Passive activations
-      await this.playPassiveActivations(step.passiveActivations, step.chain);
-
-      // Now sync to post-gravity snapshot (creates new gems at final positions)
       this.boardRenderer.syncFromSnapshot(step.boardSnapshot);
-
-      // Gravity drop animation (moves new/fallen gems from fromRow to toRow)
       await this.playGravityFromResult(step.gravity, board);
     }
+  }
+
+  // ─── Private: Radiation Timeline ────────────────────────────
+
+  private toRadiationEvent = (e: SpecialActivationEvent): RadiationEvent => ({
+    pos: e.pos,
+    type: e.type as SpecialActivationKind,
+    clearedCells: e.clearedCells,
+    score: e.score,
+  });
+
+  private chebyshev(a: CellPos, b: CellPos): number {
+    return Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]));
+  }
+
+  private async playRadiationTimeline(
+    rootEvents: RadiationEvent[],
+    passiveEvents: RadiationEvent[],
+    pureMatchCells: ClearedCellInfo[],
+    colourByPos: Map<string, GemColour | null>,
+    chain: number,
+  ): Promise<void> {
+    const eventByPos = new Map<string, RadiationEvent>();
+    for (const e of rootEvents) eventByPos.set(`${e.pos[0]},${e.pos[1]}`, e);
+    for (const e of passiveEvents) eventByPos.set(`${e.pos[0]},${e.pos[1]}`, e);
+
+    const animatedClears = new Set<string>();
+    const scheduledEvents = new Set<string>();
+    const tasks: ScheduledTask[] = [];
+    let endTime = MATCH_CLEAR_DURATION_MS;
+
+    // Pure-match cells clear immediately at T+0
+    for (const c of pureMatchCells) {
+      const k = `${c.pos[0]},${c.pos[1]}`;
+      if (animatedClears.has(k)) continue;
+      animatedClears.add(k);
+      tasks.push({ time: 0, fn: () => this.shrinkCell(c.pos, c.colour, chain) });
+    }
+
+    const scheduleEvent = (event: RadiationEvent, startTime: number): void => {
+      const ek = `${event.pos[0]},${event.pos[1]}`;
+      if (scheduledEvents.has(ek)) return;
+      scheduledEvents.add(ek);
+
+      // Area bomb: charge-up phase with red zone highlight before explosion
+      const isArea = event.type === 'area';
+      const chargeTime = isArea ? AREA_BOMB_CHARGE_MS : 0;
+
+      if (isArea) {
+        // Show red overlay on affected cells during charge-up
+        const allCells: CellPos[] = [event.pos, ...event.clearedCells];
+        tasks.push({
+          time: startTime,
+          fn: () => {
+            void this.playAnims([
+              createBlastZoneOverlay(
+                allCells as Array<[number, number]>,
+                this.layers.boardLayer,
+                chargeTime,
+              ),
+            ]);
+          },
+        });
+      }
+
+      // Wave start: ring effect + flavor text + special-clear SFX
+      // (delayed by chargeTime for area bombs)
+      tasks.push({
+        time: startTime + chargeTime,
+        fn: () => {
+          const [ax, ay] = this.cellToPixel(event.pos);
+          const dur = getSpecialActivationDuration(event.type, true);
+          this.showFlavorText(event.type, [event.pos], 30);
+          void this.playAnims([
+            createSpecialActivationEffect(ax, ay, 0xffffff, this.layers.boardLayer, dur),
+          ]);
+          playMatchSfx(event.clearedCells.length, chain);
+        },
+      });
+
+      // Wave radiates outward — schedule each cell's clear at chebyshev * speed.
+      let waveEnd = startTime + chargeTime;
+      const allCells: CellPos[] = [event.pos, ...event.clearedCells];
+      for (const cell of allCells) {
+        const ck = `${cell[0]},${cell[1]}`;
+        const dist = this.chebyshev(event.pos, cell);
+        const arriveAt = startTime + chargeTime + dist * CELL_RADIATION_SPEED_MS;
+        if (arriveAt > waveEnd) waveEnd = arriveAt;
+
+        // Chain trigger: if the wave reaches another special's source, that
+        // special radiates from its own pos starting at this arrival time.
+        if (ck !== ek) {
+          const chained = eventByPos.get(ck);
+          if (chained) scheduleEvent(chained, arriveAt);
+        }
+
+        if (animatedClears.has(ck)) continue;
+        animatedClears.add(ck);
+
+        tasks.push({
+          time: arriveAt,
+          fn: () => this.shrinkCell(cell, colourByPos.get(ck) ?? null, chain),
+        });
+      }
+
+      // Score popup lands just after the wave's last cell.
+      if (event.score > 0) {
+        tasks.push({
+          time: waveEnd + SCORE_POPUP_TAIL_MS,
+          fn: () => this.showScorePopup(event.score, event.clearedCells, chain),
+        });
+      }
+
+      const candidateEnd = waveEnd + MATCH_CLEAR_DURATION_MS + TIMELINE_TAIL_GRACE_MS;
+      if (candidateEnd > endTime) endTime = candidateEnd;
+    };
+
+    // Roots fire with a small stagger so simultaneous in-match specials don't
+    // perfectly overlap.
+    for (let i = 0; i < rootEvents.length; i++) {
+      scheduleEvent(rootEvents[i], i * ROOT_STAGGER_MS);
+    }
+
+    await this.runTimeline(tasks, endTime);
+  }
+
+  private async runTimeline(tasks: ScheduledTask[], endTime: number): Promise<void> {
+    if (tasks.length === 0 && endTime <= 0) return;
+    tasks.sort((a, b) => a.time - b.time);
+    const start = performance.now();
+    let i = 0;
+    return new Promise<void>(resolve => {
+      const tick = (): void => {
+        const elapsed = performance.now() - start;
+        while (i < tasks.length && tasks[i].time <= elapsed) {
+          try { tasks[i].fn(); } catch (e) { console.error('[runTimeline] task threw:', e); }
+          i++;
+        }
+        if (i >= tasks.length && elapsed >= endTime) {
+          resolve();
+        } else {
+          requestAnimationFrame(tick);
+        }
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
+  private shrinkCell(pos: CellPos, colour: GemColour | null, chain: number): void {
+    const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
+    if (spr) {
+      void this.playAnims([createMatchClearAnimation(spr as any)]);
+    }
+    if (colour) {
+      const fxLevel = Math.min(chain - 1, 3);
+      const [px, py] = this.cellToPixel(pos);
+      this.mergeFx.spawn(px, py, fxLevel, GEM_COLOURS[colour]);
+    }
+  }
+
+  private buildColourMap(
+    snapshot: { width: number; height: number; cells: { gem: { colour: GemColour | null } | null }[][] },
+    extra: ClearedCellInfo[],
+  ): Map<string, GemColour | null> {
+    const map = new Map<string, GemColour | null>();
+    for (let c = 0; c < snapshot.width; c++) {
+      for (let r = 0; r < snapshot.height; r++) {
+        const cell = snapshot.cells[c]?.[r];
+        const col = cell?.gem?.colour ?? null;
+        if (col) map.set(`${c},${r}`, col);
+      }
+    }
+    // Fill in from clearedCells where the snapshot had no colour (e.g. spawn
+    // positions). Don't overwrite a known colour with null.
+    for (const e of extra) {
+      if (e.colour) map.set(`${e.pos[0]},${e.pos[1]}`, e.colour);
+    }
+    return map;
   }
 
   // ─── Private: Swap Slide ────────────────────────────────
@@ -281,29 +499,6 @@ export class BoardAnimator {
         }),
       ]);
     }
-  }
-
-  // ─── Private: Clear Sequence ────────────────────────────
-
-  private async playClearSequence(cells: ClearedCellInfo[], chain: number): Promise<void> {
-    const anims: Animation[] = [];
-
-    for (const { pos, colour } of cells) {
-      const [c, r] = pos;
-      const spr = this.boardRenderer.getSprite(c, r);
-      if (spr) {
-        anims.push(createMatchClearAnimation(spr as any));
-      }
-
-      // Spawn particles
-      if (colour) {
-        const fxLevel = Math.min(chain - 1, 3);
-        const [px, py] = this.cellToPixel(pos);
-        this.mergeFx.spawn(px, py, fxLevel, GEM_COLOURS[colour]);
-      }
-    }
-
-    await this.playAnims(anims);
   }
 
   // ─── Private: Gravity From Result ─────────────────────────
@@ -349,33 +544,6 @@ export class BoardAnimator {
         duration: 900,
       });
       this.layers.boardLayer.addChild(popup.container);
-    }
-  }
-
-  // ─── Private: Passive Activations ───────────────────────
-
-  private async playPassiveActivations(
-    events: SpecialActivationEvent[],
-    chain: number,
-  ): Promise<void> {
-    if (events.length === 0) return;
-
-    for (const event of events) {
-      const dur = getSpecialActivationDuration(event.type, true);
-      const [ax, ay] = this.cellToPixel(event.pos);
-
-      this.showFlavorText(event.type, [event.pos], 30);
-
-      await this.playAnims([
-        createSpecialActivationEffect(ax, ay, 0xffffff, this.layers.boardLayer, dur),
-        createBlastZoneOverlay(event.clearedCells, this.layers.boardLayer, dur),
-      ]);
-
-      playMatchSfx(event.clearedCells.length, chain);
-
-      if (event.score > 0) {
-        this.showScorePopup(event.score, event.clearedCells, chain);
-      }
     }
   }
 
