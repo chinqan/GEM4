@@ -12,12 +12,13 @@
         "cat *",
         "test *",
         "git *",
-        "/Users/chinqan/opt/anaconda3/bin/python *",
         "wc *",
-        "python3 *",
+        "python *",
         "GRAPHIFY_BIN=$(which *",
         "$(cat *",
-        "cp *"
+        "cp *",
+        "which *",
+        "/opt/anaconda3/bin/python *"
     ],
     "files.watcherExclude": {
         "**/node_modules/**": true,

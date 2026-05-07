@@ -31,3 +31,5 @@ When asked about how modules connect, what depends on what, or where something i
 1. Check `graphify-out/graph.json` god nodes and community structure first.
 2. Follow edges from the graph rather than scanning files manually.
 3. Cite source_file and source_location from graph nodes when referencing specific code.
+
+For Traditional Chinese summaries and Suggested Questions action plans, also follow `.kiro/steering/graphify-action-plan.md`.

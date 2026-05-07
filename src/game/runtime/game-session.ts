@@ -83,6 +83,8 @@ export interface SwapResult {
     clearedCells: ClearedCellInfo[];
     score: number;
     passiveActivations: SpecialActivationEvent[];
+    /** Gravity result from the initial activation clear (before cascade) */
+    gravity: GravityResult;
   };
   /** Cascade steps after the initial clear */
   cascadeSteps: CascadeStep[];
@@ -100,6 +102,8 @@ export interface ActivateResult {
   clearedCells: ClearedCellInfo[];
   score: number;
   passiveActivations: SpecialActivationEvent[];
+  /** Gravity result from the initial activation clear (before cascade) */
+  gravity: GravityResult;
   cascadeSteps: CascadeStep[];
   totalScore: number;
   endCondition: EndCondition | null;
@@ -662,7 +666,7 @@ export class GameSessionController {
       }
       const pool = [...present].sort();
       if (pool.length === 0) {
-        return { valid: false, type: special, pos: at, clearedCells: [], score: 0, passiveActivations: [], cascadeSteps: [], totalScore: 0, endCondition: null };
+        return { valid: false, type: special, pos: at, clearedCells: [], score: 0, passiveActivations: [], gravity: { drops: [], deliveryCollected: [] }, cascadeSteps: [], totalScore: 0, endCondition: null };
       }
       const target = pool[this.rngStreams.cascadeFill.int(0, pool.length)];
       activeResult = activateColourGem(this.board, at, target);
@@ -699,7 +703,7 @@ export class GameSessionController {
     }
 
     // Gravity
-    this.runGravity();
+    const gravity = this.runGravity();
 
     // Cascade
     const cascadeSteps = this.runCascadeLoop(chain);
@@ -728,6 +732,7 @@ export class GameSessionController {
       clearedCells: clearedInfos,
       score,
       passiveActivations: passiveEvents,
+      gravity,
       cascadeSteps,
       totalScore,
       endCondition,
@@ -844,7 +849,7 @@ export class GameSessionController {
     const passiveEvents = this.handlePassiveActivations(comboClearedCells, chain, comboExclude, specialSnapshot);
 
     // Gravity + cascade
-    this.runGravity();
+    const comboGravity = this.runGravity();
     const cascadeSteps = this.runCascadeLoop(chain);
 
     const clearedInfos = this.toClearedCellInfos(comboClearedCells, colourSnapshot);
@@ -860,6 +865,7 @@ export class GameSessionController {
         clearedCells: clearedInfos,
         score: comboPoints,
         passiveActivations: passiveEvents,
+        gravity: comboGravity,
       },
       cascadeSteps,
       totalScore: this._score - scoreBeforeSwap,
@@ -902,7 +908,7 @@ export class GameSessionController {
     const passiveEvents = this.handlePassiveActivations(colourClearedCells, chain, colourExclude, specialSnapshot);
 
     // Gravity + cascade
-    this.runGravity();
+    const colourGravity = this.runGravity();
     const cascadeSteps = this.runCascadeLoop(chain);
 
     const clearedInfos = this.toClearedCellInfos(colourClearedCells, colourSnapshot);
@@ -918,6 +924,7 @@ export class GameSessionController {
         clearedCells: clearedInfos,
         score: activationPoints,
         passiveActivations: passiveEvents,
+        gravity: colourGravity,
       },
       cascadeSteps,
       totalScore: this._score - scoreBeforeSwap,
@@ -959,7 +966,7 @@ export class GameSessionController {
     const passiveEvents = this.handlePassiveActivations(activatedCells, chain, directExclude, specialSnapshot);
 
     // Gravity + cascade
-    this.runGravity();
+    const bombGravity = this.runGravity();
     const cascadeSteps = this.runCascadeLoop(chain);
 
     const clearedInfos = this.toClearedCellInfos(activatedCells, colourSnapshot);
@@ -975,6 +982,7 @@ export class GameSessionController {
         clearedCells: clearedInfos,
         score: actScore,
         passiveActivations: passiveEvents,
+        gravity: bombGravity,
       },
       cascadeSteps,
       totalScore: this._score - scoreBeforeSwap,

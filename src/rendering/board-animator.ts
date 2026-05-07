@@ -104,7 +104,7 @@ export class BoardAnimator {
 
     // Handle initial activation (combo/colour/directBomb)
     if (result.initialActivation) {
-      const { type, pos, clearedCells, score, passiveActivations } = result.initialActivation;
+      const { type, pos, clearedCells, score, passiveActivations, gravity } = result.initialActivation;
 
       if (type === 'combo') {
         playCombo();
@@ -140,6 +140,9 @@ export class BoardAnimator {
 
       // Sync renderer after initial activation
       this.boardRenderer.sync(board);
+
+      // Gravity animation using the actual gravity result
+      await this.playGravityFromResult(gravity, board);
     } else {
       // Normal swap: play swap SFX
       playSwap();
@@ -161,7 +164,7 @@ export class BoardAnimator {
   ): Promise<void> {
     if (!result.valid) return;
 
-    const { type, pos, clearedCells, score, passiveActivations, cascadeSteps } = result;
+    const { type, pos, clearedCells, score, passiveActivations, gravity, cascadeSteps } = result;
 
     // Activation effect
     const dur = getSpecialActivationDuration(type, false);
@@ -188,11 +191,11 @@ export class BoardAnimator {
     // Passive activations
     await this.playPassiveActivations(passiveActivations, 1);
 
-    // Sync board after activation clears
+    // Sync board after activation clears (board already has gravity applied)
     this.boardRenderer.sync(board);
 
-    // Gravity animation (first gravity is part of the activation)
-    await this.playGravityDrop(board);
+    // Gravity animation using the actual gravity result
+    await this.playGravityFromResult(gravity, board);
 
     // Cascade steps
     await this.animateCascadeSteps(cascadeSteps, board);
@@ -304,13 +307,7 @@ export class BoardAnimator {
     await this.playAnims(anims);
   }
 
-  // ─── Private: Gravity Drop ──────────────────────────────
-
-  private async playGravityDrop(board: Board): Promise<void> {
-    // After sync, sprites are in final positions — we need to animate from old positions
-    // This is a simplified version; the full version would use DropInfo from GravityResult
-    await this.wait(GRAVITY_WAIT_MS);
-  }
+  // ─── Private: Gravity From Result ─────────────────────────
 
   private async playGravityFromResult(gravity: GravityResult, board: Board): Promise<void> {
     const dropAnims: Animation[] = [];
