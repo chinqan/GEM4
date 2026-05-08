@@ -124,8 +124,8 @@
     "hash": "b07ea14f713d397fa8ebc41d35da8730"
   },
   "/Users/chinqan-mac/GEM4/src/integration/game-integration.ts": {
-    "mtime": 1778205910.318829,
-    "hash": "f34de5ae3b3086d01ffd463cccafb84c"
+    "mtime": 1778209612.3539927,
+    "hash": "1dc3d219ea95f28ef5b1605d2287cca9"
   },
   "/Users/chinqan-mac/GEM4/src/integration/__tests__/special-activation.test.ts": {
     "mtime": 1778123622.0598497,
@@ -160,8 +160,8 @@
     "hash": "3fba21f13f4af002912b4e65cf29dc68"
   },
   "/Users/chinqan-mac/GEM4/src/game/runtime/__tests__/reshuffle.property.test.ts": {
-    "mtime": 1776908647.5457833,
-    "hash": "91d42b5474731b0a251a6a036f0d499d"
+    "mtime": 1778210291.4659731,
+    "hash": "3eeb30daa7264a81866c220bfa6b07a0"
   },
   "/Users/chinqan-mac/GEM4/src/game/runtime/__tests__/game-session.test.ts": {
     "mtime": 1778113710.5101957,
@@ -476,44 +476,48 @@
     "hash": "ba088c239d7aaa8fc769951407f0ffe5"
   },
   "/Users/chinqan-mac/GEM4/gdd/06_game_flow.md": {
-    "mtime": 1776908646.8941364,
-    "hash": "c637fed7b9f3fe99c9284a75650a7b1f"
+    "mtime": 1778210375.2273445,
+    "hash": "cb30698e78aa2a488a4642a3f15110ea"
   },
   "/Users/chinqan-mac/GEM4/gdd/04_art_style_and_narrative.md": {
-    "mtime": 1776908646.89396,
-    "hash": "65739b2185ea3adc18f5613ef5677344"
+    "mtime": 1778210371.6614633,
+    "hash": "1a3826b54dadd016c562ce15f45221a3"
   },
   "/Users/chinqan-mac/GEM4/gdd/02_scene_and_level_design.md": {
-    "mtime": 1776908646.8937714,
-    "hash": "9971f9bf6a70dc0554aa90138949a50d"
+    "mtime": 1778210363.1190937,
+    "hash": "b62fc654c7d483022fda64cf533156e2"
   },
   "/Users/chinqan-mac/GEM4/gdd/README.md": {
     "mtime": 1776908646.89443,
     "hash": "f63f28e35bb9bd0b235f8698b5a80dbd"
   },
   "/Users/chinqan-mac/GEM4/gdd/01_game_overview.md": {
-    "mtime": 1777271250.869804,
-    "hash": "8ec5f0d3fc58ea57e13e5e530be616aa"
+    "mtime": 1778210361.6926553,
+    "hash": "ac9df308c823c3e88563e034e6615f5a"
   },
   "/Users/chinqan-mac/GEM4/gdd/09_testing.md": {
-    "mtime": 1776908646.894377,
-    "hash": "b40cebfacd2a5db7be28ef1e3a4988d5"
+    "mtime": 1778210409.0095189,
+    "hash": "a79c192829d1ffcdb16031ed79b0be9c"
   },
   "/Users/chinqan-mac/GEM4/gdd/07_audio_design.md": {
-    "mtime": 1776908646.894217,
-    "hash": "f7cf5e0122d3aa9df01f62575b8318e5"
+    "mtime": 1778210376.6835153,
+    "hash": "0d55d425378c397959e45652a8c42501"
   },
   "/Users/chinqan-mac/GEM4/gdd/05_ui_ux_design.md": {
-    "mtime": 1776908646.8940437,
-    "hash": "fd1ccf50152d26af9c56aff59c283f02"
+    "mtime": 1778210373.4838772,
+    "hash": "16b769766a8ab3102979267f56c38d39"
   },
   "/Users/chinqan-mac/GEM4/gdd/08_additional_specs.md": {
-    "mtime": 1776908646.8943026,
-    "hash": "160d9905e5064f25d42b6cd778c462d0"
+    "mtime": 1778210378.7001164,
+    "hash": "08c55a94a63603b978d40cbe672bd522"
   },
   "/Users/chinqan-mac/GEM4/gdd/03_technical_foundation.md": {
-    "mtime": 1776908646.8938682,
-    "hash": "a85ac89dbd59c3fea483512048153e5d"
+    "mtime": 1778210422.653452,
+    "hash": "363e69336559d9f228a6e475df62d0d6"
+  },
+  "/Users/chinqan-mac/GEM4/gdd/2026-05-08-consolidated-requirements.md": {
+    "mtime": 1778210238.027446,
+    "hash": "b8b72aa92b0dbe0d643a4fdcd5e7ddf0"
   },
   "/Users/chinqan-mac/GEM4/gdd/registries/placeholders.md": {
     "mtime": 1776908646.8949857,

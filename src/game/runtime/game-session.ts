@@ -190,6 +190,7 @@ export class GameSessionController {
   private readonly rngStreams: RngStreams;
   private readonly tracker: ObjectiveTracker;
   private readonly colours: GemColour[];
+  private readonly _testMode: boolean;
 
   private _score = 0;
   private _movesRemaining: number;
@@ -205,6 +206,7 @@ export class GameSessionController {
     this.colours = [...config.spec.gems.colours];
     this._movesRemaining = config.spec.constraints.moveBudget ?? Infinity;
     this._timeRemaining = config.spec.constraints.timeBudget ?? Infinity;
+    this._testMode = config.spec.id === -1;
   }
 
   // ─── Public Accessors ───────────────────────────────────
@@ -306,6 +308,24 @@ export class GameSessionController {
     walk(this.tracker);
   }
 
+  /** Test mode: randomly convert some newly-filled gems to specials (~4% chance per cell) */
+  private injectTestModeSpecials(): void {
+    const specials: SpecialGemType[] = ['lineH', 'lineV', 'area', 'colour'];
+    const rng = this.rngStreams.cascadeFill;
+    for (let col = 0; col < this.board.width; col++) {
+      // Only check top row (newly filled gems come from top)
+      for (let row = 0; row < 1; row++) {
+        const cell = this.board.cells[col][row];
+        if (!cell.gem || cell.gem.special) continue;
+        if (rng.next() < 0.04) {
+          const specialType = specials[rng.int(0, specials.length)];
+          cell.gem.special = specialType;
+          cell.gem.colour = null;
+        }
+      }
+    }
+  }
+
   private getObjectiveProgress(): Array<{ current: number; total: number }> {
     if (this.tracker && typeof (this.tracker as any).getTrackers === 'function') {
       const subs = (this.tracker as any).getTrackers() as Array<{ getSummary(): { current: number; total: number } }>;
@@ -401,6 +421,11 @@ export class GameSessionController {
 
     applyGravity(this.board);
     fillFromTop(this.board, this.rngStreams.cascadeFill, this.colours);
+
+    // Test mode: randomly convert ~12% of top-row gems to specials
+    if (this._testMode) {
+      this.injectTestModeSpecials();
+    }
 
     // Collect delivery items
     const deliveryPositions = collectDeliveryItems(this.board);

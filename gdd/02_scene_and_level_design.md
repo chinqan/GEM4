@@ -1,7 +1,7 @@
 # 02 · 場景與關卡設計 (Scene & Level Design)
 
-> **Status**: v0.9 (draft) · **Owner**: match3-level-designer
-> **Last updated**: 2026-04-21 · **Phase**: 2 — Systems
+> **Status**: v1.0 (synced 2026-05-08) · **Owner**: match3-level-designer
+> **Last updated**: 2026-05-08 · **Phase**: 2 — Systems
 
 ---
 

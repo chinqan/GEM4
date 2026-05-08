@@ -1,7 +1,7 @@
 # 03 · 技術基礎 (Technical Foundation)
 
-> **Status**: v0.9 (draft) · **Owners**: match3-technical-artist (渲染/資產) · match3-ux-architect (state/save)
-> **Last updated**: 2026-04-21 · **Phase**: 1 — Foundations
+> **Status**: v1.0 (synced 2026-05-08) · **Owners**: match3-technical-artist (渲染/資產) · match3-ux-architect (state/save)
+> **Last updated**: 2026-05-08 · **Phase**: 1 — Foundations
 
 ---
 
@@ -72,22 +72,22 @@ async function detectBackend(): Promise<'webgpu' | 'webgl2' | 'webgl1'> {
 ```json
 {
   "dependencies": {
-    "pixi.js": "^8.6.6",
-    "@pixi/ui": "^2.0.0",
-    "@pixi/layout": "^2.0.0",
-    "@pixi/sound": "^6.0.0",
+    "pixi.js": "^8.18.1",
+    "@pixi/ui": "^2.3.2",
+    "@pixi/layout": "^2.0.1",
+    "@pixi/sound": "^6.0.1",
     "howler": "^2.2.4"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
-    "vite": "^6.0.7",
-    "vitest": "^3.0.4",
-    "@playwright/test": "^1.50.0",
-    "eslint": "^9.18.0",
-    "typescript-eslint": "^8.21.0",
-    "prettier": "^3.4.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.3",
+    "@playwright/test": "^1.59.1",
+    "eslint": "^9.39.4",
+    "fast-check": "^4.7.0",
+    "prettier": "^3.8.3",
     "husky": "^9.1.7",
-    "tweakpane": "^4.0.0",
+    "tweakpane": "^4.0.5",
     "stats.js": "^0.17.0"
   }
 }
@@ -95,9 +95,9 @@ async function detectBackend(): Promise<'webgpu' | 'webgl2' | 'webgl1'> {
 
 ### 2.2 音訊庫選擇
 
-> **決策待定**：`@pixi/sound` vs `Howler.js`
+> **決策已定**：**`howler`**（Safari autoplay 處理最成熟、跨平台最穩）。
 >
-> v0.9 暫定：**`howler`**（Safari autoplay 處理最成熟、跨平台最穩）；完整驗證見 S07 `07_audio_design.md#library-choice`。
+> `@pixi/sound` 已從 dependencies 移除。完整驗證見 S07 `07_audio_design.md#library-choice`。
 
 ### 2.3 不使用 / 禁止
 
@@ -805,4 +805,5 @@ SCOPE: GameEvent kind + non-juice payload
 
 ## Changelog
 
+- **2026-05-08** · v1.0 · 同步現行程式碼：音訊庫決策確認為 Howler.js、更新 dependencies 版本號
 - **2026-04-21** · v0.9 · 初稿（owners: match3-technical-artist + match3-ux-architect）

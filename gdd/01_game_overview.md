@@ -1,6 +1,6 @@
 # 01 · 遊戲概述 (Game Overview)
 
-> **Status**: v0.9 (draft) · **Owner**: match3-game-designer · **Last updated**: 2026-04-21
+> **Status**: v1.0 (synced 2026-05-08) · **Owner**: match3-game-designer · **Last updated**: 2026-05-08
 > **Phase**: 1 — Foundations · 本章是下游所有章節的設計支柱來源。
 
 ---

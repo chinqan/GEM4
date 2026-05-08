@@ -54,6 +54,12 @@ export interface CreateGameHUDOptions {
   mode?: 'moves' | 'time';
   /** 目標資訊，用於決定 chip 的 icon 與描述格式 */
   objective?: { type: string; target?: unknown; objectives?: Array<{ type: string; target?: unknown }> };
+  /** 世界 ID（用於顯示世界名稱） */
+  worldId?: number;
+  /** 關卡 ID（用於顯示第幾關） */
+  levelId?: number;
+  /** 關卡名稱 */
+  levelName?: string;
   onPause?: () => void;
   onSettings?: () => void;
   onReset?: () => void;
@@ -75,6 +81,9 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
     height,
     mode = 'moves',
     objective,
+    worldId,
+    levelId,
+    levelName,
     onPause,
     onSettings,
     onReset,
@@ -153,6 +162,37 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
   const chipY = topY + 56;
   const chipGap = SPACING.sm;
 
+  // ── 世界/關卡名稱（目標上方） ─────────────────────────
+  let levelInfoHeight = 0;
+  if (worldId || levelId) {
+    const worldLabel = worldId ? `世界 ${worldId}` : '';
+    const levelLabel = levelId ? `第 ${levelId} 關` : '';
+    const headerLine = [worldLabel, levelLabel].filter(Boolean).join(' · ');
+
+    const levelHeaderText = new Text({ text: headerLine, style: new TextStyle({
+      fontFamily: 'Inter, "Noto Sans CJK TC", sans-serif',
+      fontSize: 13,
+      fill: TEXT_COLOURS.muted,
+    }) });
+    levelHeaderText.position.set(margin, chipY);
+    container.addChild(levelHeaderText);
+    levelInfoHeight += 16;
+
+    if (levelName) {
+      const levelNameText = new Text({ text: levelName, style: new TextStyle({
+        fontFamily: 'Inter, "Noto Sans CJK TC", sans-serif',
+        fontSize: 14,
+        fill: TEXT_COLOURS.secondary,
+        fontWeight: '600',
+      }) });
+      levelNameText.position.set(margin, chipY + 15);
+      container.addChild(levelNameText);
+      levelInfoHeight += 18;
+    }
+
+    levelInfoHeight += 4; // gap before objective chip
+  }
+
   // 解析子目標列表：multi 拆成多個，其他包成單一
   const subObjectives: Array<{ type: string; target?: unknown }> =
     objective?.type === 'multi' && objective.objectives
@@ -163,7 +203,7 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
 
   // 為每個子目標建立獨立的 chip
   const objectiveChips: UIObjectiveChip[] = [];
-  let currentChipY = chipY;
+  let currentChipY = chipY + levelInfoHeight;
   for (const subObj of subObjectives) {
     const info = objectiveToDisplayInfo(subObj);
     const chip = createObjectiveChip({

@@ -295,6 +295,21 @@ export class BoardAnimator {
           .filter(c => !passiveBlastCells.has(`${c.pos[0]},${c.pos[1]}`))
           .map(c => c.pos);
 
+        // ── Show blast zone overlay for bomb/line combos ──────────
+        const comboType = result.initialActivation.comboType;
+        if (comboType === 'bomb.bomb' || comboType === 'line.line' || comboType === 'bomb.line') {
+          const overlayCells = initialBlast as Array<[number, number]>;
+          const overlayColour = comboType === 'line.line'
+            ? BLAST_ZONE_COLOUR_LINE_H
+            : comboType === 'bomb.bomb'
+              ? BLAST_ZONE_COLOUR_AREA
+              : BLAST_ZONE_COLOUR_LINE_V; // bomb.line uses line colour
+          void this.playAnims([
+            createBlastZoneOverlay(overlayCells, this.layers.boardLayer, 300, overlayColour),
+          ]);
+          await this.wait(120); // brief pause so player sees the zone before blast
+        }
+
         const root: RadiationEvent = {
           pos,
           type: type as SpecialActivationKind,
@@ -633,6 +648,25 @@ export class BoardAnimator {
     const reducedMotion = detectPrefersReducedMotion();
     const tasks: ScheduledTask[] = [];
 
+    // ── Activation burst: visual effect at source position (time 0) ──
+    tasks.push({
+      time: 0,
+      fn: () => {
+        const [sx, sy] = this.cellToPixel(source);
+        void this.playAnims([
+          createSpecialActivationEffect(sx, sy, BLAST_ZONE_COLOUR_COLOUR, this.layers.boardLayer, 600),
+        ]);
+        // Show blast zone overlay on all target cells
+        const overlayCells = targets as Array<[number, number]>;
+        if (overlayCells.length > 0) {
+          const overlayDuration = blastStartTime + MATCH_CLEAR_DURATION_MS;
+          void this.playAnims([
+            createBlastZoneOverlay(overlayCells, this.layers.boardLayer, overlayDuration, BLAST_ZONE_COLOUR_COLOUR),
+          ]);
+        }
+      },
+    });
+
     // ── Mark Phase: schedule mark effects at each target's arrival time ──
     for (const { pos, arriveAt } of markSchedule) {
       const markDuration = blastStartTime - arriveAt;
@@ -760,6 +794,24 @@ export class BoardAnimator {
 
     const reducedMotion = detectPrefersReducedMotion();
     const tasks: ScheduledTask[] = [];
+
+    // ── Activation burst: show source effect + target zone overlay at time 0 ──
+    tasks.push({
+      time: 0,
+      fn: () => {
+        const [sx, sy] = this.cellToPixel(source);
+        void this.playAnims([
+          createSpecialActivationEffect(sx, sy, BLAST_ZONE_COLOUR_COLOUR, this.layers.boardLayer, 600),
+        ]);
+        // Show all target positions as zone overlay (persists until blast ends)
+        const overlayCells = targets as Array<[number, number]>;
+        if (overlayCells.length > 0) {
+          void this.playAnims([
+            createBlastZoneOverlay(overlayCells, this.layers.boardLayer, blastStartTime + MATCH_CLEAR_DURATION_MS, BLAST_ZONE_COLOUR_COLOUR),
+          ]);
+        }
+      },
+    });
 
     // ── Mark Phase: immediately convert each target to Line Bomb visual on arrival ──
     for (const { pos, arriveAt } of markSchedule) {
@@ -978,6 +1030,24 @@ export class BoardAnimator {
 
     const reducedMotion = detectPrefersReducedMotion();
     const tasks: ScheduledTask[] = [];
+
+    // ── Activation burst: show source effect + target zone overlay at time 0 ──
+    tasks.push({
+      time: 0,
+      fn: () => {
+        const [sx, sy] = this.cellToPixel(source);
+        void this.playAnims([
+          createSpecialActivationEffect(sx, sy, BLAST_ZONE_COLOUR_COLOUR, this.layers.boardLayer, 600),
+        ]);
+        // Show all target positions as zone overlay (persists until blast ends)
+        const overlayCells = targets as Array<[number, number]>;
+        if (overlayCells.length > 0) {
+          void this.playAnims([
+            createBlastZoneOverlay(overlayCells, this.layers.boardLayer, blastStartTime + MATCH_CLEAR_DURATION_MS, BLAST_ZONE_COLOUR_COLOUR),
+          ]);
+        }
+      },
+    });
 
     // ── Mark Phase: immediately convert each target to Area Bomb visual on arrival ──
     for (const { pos, arriveAt } of markSchedule) {

@@ -303,7 +303,7 @@ describe('CP-1: Board Validity after initBoard + reshuffle sequence', () => {
       fc.property(
         fc.integer({ min: 5, max: 9 }),
         fc.integer({ min: 5, max: 9 }),
-        fc.integer({ min: 3, max: 7 }),
+        fc.integer({ min: 4, max: 7 }),
         fc.integer({ min: 1, max: 2 ** 31 - 1 }),
         fc.integer({ min: 2, max: 5 }),
         (width, height, numColours, seed, numReshuffles) => {

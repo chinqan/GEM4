@@ -1,7 +1,7 @@
 # 07 · 音樂音效設計 (Audio Design)
 
-> **Status**: v0.9 (draft) · **Owner**: match3-audio-engineer
-> **Last updated**: 2026-04-21 · **Phase**: 3 — Polish Systems
+> **Status**: v1.0 (synced 2026-05-08) · **Owner**: match3-audio-engineer
+> **Last updated**: 2026-05-08 · **Phase**: 3 — Polish Systems
 
 ---
 

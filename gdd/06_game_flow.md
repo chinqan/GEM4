@@ -1,7 +1,7 @@
 # 06 · 遊戲流程 (Game Flow)
 
-> **Status**: v0.9 (draft) · **Owners**: match3-game-designer (規則流) · match3-ux-architect (畫面流)
-> **Last updated**: 2026-04-21 · **Phase**: 2 — Systems
+> **Status**: v1.0 (synced 2026-05-08) · **Owners**: match3-game-designer (規則流) · match3-ux-architect (畫面流)
+> **Last updated**: 2026-05-08 · **Phase**: 2 — Systems
 
 ---
 

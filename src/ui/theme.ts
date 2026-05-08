@@ -157,12 +157,12 @@ export function getButtonColours(
       };
     case 'ghost':
       return {
-        fill: 0x000000,
-        fillAlpha: 0,
+        fill: 0x1a2040,
+        fillAlpha: 0.45,
         text: TEXT_COLOURS.secondary,
-        stroke: 0x000000,
-        strokeWidth: 0,
-        strokeAlpha: 0,
+        stroke: TEXT_COLOURS.secondary,
+        strokeWidth: 1.5,
+        strokeAlpha: 0.4,
       };
   }
 }

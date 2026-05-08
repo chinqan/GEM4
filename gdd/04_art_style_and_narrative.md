@@ -1,7 +1,7 @@
 # 04 · 風格與故事 (Art Style & Narrative)
 
-> **Status**: v0.9 (draft) · **Owners**: match3-narrative-designer (主) · match3-ui-designer (視覺) · match3-technical-artist (執行性)
-> **Last updated**: 2026-04-21 · **Phase**: 1 — Foundations
+> **Status**: v1.0 (synced 2026-05-08) · **Owners**: match3-narrative-designer (主) · match3-ui-designer (視覺) · match3-technical-artist (執行性)
+> **Last updated**: 2026-05-08 · **Phase**: 1 — Foundations
 
 ---
 

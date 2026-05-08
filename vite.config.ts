@@ -2,6 +2,9 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
+  test: {
+    exclude: ['node_modules', 'dist', 'e2e', '.kiro'],
+  },
   resolve: {
     alias: {
       '@game': resolve(__dirname, 'src/game'),

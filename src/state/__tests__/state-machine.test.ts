@@ -175,10 +175,9 @@ describe('State Machine', () => {
       ).toThrow(IllegalTransitionError);
     });
 
-    it('menu → game 拋錯（必須經過 levelSelect）', () => {
-      expect(() =>
-        transition({ kind: 'menu' }, { kind: 'game', levelId: 1 }),
-      ).toThrow(IllegalTransitionError);
+    it('menu → game 允許（測試模式直接進入）', () => {
+      const result = transition({ kind: 'menu' }, { kind: 'game', levelId: -1 });
+      expect(result.kind).toBe('game');
     });
 
     it('credits → worldMap 拋錯', () => {

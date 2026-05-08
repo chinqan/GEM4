@@ -10,6 +10,7 @@ import { createButton, type UIButton } from '../factory';
 export interface MainMenuScreen extends Container {
   playButton: UIButton;
   endlessButton: UIButton;
+  testModeButton: UIButton;
   settingsButton: UIButton;
   creditsButton: UIButton;
   /** 設定 Endless 按鈕是否解鎖 */
@@ -22,6 +23,7 @@ export interface CreateMainMenuOptions {
   endlessUnlocked?: boolean;
   onPlay?: () => void;
   onEndless?: () => void;
+  onTestMode?: () => void;
   onSettings?: () => void;
   onCredits?: () => void;
 }
@@ -42,6 +44,7 @@ export function createMainMenuScreen(options: CreateMainMenuOptions): MainMenuSc
     endlessUnlocked = false,
     onPlay,
     onEndless,
+    onTestMode,
     onSettings,
     onCredits,
   } = options;
@@ -101,6 +104,16 @@ export function createMainMenuScreen(options: CreateMainMenuOptions): MainMenuSc
   endlessButton.position.set(width / 2 - btnWidth / 2, startY + 56 + btnGap);
   container.addChild(endlessButton);
 
+  const testModeButton = createButton({
+    text: '🧪 測試模式',
+    variant: 'secondary',
+    size: 'md',
+    width: btnWidth,
+    onClick: onTestMode,
+  });
+  testModeButton.position.set(width / 2 - btnWidth / 2, startY + 56 + 44 + btnGap * 2);
+  container.addChild(testModeButton);
+
   const settingsButton = createButton({
     text: 'Settings',
     variant: 'ghost',
@@ -108,7 +121,7 @@ export function createMainMenuScreen(options: CreateMainMenuOptions): MainMenuSc
     width: btnWidth,
     onClick: onSettings,
   });
-  settingsButton.position.set(width / 2 - btnWidth / 2, startY + 56 + 44 + btnGap * 2);
+  settingsButton.position.set(width / 2 - btnWidth / 2, startY + 56 + 44 * 2 + btnGap * 3);
   container.addChild(settingsButton);
 
   const creditsButton = createButton({
@@ -118,7 +131,7 @@ export function createMainMenuScreen(options: CreateMainMenuOptions): MainMenuSc
     width: btnWidth,
     onClick: onCredits,
   });
-  creditsButton.position.set(width / 2 - btnWidth / 2, startY + 56 + 44 * 2 + btnGap * 3);
+  creditsButton.position.set(width / 2 - btnWidth / 2, startY + 56 + 44 * 3 + btnGap * 4);
   container.addChild(creditsButton);
 
   // ── 版本號 ────────────────────────────────────────────
@@ -135,6 +148,7 @@ export function createMainMenuScreen(options: CreateMainMenuOptions): MainMenuSc
   // ── 公開參照 ──────────────────────────────────────────
   container.playButton = playButton;
   container.endlessButton = endlessButton;
+  container.testModeButton = testModeButton;
   container.settingsButton = settingsButton;
   container.creditsButton = creditsButton;
 

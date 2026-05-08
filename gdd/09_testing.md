@@ -1,7 +1,7 @@
 # 09 · 測試 (Testing)
 
-> **Status**: v0.9 (draft) · **Owner**: match3-qa-engineer
-> **Last updated**: 2026-04-21 · **Phase**: 4 — QA / Testing
+> **Status**: v1.0 (synced 2026-05-08) · **Owner**: match3-qa-engineer
+> **Last updated**: 2026-05-08 · **Phase**: 4 — QA / Testing
 >
 > 本章橫切前 8 章，建立驗收門檻與測試策略。
 
@@ -38,7 +38,8 @@
 
 | 工具 | 用途 | 執行頻率 |
 |---|---|---|
-| **Vitest** | 單元 + 整合 | 每 commit (CI) |
+| **Vitest** | 單元 + 整合 + property-based | 每 commit (CI) |
+| **fast-check** | Property-based testing（確定性、不變式） | 每 commit (CI) |
 | **Playwright** | E2E 瀏覽器 | 每 PR |
 | **Headless simulator (自製)** | 關卡 1,000-seed 模擬 | nightly + 手動 |
 | **Chrome DevTools Performance API** | FPS / memory profiling | weekly + milestone |
@@ -46,6 +47,24 @@
 | **axe-core** | A11y 自動檢查（DOM 部分） | 每 PR |
 | **license-checker** | 相依授權合規 | 每 PR |
 | **Playtest session 協議** | 人類可玩性 | 每 milestone |
+
+### 1.4 現行測試覆蓋（2026-05-08 同步）
+
+**35 個測試檔案，736 個測試案例，全部通過。**
+
+| 模組 | 檔案數 | 涵蓋範圍 |
+|---|---|---|
+| `src/game/rules/__tests__/` | 7 | board, cascade, combo-matrix, match-detect, rng, scoring, special-gems |
+| `src/game/runtime/__tests__/` | 7 | determinism, drag-chain-bug, game-loop, game-session, hint, reshuffle (unit + property) |
+| `src/game/level/__tests__/` | 3 | blocker, objective, objective-preservation (property) |
+| `src/rendering/__tests__/` | 6 | animation-flow, animations, board-animator, filters, particles, viewport |
+| `src/audio/__tests__/` | 4 | adaptive-music, audio-system, buses, synth-sfx |
+| `src/state/__tests__/` | 4 | events, save-state, state-machine (unit + property) |
+| `src/integration/__tests__/` | 2 | special-activation (unit + property) |
+| `src/ui/screens/__tests__/` | 2 | level-select-bugfix (property), level-select-preservation (property) |
+| `e2e/` | 5 | cross-browser, first-launch, pause-resume, settings-persistence, special-gems |
+
+**Property-based tests（5 個）**：驗證確定性、棋盤不變式、狀態機合法性、目標保存、關卡選擇保存。
 
 ---
 
@@ -588,4 +607,5 @@ jobs:
 
 ## Changelog
 
+- **2026-05-08** · v1.0 · 同步現行程式碼：更新測試工具鏈、新增 §1.4 現行測試覆蓋表、確認 35 檔 736 測試全通過
 - **2026-04-21** · v0.9 · 初稿（owner: match3-qa-engineer）

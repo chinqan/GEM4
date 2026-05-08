@@ -1,7 +1,7 @@
 # 08 · 其他規格與設定 (Additional Specs)
 
-> **Status**: v0.9 (draft) · **Owner**: match3-game-designer (召集) + 全 agents 各補
-> **Last updated**: 2026-04-21 · **Phase**: 3 — Polish Systems
+> **Status**: v1.0 (synced 2026-05-08) · **Owner**: match3-game-designer (召集) + 全 agents 各補
+> **Last updated**: 2026-05-08 · **Phase**: 3 — Polish Systems
 
 > 本章收納前 7 章未完整歸類的規格。目的：讓前 7 章乾淨聚焦，同時確保沒有任何跨章節規格被遺忘。
 

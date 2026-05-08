@@ -483,12 +483,18 @@ export class GameIntegration {
 
     // --- Create HUD ---
     const { createGameHUD } = await import('../ui/screens/game-hud');
+    const { getTranslator } = await import('../i18n/translator');
     const { width, height } = this.getScreenSize();
+    const locale = getTranslator().locale;
+    const levelName = spec.name?.[locale] ?? spec.name?.['zh-TW'] ?? spec.name?.en ?? '';
     const hud = createGameHUD({
       width,
       height,
       mode: spec.constraints.timeBudget ? 'time' : 'moves',
       objective: spec.objective,
+      worldId: spec.worldId,
+      levelId: spec.id,
+      levelName,
       onPause: () => this.transitionTo({ kind: 'pause', previous: this.currentState } as any),
       onReset: () => this.transitionTo({ kind: 'game', levelId }),
     });

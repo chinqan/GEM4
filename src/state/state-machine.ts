@@ -19,7 +19,7 @@ import type {
  */
 export const LEGAL_TRANSITIONS: Readonly<Record<AppStateKind, readonly AppStateKind[]>> = {
   splash:        ['menu'],
-  menu:          ['worldMap', 'settings', 'credits', 'endless'],
+  menu:          ['worldMap', 'settings', 'credits', 'endless', 'game'],
   worldMap:      ['levelSelect', 'menu', 'settings', 'worldMap'],
   levelSelect:   ['game', 'worldMap'],
   game:          ['pause', 'levelComplete', 'levelFail', 'settings'],
