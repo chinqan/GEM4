@@ -157,6 +157,29 @@ export const CHAIN_SATURATION_THRESHOLD = 3;
 /** 飽和脈衝增強量（ColorMatrix saturation 值） */
 export const CHAIN_SATURATION_BOOST = 2.0;
 
+// ─── Color Gem 分階段爆破常數 ─────────────────────────────────
+
+/** Color Gem 蓄力階段時長（ms） */
+export const BREW_PHASE_DURATION_MS = 400;
+
+/** 標記效果脈衝週期（ms） */
+export const MARK_PULSE_CYCLE_MS = 300;
+
+/** 標記效果發光透明度範圍（最小值） */
+export const MARK_GLOW_ALPHA_MIN = 0.4;
+
+/** 標記效果發光透明度範圍（最大值） */
+export const MARK_GLOW_ALPHA_MAX = 1.0;
+
+/** 蓄力震動振幅（px） */
+export const BREW_SHAKE_AMPLITUDE = 2.5;
+
+/** 蓄力亮度遞增最大值 */
+export const BREW_BRIGHTNESS_MAX = 1.4;
+
+/** 爆破粒子增強倍率（相對於普通 match clear） */
+export const BLAST_PARTICLE_MULTIPLIER = 2.5;
+
 // ─── 粒子常數 ──────────────────────────────────────────────
 
 /** Match 爆破粒子數量 */

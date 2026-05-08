@@ -29,13 +29,20 @@ import {
   createCascadeDropAnimation,
   createSpecialActivationEffect,
   createBlastZoneOverlay,
+  createMarkEffect,
+  createBrewAnimation,
+  createEnhancedBlastAnimation,
 } from './animations';
 import {
   CELL_SIZE,
   GEM_COLOURS,
   MATCH_CLEAR_DURATION_MS,
+  BREW_PHASE_DURATION_MS,
+  BLAST_PARTICLE_MULTIPLIER,
   getSpecialActivationDuration,
 } from './design-tokens';
+import { computeStagedPhases } from './staged-blast';
+import { detectPrefersReducedMotion } from './accessibility';
 import { MergeParticleSystem } from './particles';
 import { createScorePopup } from '../ui/juice/score-popup';
 import {
@@ -64,7 +71,7 @@ const GRAVITY_WAIT_MS = 80;
 // Lightning-like outward radiation from each special's centre. Each cell's
 // match-clear fires when the wave reaches it: arriveAt = startTime +
 // chebyshev(source, cell) * CELL_RADIATION_SPEED_MS.
-const CELL_RADIATION_SPEED_MS = 30;
+const CELL_RADIATION_SPEED_MS = 20;
 // Stagger between simultaneous in-match (root) activations so multiple
 // roots don't perfectly overlap.
 const ROOT_STAGGER_MS = 80;
@@ -152,41 +159,160 @@ export class BoardAnimator {
         playCombo();
       }
 
-      // The initial activation's clearedCells is the FULL set (initial blast +
-      // every passive blast). For radiation we need just the initial blast.
-      // IMPORTANT: keep each chained special's own pos inside the parent's
-      // wave — that's what triggers the chain in scheduleEvent. Only strip
-      // the chained's own blast cells (those belong to the chained's wave).
-      const passiveBlastCells = new Set<string>();
-      for (const p of passiveActivations) {
-        for (const [c, r] of p.clearedCells) passiveBlastCells.add(`${c},${r}`);
+      // ── colour.line combo: staged Mark → Brew → Blast with line bomb conversion ──
+      if (type === 'combo' && result.initialActivation.comboType === 'colour.line') {
+        const colourByPos = new Map<string, GemColour | null>();
+        for (const c of clearedCells) {
+          if (c.colour) colourByPos.set(`${c.pos[0]},${c.pos[1]}`, c.colour);
+        }
+
+        // comboTargets = same-colour gems that were converted to line bombs
+        const comboTargets = result.initialActivation.comboTargets ?? [];
+
+        // Build radiation events for each converted line bomb target.
+        // Each target fires a line bomb wave at blast time.
+        const lineBombEvents: RadiationEvent[] = comboTargets.map(targetPos => {
+          // Determine direction: same deterministic logic as colourTransform
+          const direction: 'lineH' | 'lineV' = (targetPos[0] + targetPos[1]) % 2 === 0 ? 'lineH' : 'lineV';
+          // Compute the cells this line bomb would clear
+          const bombCells: CellPos[] = [];
+          if (direction === 'lineH') {
+            for (let c = 0; c < (result.initialActivation!.boardSnapshot.width ?? 8); c++) {
+              bombCells.push([c, targetPos[1]]);
+            }
+          } else {
+            for (let r = 0; r < (result.initialActivation!.boardSnapshot.height ?? 8); r++) {
+              bombCells.push([targetPos[0], r]);
+            }
+          }
+          return { pos: targetPos, type: direction as SpecialActivationKind, clearedCells: bombCells, score: 0 };
+        });
+
+        // Also include any passive activations (specials triggered by line bomb blasts)
+        const allPassiveEvents = [
+          ...lineBombEvents,
+          ...passiveActivations.map(this.toRadiationEvent),
+        ];
+
+        await this.playColourLineComboStagedTimeline(
+          pos,
+          comboTargets,
+          allPassiveEvents,
+          colourByPos,
+          1,
+        );
+
+        this.boardRenderer.syncFromSnapshot(result.initialActivation.boardSnapshot);
+        await this.playGravityFromResult(gravity, board);
+
+      // ── colour.bomb combo: staged Mark → Brew → Blast with area bomb conversion ──
+      } else if (type === 'combo' && result.initialActivation.comboType === 'colour.bomb') {
+        const colourByPos = new Map<string, GemColour | null>();
+        for (const c of clearedCells) {
+          if (c.colour) colourByPos.set(`${c.pos[0]},${c.pos[1]}`, c.colour);
+        }
+
+        // comboTargets = same-colour gems that were converted to area bombs
+        const comboTargets = result.initialActivation.comboTargets ?? [];
+
+        // Build radiation events for each converted area bomb target.
+        // Each target fires a 3×3 area bomb wave at blast time.
+        const boardWidth = result.initialActivation.boardSnapshot.width ?? 8;
+        const boardHeight = result.initialActivation.boardSnapshot.height ?? 8;
+        const areaBombEvents: RadiationEvent[] = comboTargets.map(targetPos => {
+          // Compute the 3×3 cells this area bomb would clear
+          const bombCells: CellPos[] = [];
+          for (let dc = -1; dc <= 1; dc++) {
+            for (let dr = -1; dr <= 1; dr++) {
+              const c = targetPos[0] + dc;
+              const r = targetPos[1] + dr;
+              if (c >= 0 && c < boardWidth && r >= 0 && r < boardHeight) {
+                bombCells.push([c, r]);
+              }
+            }
+          }
+          return { pos: targetPos, type: 'area' as SpecialActivationKind, clearedCells: bombCells, score: 0 };
+        });
+
+        // Also include any passive activations (specials triggered by area bomb blasts)
+        const allPassiveEvents = [
+          ...areaBombEvents,
+          ...passiveActivations.map(this.toRadiationEvent),
+        ];
+
+        await this.playColourBombComboStagedTimeline(
+          pos,
+          comboTargets,
+          allPassiveEvents,
+          colourByPos,
+          1,
+        );
+
+        this.boardRenderer.syncFromSnapshot(result.initialActivation.boardSnapshot);
+        await this.playGravityFromResult(gravity, board);
+
+      // ── colour.colour combo: staged Mark → Brew → Blast for entire board ──
+      } else if (type === 'combo' && result.initialActivation.comboType === 'colour.colour') {
+        const colourByPos = new Map<string, GemColour | null>();
+        for (const c of clearedCells) {
+          if (c.colour) colourByPos.set(`${c.pos[0]},${c.pos[1]}`, c.colour);
+        }
+
+        // colour.colour clears the ENTIRE board — targets are all non-empty cells
+        // from clearedCells, excluding the source position (the swap target where combo triggered)
+        const allTargets: CellPos[] = clearedCells
+          .filter(c => !(c.pos[0] === pos[0] && c.pos[1] === pos[1]))
+          .map(c => c.pos);
+
+        // No passive radiation events needed — everything is being cleared simultaneously
+        await this.playColourGemStagedTimeline(
+          pos,
+          allTargets,
+          [],
+          colourByPos,
+          1,
+        );
+
+        this.boardRenderer.syncFromSnapshot(result.initialActivation.boardSnapshot);
+        await this.playGravityFromResult(gravity, board);
+      } else {
+        // Default combo / colour / directBomb path
+        // The initial activation's clearedCells is the FULL set (initial blast +
+        // every passive blast). For radiation we need just the initial blast.
+        // IMPORTANT: keep each chained special's own pos inside the parent's
+        // wave — that's what triggers the chain in scheduleEvent. Only strip
+        // the chained's own blast cells (those belong to the chained's wave).
+        const passiveBlastCells = new Set<string>();
+        for (const p of passiveActivations) {
+          for (const [c, r] of p.clearedCells) passiveBlastCells.add(`${c},${r}`);
+        }
+        const initialBlast: CellPos[] = clearedCells
+          .filter(c => !passiveBlastCells.has(`${c.pos[0]},${c.pos[1]}`))
+          .map(c => c.pos);
+
+        const root: RadiationEvent = {
+          pos,
+          type: type as SpecialActivationKind,
+          clearedCells: initialBlast,
+          score,
+        };
+
+        const colourByPos = new Map<string, GemColour | null>();
+        for (const c of clearedCells) {
+          if (c.colour) colourByPos.set(`${c.pos[0]},${c.pos[1]}`, c.colour);
+        }
+
+        await this.playRadiationTimeline(
+          [root],
+          passiveActivations.map(this.toRadiationEvent),
+          [],
+          colourByPos,
+          1,
+        );
+
+        this.boardRenderer.syncFromSnapshot(result.initialActivation.boardSnapshot);
+        await this.playGravityFromResult(gravity, board);
       }
-      const initialBlast: CellPos[] = clearedCells
-        .filter(c => !passiveBlastCells.has(`${c.pos[0]},${c.pos[1]}`))
-        .map(c => c.pos);
-
-      const root: RadiationEvent = {
-        pos,
-        type: type as SpecialActivationKind,
-        clearedCells: initialBlast,
-        score,
-      };
-
-      const colourByPos = new Map<string, GemColour | null>();
-      for (const c of clearedCells) {
-        if (c.colour) colourByPos.set(`${c.pos[0]},${c.pos[1]}`, c.colour);
-      }
-
-      await this.playRadiationTimeline(
-        [root],
-        passiveActivations.map(this.toRadiationEvent),
-        [],
-        colourByPos,
-        1,
-      );
-
-      this.boardRenderer.syncFromSnapshot(result.initialActivation.boardSnapshot);
-      await this.playGravityFromResult(gravity, board);
     } else {
       // Normal swap: play swap SFX
       playSwap();
@@ -340,10 +466,44 @@ export class BoardAnimator {
       tasks.push({ time: 0, fn: () => this.shrinkCell(c.pos, c.colour, chain) });
     }
 
+    // Collect async colour gem staged timeline promises to await alongside runTimeline
+    const colourGemPromises: Promise<void>[] = [];
+
     const scheduleEvent = (event: RadiationEvent, startTime: number): void => {
       const ek = `${event.pos[0]},${event.pos[1]}`;
       if (scheduledEvents.has(ek)) return;
       scheduledEvents.add(ek);
+
+      // ── Colour gem interception: delegate to staged timeline ──
+      if (event.type === 'colour') {
+        // Targets = clearedCells excluding the colour gem's own position
+        const targets = event.clearedCells.filter(
+          cell => !(cell[0] === event.pos[0] && cell[1] === event.pos[1]),
+        );
+
+        // Gather passive events: specials within the colour gem's cleared cells
+        const colourPassiveEvents: RadiationEvent[] = [];
+        for (const cell of event.clearedCells) {
+          const ck = `${cell[0]},${cell[1]}`;
+          if (ck === ek) continue; // skip the colour gem itself
+          const chained = eventByPos.get(ck);
+          if (chained) {
+            colourPassiveEvents.push(chained);
+            // Mark as scheduled so they aren't processed again by the normal path
+            scheduledEvents.add(ck);
+          }
+        }
+
+        // Mark all target cells as animated so the normal path doesn't shrink them
+        for (const cell of event.clearedCells) {
+          animatedClears.add(`${cell[0]},${cell[1]}`);
+        }
+
+        colourGemPromises.push(
+          this.playColourGemStagedTimeline(event.pos, targets, colourPassiveEvents, colourByPos, chain),
+        );
+        return; // Don't proceed with the default per-cell shrink behaviour
+      }
 
       // Area bomb: charge-up phase with red zone highlight before explosion
       const isArea = event.type === 'area';
@@ -424,6 +584,399 @@ export class BoardAnimator {
       scheduleEvent(rootEvents[i], i * ROOT_STAGGER_MS);
     }
 
+    // Await both the normal radiation timeline and any colour gem staged timelines
+    await Promise.all([
+      this.runTimeline(tasks, endTime),
+      ...colourGemPromises,
+    ]);
+  }
+
+  // ─── Private: Colour Gem Staged Timeline ──────────────────
+
+  /**
+   * Color Gem 專用的分階段輻射時間軸。
+   *
+   * 取代原本在 playRadiationTimeline 中對 colour 類型事件的處理，
+   * 將「到達即清除」改為「標記 → 蓄力 → 同步爆破」。
+   */
+  private async playColourGemStagedTimeline(
+    source: CellPos,
+    targets: CellPos[],
+    passiveEvents: RadiationEvent[],
+    colourByPos: Map<string, GemColour | null>,
+    chain: number,
+  ): Promise<void> {
+    // ── No-target fast path: just shrink the source gem and return ──
+    if (targets.length === 0) {
+      this.shrinkCell(source, null, chain);
+      return;
+    }
+
+    // ── Compute staged phases ──
+    const phases = computeStagedPhases(source, targets, passiveEvents);
+    const { markSchedule, blastStartTime } = phases;
+
+    const reducedMotion = detectPrefersReducedMotion();
+    const tasks: ScheduledTask[] = [];
+
+    // ── Mark Phase: schedule mark effects at each target's arrival time ──
+    for (const { pos, arriveAt } of markSchedule) {
+      const markDuration = blastStartTime - arriveAt;
+      tasks.push({
+        time: arriveAt,
+        fn: () => {
+          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
+          if (!spr) return;
+          const colourHex = colourByPos.get(`${pos[0]},${pos[1]}`);
+          const colourValue = colourHex ? GEM_COLOURS[colourHex] : 0xffffff;
+          void this.playAnims([
+            createMarkEffect({
+              sprite: spr as any,
+              duration: markDuration,
+              colour: colourValue,
+              reducedMotion,
+            }),
+          ]);
+        },
+      });
+    }
+
+    // ── Brew Phase: schedule brew animations for all marked gems ──
+    tasks.push({
+      time: phases.brewStartTime,
+      fn: () => {
+        for (const { pos } of markSchedule) {
+          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
+          if (!spr) continue;
+          void this.playAnims([
+            createBrewAnimation({
+              sprite: spr as any,
+              duration: BREW_PHASE_DURATION_MS,
+              reducedMotion,
+            }),
+          ]);
+        }
+      },
+    });
+
+    // ── Blast Phase: schedule enhanced blast for all marked gems ──
+    tasks.push({
+      time: blastStartTime,
+      fn: () => {
+        for (const { pos } of markSchedule) {
+          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
+          if (!spr) continue;
+          const gemColour = colourByPos.get(`${pos[0]},${pos[1]}`) ?? null;
+          void this.playAnims([
+            createEnhancedBlastAnimation({
+              sprite: spr as any,
+              colour: gemColour,
+              particleMultiplier: BLAST_PARTICLE_MULTIPLIER,
+              fxLayer: this.layers.fxLayer,
+            }),
+          ]);
+          // Also fire particle FX via mergeFx
+          if (gemColour) {
+            const [px, py] = this.cellToPixel(pos);
+            const fxLevel = Math.min(chain - 1, 3);
+            this.mergeFx.spawn(px, py, fxLevel, GEM_COLOURS[gemColour]);
+          }
+        }
+        // Shrink the source gem itself at blast time
+        this.shrinkCell(source, null, chain);
+      },
+    });
+
+    // ── Passive triggers: fire chained specials at blastStartTime ──
+    for (const { event, triggerAt } of phases.passiveSchedule) {
+      tasks.push({
+        time: triggerAt,
+        fn: () => {
+          const [ax, ay] = this.cellToPixel(event.pos);
+          const dur = getSpecialActivationDuration(event.type, true);
+          this.showFlavorText(event.type, [event.pos], 30);
+          void this.playAnims([
+            createSpecialActivationEffect(ax, ay, 0xffffff, this.layers.boardLayer, dur),
+          ]);
+          playMatchSfx(event.clearedCells.length, chain);
+        },
+      });
+    }
+
+    // ── Score popup: show after blast completes ──
+    const scorePopupTime = blastStartTime + MATCH_CLEAR_DURATION_MS + SCORE_POPUP_TAIL_MS;
+    const totalScore = targets.length * 10 * chain; // approximate; actual score comes from caller
+    tasks.push({
+      time: scorePopupTime,
+      fn: () => {
+        this.showScorePopup(totalScore, targets, chain);
+      },
+    });
+
+    // ── Run the timeline ──
+    const endTime = scorePopupTime + TIMELINE_TAIL_GRACE_MS;
+    await this.runTimeline(tasks, endTime);
+  }
+
+  // ─── Private: Colour + Line Combo Staged Timeline ─────────
+
+  /**
+   * colour.line 組合專用的分階段輻射時間軸。
+   *
+   * Mark Phase: 標記所有同色寶石（comboTargets）
+   * Brew Phase: 蓄力動畫
+   * Blast Phase: 將每個標記寶石轉換為 Line Bomb 視覺並觸發各自輻射波
+   */
+  private async playColourLineComboStagedTimeline(
+    source: CellPos,
+    targets: CellPos[],
+    passiveEvents: RadiationEvent[],
+    colourByPos: Map<string, GemColour | null>,
+    chain: number,
+  ): Promise<void> {
+    // ── No-target fast path: just shrink the source gem and return ──
+    if (targets.length === 0) {
+      this.shrinkCell(source, null, chain);
+      return;
+    }
+
+    // ── Compute staged phases (same timing as colour gem staged blast) ──
+    const phases = computeStagedPhases(source, targets, passiveEvents);
+    const { markSchedule, blastStartTime } = phases;
+
+    const reducedMotion = detectPrefersReducedMotion();
+    const tasks: ScheduledTask[] = [];
+
+    // ── Mark Phase: schedule mark effects at each target's arrival time ──
+    for (const { pos, arriveAt } of markSchedule) {
+      const markDuration = blastStartTime - arriveAt;
+      tasks.push({
+        time: arriveAt,
+        fn: () => {
+          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
+          if (!spr) return;
+          const colourHex = colourByPos.get(`${pos[0]},${pos[1]}`);
+          const colourValue = colourHex ? GEM_COLOURS[colourHex] : 0xffffff;
+          void this.playAnims([
+            createMarkEffect({
+              sprite: spr as any,
+              duration: markDuration,
+              colour: colourValue,
+              reducedMotion,
+            }),
+          ]);
+        },
+      });
+    }
+
+    // ── Brew Phase: schedule brew animations for all marked gems ──
+    tasks.push({
+      time: phases.brewStartTime,
+      fn: () => {
+        for (const { pos } of markSchedule) {
+          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
+          if (!spr) continue;
+          void this.playAnims([
+            createBrewAnimation({
+              sprite: spr as any,
+              duration: BREW_PHASE_DURATION_MS,
+              reducedMotion,
+            }),
+          ]);
+        }
+      },
+    });
+
+    // ── Blast Phase: convert each target to Line Bomb visual and fire radiation ──
+    tasks.push({
+      time: blastStartTime,
+      fn: () => {
+        for (const { pos } of markSchedule) {
+          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
+          if (!spr) continue;
+          const gemColour = colourByPos.get(`${pos[0]},${pos[1]}`) ?? null;
+
+          // Enhanced blast animation (line bomb conversion + explosion)
+          void this.playAnims([
+            createEnhancedBlastAnimation({
+              sprite: spr as any,
+              colour: gemColour,
+              particleMultiplier: BLAST_PARTICLE_MULTIPLIER,
+              fxLayer: this.layers.fxLayer,
+            }),
+          ]);
+
+          // Particle FX
+          if (gemColour) {
+            const [px, py] = this.cellToPixel(pos);
+            const fxLevel = Math.min(chain - 1, 3);
+            this.mergeFx.spawn(px, py, fxLevel, GEM_COLOURS[gemColour]);
+          }
+        }
+        // Shrink the source gem (colour gem) at blast time
+        this.shrinkCell(source, null, chain);
+      },
+    });
+
+    // ── Line Bomb radiation waves: fire from each target at blast time ──
+    for (const { event, triggerAt } of phases.passiveSchedule) {
+      tasks.push({
+        time: triggerAt,
+        fn: () => {
+          const [ax, ay] = this.cellToPixel(event.pos);
+          const dur = getSpecialActivationDuration(event.type, true);
+          this.showFlavorText(event.type, [event.pos], 30);
+          void this.playAnims([
+            createSpecialActivationEffect(ax, ay, 0xffffff, this.layers.boardLayer, dur),
+          ]);
+          playMatchSfx(event.clearedCells.length, chain);
+        },
+      });
+    }
+
+    // ── Score popup: show after blast completes ──
+    const scorePopupTime = blastStartTime + MATCH_CLEAR_DURATION_MS + SCORE_POPUP_TAIL_MS;
+    const totalScore = targets.length * 10 * chain;
+    tasks.push({
+      time: scorePopupTime,
+      fn: () => {
+        this.showScorePopup(totalScore, targets, chain);
+      },
+    });
+
+    // ── Run the timeline ──
+    const endTime = scorePopupTime + TIMELINE_TAIL_GRACE_MS;
+    await this.runTimeline(tasks, endTime);
+  }
+
+  // ─── Private: Colour + Bomb Combo Staged Timeline ─────────
+
+  /**
+   * colour.bomb 組合專用的分階段輻射時間軸。
+   *
+   * Mark Phase: 標記所有同色寶石（comboTargets）
+   * Brew Phase: 蓄力動畫
+   * Blast Phase: 將每個標記寶石轉換為 Area Bomb 視覺並觸發各自 3×3 輻射波
+   */
+  private async playColourBombComboStagedTimeline(
+    source: CellPos,
+    targets: CellPos[],
+    passiveEvents: RadiationEvent[],
+    colourByPos: Map<string, GemColour | null>,
+    chain: number,
+  ): Promise<void> {
+    // ── No-target fast path: just shrink the source gem and return ──
+    if (targets.length === 0) {
+      this.shrinkCell(source, null, chain);
+      return;
+    }
+
+    // ── Compute staged phases (same timing as colour gem staged blast) ──
+    const phases = computeStagedPhases(source, targets, passiveEvents);
+    const { markSchedule, blastStartTime } = phases;
+
+    const reducedMotion = detectPrefersReducedMotion();
+    const tasks: ScheduledTask[] = [];
+
+    // ── Mark Phase: schedule mark effects at each target's arrival time ──
+    for (const { pos, arriveAt } of markSchedule) {
+      const markDuration = blastStartTime - arriveAt;
+      tasks.push({
+        time: arriveAt,
+        fn: () => {
+          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
+          if (!spr) return;
+          const colourHex = colourByPos.get(`${pos[0]},${pos[1]}`);
+          const colourValue = colourHex ? GEM_COLOURS[colourHex] : 0xffffff;
+          void this.playAnims([
+            createMarkEffect({
+              sprite: spr as any,
+              duration: markDuration,
+              colour: colourValue,
+              reducedMotion,
+            }),
+          ]);
+        },
+      });
+    }
+
+    // ── Brew Phase: schedule brew animations for all marked gems ──
+    tasks.push({
+      time: phases.brewStartTime,
+      fn: () => {
+        for (const { pos } of markSchedule) {
+          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
+          if (!spr) continue;
+          void this.playAnims([
+            createBrewAnimation({
+              sprite: spr as any,
+              duration: BREW_PHASE_DURATION_MS,
+              reducedMotion,
+            }),
+          ]);
+        }
+      },
+    });
+
+    // ── Blast Phase: convert each target to Area Bomb visual and fire radiation ──
+    tasks.push({
+      time: blastStartTime,
+      fn: () => {
+        for (const { pos } of markSchedule) {
+          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
+          if (!spr) continue;
+          const gemColour = colourByPos.get(`${pos[0]},${pos[1]}`) ?? null;
+
+          // Enhanced blast animation (area bomb conversion + explosion)
+          void this.playAnims([
+            createEnhancedBlastAnimation({
+              sprite: spr as any,
+              colour: gemColour,
+              particleMultiplier: BLAST_PARTICLE_MULTIPLIER,
+              fxLayer: this.layers.fxLayer,
+            }),
+          ]);
+
+          // Particle FX
+          if (gemColour) {
+            const [px, py] = this.cellToPixel(pos);
+            const fxLevel = Math.min(chain - 1, 3);
+            this.mergeFx.spawn(px, py, fxLevel, GEM_COLOURS[gemColour]);
+          }
+        }
+        // Shrink the source gem (colour gem) at blast time
+        this.shrinkCell(source, null, chain);
+      },
+    });
+
+    // ── Area Bomb radiation waves: fire from each target at blast time ──
+    for (const { event, triggerAt } of phases.passiveSchedule) {
+      tasks.push({
+        time: triggerAt,
+        fn: () => {
+          const [ax, ay] = this.cellToPixel(event.pos);
+          const dur = getSpecialActivationDuration(event.type, true);
+          this.showFlavorText(event.type, [event.pos], 30);
+          void this.playAnims([
+            createSpecialActivationEffect(ax, ay, 0xffffff, this.layers.boardLayer, dur),
+          ]);
+          playMatchSfx(event.clearedCells.length, chain);
+        },
+      });
+    }
+
+    // ── Score popup: show after blast completes ──
+    const scorePopupTime = blastStartTime + MATCH_CLEAR_DURATION_MS + SCORE_POPUP_TAIL_MS;
+    const totalScore = targets.length * 10 * chain;
+    tasks.push({
+      time: scorePopupTime,
+      fn: () => {
+        this.showScorePopup(totalScore, targets, chain);
+      },
+    });
+
+    // ── Run the timeline ──
+    const endTime = scorePopupTime + TIMELINE_TAIL_GRACE_MS;
     await this.runTimeline(tasks, endTime);
   }
 

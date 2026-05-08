@@ -112,6 +112,24 @@ vi.mock('../animations', () => ({
     update: vi.fn(() => true),
     complete: vi.fn(),
   })),
+  createMarkEffect: vi.fn(() => ({
+    elapsed: 0,
+    duration: 300,
+    update: vi.fn(() => true),
+    complete: vi.fn(),
+  })),
+  createBrewAnimation: vi.fn(() => ({
+    elapsed: 0,
+    duration: 400,
+    update: vi.fn(() => true),
+    complete: vi.fn(),
+  })),
+  createEnhancedBlastAnimation: vi.fn(() => ({
+    elapsed: 0,
+    duration: 200,
+    update: vi.fn(() => true),
+    complete: vi.fn(),
+  })),
 }));
 
 // ─── Mock score-popup ───────────────────────────────────────
@@ -121,6 +139,25 @@ vi.mock('../../ui/juice/score-popup', () => ({
     container: { destroy: vi.fn() },
     update: vi.fn(),
   })),
+}));
+
+// ─── Mock staged-blast ──────────────────────────────────────
+
+vi.mock('../staged-blast', () => ({
+  computeStagedPhases: vi.fn(() => ({
+    markSchedule: [],
+    markEndTime: 0,
+    brewStartTime: 0,
+    brewEndTime: 400,
+    blastStartTime: 400,
+    passiveSchedule: [],
+  })),
+}));
+
+// ─── Mock accessibility ─────────────────────────────────────
+
+vi.mock('../accessibility', () => ({
+  detectPrefersReducedMotion: vi.fn(() => false),
 }));
 
 import { playMatchSfx, playInvalid, playCombo } from '../../audio/synth-sfx';
@@ -157,6 +194,7 @@ function createMockConfig(): BoardAnimatorConfig {
     layers: {
       boardLayer: new Container(),
       glowLayer: new Container(),
+      fxLayer: new Container(),
       uiLayer: new Container(),
       particleLayer: new Container(),
     } as any,

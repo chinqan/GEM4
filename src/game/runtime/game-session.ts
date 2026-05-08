@@ -8,7 +8,7 @@
 import type { Board } from '../rules/board';
 import type { LevelSpec } from '../level/level-spec';
 import type { RngStreams } from '../rules/rng';
-import type { CellPos, GemColour, SpecialGemType, MatchDescriptor } from '../../types';
+import type { CellPos, GemColour, SpecialGemType, MatchDescriptor, ComboType } from '../../types';
 import type { ObjectiveTracker } from '../level/objective';
 import { getCell } from '../rules/board';
 import { detectMatches } from '../rules/match-detect';
@@ -96,6 +96,10 @@ export interface SwapResult {
   /** Initial activation (for combo/colour/directBomb paths) */
   initialActivation?: {
     type: SpecialGemType | 'combo';
+    /** Specific combo type when type === 'combo' (e.g. 'colour.line') */
+    comboType?: ComboType;
+    /** Positions of gems transformed during colour.line / colour.bomb combos */
+    comboTargets?: CellPos[];
     pos: CellPos;
     clearedCells: ClearedCellInfo[];
     score: number;
@@ -925,6 +929,8 @@ export class GameSessionController {
       movesConsumed: true,
       initialActivation: {
         type: 'combo',
+        comboType: cType ?? undefined,
+        comboTargets: comboResult.triggeredSpecials.length > 0 ? comboResult.triggeredSpecials : undefined,
         pos: to,
         clearedCells: clearedInfos,
         score: comboPoints,

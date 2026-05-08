@@ -1,5 +1,5 @@
 import { Container, Graphics, ColorMatrixFilter } from 'pixi.js';
-import type { CellPos } from '../types';
+import type { CellPos, GemColour } from '../types';
 import type { GemSprite } from './gem-sprites';
 import type { LayerRefs } from './app-layers';
 import {
@@ -14,6 +14,14 @@ import {
   CHAIN_SATURATION_PULSE_MS,
   CHAIN_SATURATION_THRESHOLD,
   CHAIN_SATURATION_BOOST,
+  MARK_GLOW_ALPHA_MIN,
+  MARK_GLOW_ALPHA_MAX,
+  MARK_PULSE_CYCLE_MS,
+  BREW_SHAKE_AMPLITUDE,
+  BREW_BRIGHTNESS_MAX,
+  BLAST_PARTICLE_MULTIPLIER,
+  MATCH_BURST_PARTICLE_COUNT,
+  GEM_COLOURS,
 } from './design-tokens';
 
 // ─── 型別 ──────────────────────────────────────────────────
@@ -518,6 +526,281 @@ export function createBlastZoneOverlay(
     complete(): void {
       parentLayer.removeChild(container);
       container.destroy({ children: true });
+    },
+  };
+}
+
+// ─── 22.8 Mark Effect（標記發光脈衝） ──────────────────────
+
+/** 標記效果配置 */
+export interface MarkEffectConfig {
+  /** 目標寶石 sprite */
+  sprite: GemSprite;
+  /** 標記持續時間（ms）— 從標記到爆破 */
+  duration: number;
+  /** 寶石顏色（hex 數值，用於發光色調） */
+  colour: number;
+  /** 是否使用減少動態模式（靜態高亮取代脈衝） */
+  reducedMotion: boolean;
+}
+
+/**
+ * 建立標記效果動畫：發光脈衝或靜態高亮。
+ *
+ * - 正常模式：alpha 在 MARK_GLOW_ALPHA_MIN ~ MARK_GLOW_ALPHA_MAX 之間
+ *   以 MARK_PULSE_CYCLE_MS 週期循環的正弦脈衝。
+ * - 減少動態模式：固定 alpha 的邊框高亮 + 色調變化。
+ *
+ * 動畫持續到外部呼叫 complete() 或 duration 到期。
+ */
+export function createMarkEffect(config: MarkEffectConfig): Animation {
+  const { sprite, duration, colour, reducedMotion } = config;
+
+  // Create a glow ring overlay attached to the sprite
+  const glowRing = new Graphics();
+  glowRing.label = 'markGlow';
+
+  const radius = CELL_SIZE * 0.38; // matches GEM_RADIUS_RATIO
+  glowRing.circle(0, 0, radius + 3);
+  glowRing.stroke({ color: colour, width: 3, alpha: 1 });
+  sprite.addChild(glowRing);
+
+  if (reducedMotion) {
+    // Static highlight: fixed alpha midpoint, no animation
+    const staticAlpha = (MARK_GLOW_ALPHA_MIN + MARK_GLOW_ALPHA_MAX) / 2;
+    glowRing.alpha = staticAlpha;
+  } else {
+    glowRing.alpha = MARK_GLOW_ALPHA_MIN;
+  }
+
+  return {
+    elapsed: 0,
+    duration,
+
+    update(dtMs: number): boolean {
+      this.elapsed += dtMs;
+
+      // Bail out if sprite was destroyed mid-animation
+      if (!sprite.scale) return true;
+
+      if (!reducedMotion) {
+        // Sinusoidal pulse: cycle alpha between MIN and MAX
+        const phase = (this.elapsed % MARK_PULSE_CYCLE_MS) / MARK_PULSE_CYCLE_MS;
+        const t = Math.sin(phase * Math.PI * 2) * 0.5 + 0.5;
+        glowRing.alpha =
+          MARK_GLOW_ALPHA_MIN + t * (MARK_GLOW_ALPHA_MAX - MARK_GLOW_ALPHA_MIN);
+      }
+
+      return this.elapsed >= this.duration;
+    },
+
+    complete(): void {
+      // Remove the glow overlay from the sprite
+      if (glowRing.parent) {
+        glowRing.parent.removeChild(glowRing);
+      }
+      glowRing.destroy();
+    },
+  };
+}
+
+// ─── 22.9 Brew Animation（蓄力震動 + 亮度遞增） ────────────
+
+/** 蓄力動畫配置 */
+export interface BrewAnimationConfig {
+  /** 目標寶石 sprite */
+  sprite: GemSprite;
+  /** 蓄力持續時間（ms）— 通常為 BREW_PHASE_DURATION_MS */
+  duration: number;
+  /** 是否使用減少動態模式（僅亮度變化，不震動） */
+  reducedMotion: boolean;
+}
+
+/**
+ * 建立蓄力動畫：震動 + 亮度遞增。
+ *
+ * - 正常模式：sprite 的 x 位置以 BREW_SHAKE_AMPLITUDE 振幅的正弦波震動，
+ *   同時亮度從 1.0 線性增至 BREW_BRIGHTNESS_MAX。
+ * - 減少動態模式：僅亮度遞增，不震動。
+ *
+ * 動畫結束時恢復原始 x 位置並移除亮度濾鏡。
+ */
+export function createBrewAnimation(config: BrewAnimationConfig): Animation {
+  const { sprite, duration, reducedMotion } = config;
+
+  // Store original x position for shake restoration
+  const originX = sprite.position.x;
+
+  // Create a ColorMatrixFilter for brightness adjustment
+  const brightnessFilter = new ColorMatrixFilter();
+  const existingFilters = sprite.filters ? [...sprite.filters] : [];
+  sprite.filters = [...existingFilters, brightnessFilter];
+
+  // Shake frequency: multiple oscillations during the brew phase
+  const shakeFrequency = 12; // oscillations over the full duration
+
+  return {
+    elapsed: 0,
+    duration,
+
+    update(dtMs: number): boolean {
+      this.elapsed += dtMs;
+
+      // Bail out if sprite was destroyed mid-animation
+      if (!sprite.scale) return true;
+
+      const progress = Math.min(this.elapsed / this.duration, 1);
+
+      // Brightness: linear increase from 1.0 to BREW_BRIGHTNESS_MAX
+      const brightness = lerp(1.0, BREW_BRIGHTNESS_MAX, progress);
+      brightnessFilter.reset();
+      brightnessFilter.brightness(brightness, false);
+
+      // Shake: sine wave oscillation on x position (skip in reduced motion)
+      if (!reducedMotion) {
+        const shakeOffset =
+          Math.sin(progress * Math.PI * 2 * shakeFrequency) *
+          BREW_SHAKE_AMPLITUDE *
+          progress; // amplitude ramps up with progress for increasing intensity
+        sprite.position.x = originX + shakeOffset;
+      }
+
+      return this.elapsed >= this.duration;
+    },
+
+    complete(): void {
+      // Restore original x position
+      if (sprite.scale) {
+        sprite.position.x = originX;
+      }
+
+      // Remove the brightness filter
+      if (sprite.filters) {
+        sprite.filters = sprite.filters.filter((f) => f !== brightnessFilter);
+        if (sprite.filters.length === 0) {
+          sprite.filters = null;
+        }
+      }
+    },
+  };
+}
+
+// ─── 22.10 Enhanced Blast Animation（增強爆破效果） ─────────
+
+/** 增強爆破效果配置 */
+export interface EnhancedBlastConfig {
+  /** 目標寶石 sprite */
+  sprite: GemSprite;
+  /** 寶石顏色（用於粒子色調），null 時使用白色 */
+  colour: GemColour | null;
+  /** 粒子數量倍率（相對於基礎 MATCH_BURST_PARTICLE_COUNT） */
+  particleMultiplier: number;
+  /** 粒子效果圖層（用於掛載爆破粒子） */
+  fxLayer?: Container;
+}
+
+/**
+ * 建立增強爆破動畫：複用 createMatchClearAnimation 的縮放/淡出邏輯，
+ * 並增加粒子爆破效果（數量 × particleMultiplier）。
+ *
+ * 粒子以 sprite 中心為原點向外噴射，帶有重力與淡出效果。
+ * 若未提供 fxLayer，則僅執行縮放/淡出（不產生粒子）。
+ */
+export function createEnhancedBlastAnimation(config: EnhancedBlastConfig): Animation {
+  const { sprite, colour, particleMultiplier, fxLayer } = config;
+
+  // ── Shrink/fade logic (reused from createMatchClearAnimation) ──
+  const originalScaleX = sprite.scale.x;
+  const originalScaleY = sprite.scale.y;
+  const originalAlpha = sprite.alpha;
+
+  // ── Particle burst setup ──
+  const particleCount = Math.round(MATCH_BURST_PARTICLE_COUNT * particleMultiplier);
+  const burstColour = colour ? GEM_COLOURS[colour] : 0xffffff;
+  const particles: Graphics[] = [];
+
+  // Spawn burst particles on the fxLayer if available
+  if (fxLayer) {
+    const cx = sprite.position.x;
+    const cy = sprite.position.y;
+
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (i / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const radius = 2 + Math.random() * 3;
+
+      const dot = new Graphics();
+      dot.circle(0, 0, radius);
+      dot.fill({ color: burstColour, alpha: 1 });
+      dot.position.set(cx, cy);
+      dot.blendMode = 'add';
+      fxLayer.addChild(dot);
+
+      // Store velocity data on the particle for update
+      (dot as any)._vx = Math.cos(angle) * (120 + Math.random() * 200);
+      (dot as any)._vy = Math.sin(angle) * (120 + Math.random() * 200);
+      particles.push(dot);
+    }
+  }
+
+  return {
+    elapsed: 0,
+    duration: MATCH_CLEAR_DURATION_MS,
+
+    update(dtMs: number): boolean {
+      this.elapsed += dtMs;
+      const progress = Math.min(this.elapsed / this.duration, 1);
+
+      // Sprite may be destroyed mid-animation
+      if (!sprite.scale) return true;
+
+      // ── Shrink + fade (same as createMatchClearAnimation) ──
+      const t = smoothstep(progress);
+      const scale = 1 - t;
+      sprite.scale.set(originalScaleX * scale, originalScaleY * scale);
+      sprite.alpha = originalAlpha * (1 - t);
+
+      // ── Update burst particles ──
+      const dtSec = dtMs / 1000;
+      for (const dot of particles) {
+        if (!dot.visible) continue;
+        const vx: number = (dot as any)._vx;
+        const vy: number = (dot as any)._vy;
+
+        dot.position.x += vx * dtSec;
+        dot.position.y += vy * dtSec;
+
+        // Apply gravity
+        (dot as any)._vy += 400 * dtSec;
+
+        // Fade out in the second half
+        if (progress > 0.5) {
+          dot.alpha = 1 - (progress - 0.5) * 2;
+        }
+
+        // Shrink slightly
+        const s = 1 - progress * 0.6;
+        dot.scale.set(s, s);
+      }
+
+      return this.elapsed >= this.duration;
+    },
+
+    complete(): void {
+      // Finalize sprite
+      if (sprite.scale) {
+        sprite.scale.set(0, 0);
+        sprite.alpha = 0;
+        sprite.visible = false;
+      }
+
+      // Clean up burst particles
+      for (const dot of particles) {
+        if (dot.parent) {
+          dot.parent.removeChild(dot);
+        }
+        dot.destroy();
+      }
+      particles.length = 0;
     },
   };
 }
