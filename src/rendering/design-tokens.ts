@@ -159,6 +159,22 @@ export const CHAIN_SATURATION_BOOST = 2.0;
 
 // ─── Color Gem 分階段爆破常數 ─────────────────────────────────
 
+// ─── 爆破範圍標示底版顏色 ──────────────────────────────────
+
+/** Line Bomb H 爆破範圍底版顏色（紅色） */
+export const BLAST_ZONE_COLOUR_LINE_H = 0xff3344;
+
+/** Line Bomb V 爆破範圍底版顏色（綠色） */
+export const BLAST_ZONE_COLOUR_LINE_V = 0x33cc66;
+
+/** Area Bomb 爆破範圍底版顏色（黃色） */
+export const BLAST_ZONE_COLOUR_AREA = 0xffcc00;
+
+/** Colour Gem 爆破範圍底版顏色（灰白） */
+export const BLAST_ZONE_COLOUR_COLOUR = 0xddddee;
+
+// ─────────────────────────────────────────────────────────────
+
 /** Color Gem 蓄力階段時長（ms） */
 export const BREW_PHASE_DURATION_MS = 400;
 

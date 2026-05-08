@@ -487,16 +487,19 @@ export function createChainSaturationPulse(
 // ─── Debug：特殊寶石影響區域遮片 ───────────────────────────
 
 /**
- * 建立紅色半透明遮片，標示特殊寶石啟動時的影響區域。
- * 遮片在 SPECIAL_ACTIVATION_MS 期間顯示，之後自動移除。
+ * 建立半透明遮片，標示特殊寶石啟動時的影響區域。
+ * 遮片在指定期間顯示，之後自動移除。
  *
  * @param cells 受影響的格子座標
  * @param parentLayer 要掛載遮片的圖層（通常是 boardLayer）
+ * @param duration 遮片持續時間（ms）
+ * @param colour 遮片顏色（hex），預設 0xff0000（紅色）
  */
 export function createBlastZoneOverlay(
   cells: Array<[number, number]>,
   parentLayer: Container,
   duration: number = SPECIAL_ACTIVATION_MS,
+  colour: number = 0xff0000,
 ): Animation {
   const container = new Container();
   container.label = 'blastZoneOverlay';
@@ -505,7 +508,7 @@ export function createBlastZoneOverlay(
   for (const [col, row] of cells) {
     const rect = new Graphics();
     rect.rect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    rect.fill({ color: 0xff0000, alpha: 0.35 });
+    rect.fill({ color: colour, alpha: 0.35 });
     container.addChild(rect);
   }
 

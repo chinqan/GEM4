@@ -1,0 +1,1 @@
+{"nodes": [{"id": "board_interaction", "label": "Board Interaction", "file_type": "code", "source_file": "src/input/board-interaction.ts"}], "edges": [{"source": "board_interaction", "target": "game_integration", "relation": "provides_input_to", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/input/board-interaction.ts"}], "hyperedges": []}

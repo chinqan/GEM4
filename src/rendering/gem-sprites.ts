@@ -6,7 +6,6 @@ import {
   COLOUR_GEM_HUE,
   GEM_RADIUS,
   CELL_SIZE,
-  SPECIAL_OVERLAY_RATIO,
   SHIMMER_CYCLE_MS,
   SHIMMER_ALPHA_MIN,
   SHIMMER_ALPHA_MAX,
@@ -35,16 +34,13 @@ export interface GemSprite extends Container {
  *
  * 使用 PixiJS 8 Graphics 繪製 placeholder 圖形：
  * - 普通寶石：彩色圓形
- * - lineH：圓形 + 水平箭頭
- * - lineV：圓形 + 垂直箭頭
- * - area：圓形 + 星形/十字
- * - colour：白色圓形 + 彩虹光暈
+ * - 特殊寶石（lineH/lineV/area/colour）：深色圓底 + 金邊 + emoji 圖示
  */
 export class GemSpriteFactory {
   /**
    * 建立一個寶石 sprite。
    *
-   * @param colour  寶石顏色（null 表示 Colour Gem）
+   * @param colour  寶石顏色（null 表示獨立特殊道具）
    * @param special 特殊類型（null 表示普通寶石）
    * @param col     棋盤欄
    * @param row     棋盤列
@@ -59,29 +55,22 @@ export class GemSpriteFactory {
     const container = new Container() as GemSprite;
     container.label = `gem-${col}-${row}`;
 
-    // 獨立特殊道具(無顏色,僅特殊類型):繪製 emoji 道具
-    const isStandaloneSpecial = special !== null && colour === null;
+    // 任何有 special 的寶石都使用獨立道具風格（深色圓底 + emoji）
+    const isSpecial = special !== null;
 
     // 繪製主體
-    //  - 一般顏色寶石:彩色圓形
-    //  - colour gem(原 colour bomb):彩虹環(有 colour=null && special='colour' 也走這條,但
-    //    新規則下其他 special 也是 colour=null,因此交由 isStandaloneSpecial 分流)
-    const body = isStandaloneSpecial
+    const body = isSpecial
       ? this.drawSpecialItemBody()
       : this.drawBody(colour);
     container.addChild(body);
     container.gemBody = body;
 
-    // 覆蓋層:獨立道具用 emoji;一般寶石才會走原本的線條/星形覆蓋
-    let overlay: Graphics | null = null;
-    if (isStandaloneSpecial) {
+    // 特殊寶石用 emoji 圖示
+    if (isSpecial) {
       const emoji = this.makeSpecialEmoji(special!);
       container.addChild(emoji);
-    } else if (special) {
-      overlay = this.drawSpecialOverlay(special, colour);
-      container.addChild(overlay);
     }
-    container.specialOverlay = overlay;
+    container.specialOverlay = null;
 
     // shimmer 高光（預設隱藏，由 BoardRenderer 控制）
     const shimmer = this.drawShimmerHighlight(colour);
@@ -157,145 +146,7 @@ export class GemSpriteFactory {
     g.circle(-GEM_RADIUS * 0.15, -GEM_RADIUS * 0.15, highlightRadius);
     g.fill({ color: highlightColour, alpha: 0.3 });
 
-    // Colour Gem 額外彩虹邊框
-    if (!colour) {
-      g.circle(0, 0, GEM_RADIUS + 2);
-      g.stroke({ color: 0xffffff, width: 3, alpha: 0.7 });
-    }
-
     return g;
-  }
-
-  /**
-   * 繪製特殊寶石覆蓋層。
-   */
-  private drawSpecialOverlay(
-    special: SpecialGemType,
-    colour: GemColour | null,
-  ): Graphics {
-    const g = new Graphics();
-    const overlaySize = CELL_SIZE * SPECIAL_OVERLAY_RATIO;
-    const lineColour = 0xffffff;
-    const lineAlpha = 0.9;
-
-    switch (special) {
-      case 'lineH':
-        this.drawArrowH(g, overlaySize, lineColour, lineAlpha);
-        break;
-      case 'lineV':
-        this.drawArrowV(g, overlaySize, lineColour, lineAlpha);
-        break;
-      case 'area':
-        this.drawStar(g, overlaySize, lineColour, lineAlpha);
-        break;
-      case 'colour':
-        this.drawRainbowRing(g, colour);
-        break;
-    }
-
-    return g;
-  }
-
-  /** 水平箭頭（lineH） */
-  private drawArrowH(
-    g: Graphics,
-    size: number,
-    colour: number,
-    alpha: number,
-  ): void {
-    const halfW = size * 0.5;
-    const arrowH = size * 0.2;
-
-    // 水平線
-    g.moveTo(-halfW, 0);
-    g.lineTo(halfW, 0);
-    g.stroke({ color: colour, width: 2.5, alpha });
-
-    // 右箭頭
-    g.moveTo(halfW - arrowH, -arrowH);
-    g.lineTo(halfW, 0);
-    g.lineTo(halfW - arrowH, arrowH);
-    g.stroke({ color: colour, width: 2.5, alpha });
-
-    // 左箭頭
-    g.moveTo(-halfW + arrowH, -arrowH);
-    g.lineTo(-halfW, 0);
-    g.lineTo(-halfW + arrowH, arrowH);
-    g.stroke({ color: colour, width: 2.5, alpha });
-  }
-
-  /** 垂直箭頭（lineV） */
-  private drawArrowV(
-    g: Graphics,
-    size: number,
-    colour: number,
-    alpha: number,
-  ): void {
-    const halfH = size * 0.5;
-    const arrowW = size * 0.2;
-
-    // 垂直線
-    g.moveTo(0, -halfH);
-    g.lineTo(0, halfH);
-    g.stroke({ color: colour, width: 2.5, alpha });
-
-    // 上箭頭
-    g.moveTo(-arrowW, -halfH + arrowW);
-    g.lineTo(0, -halfH);
-    g.lineTo(arrowW, -halfH + arrowW);
-    g.stroke({ color: colour, width: 2.5, alpha });
-
-    // 下箭頭
-    g.moveTo(-arrowW, halfH - arrowW);
-    g.lineTo(0, halfH);
-    g.lineTo(arrowW, halfH - arrowW);
-    g.stroke({ color: colour, width: 2.5, alpha });
-  }
-
-  /** 星形/十字（area） */
-  private drawStar(
-    g: Graphics,
-    size: number,
-    colour: number,
-    alpha: number,
-  ): void {
-    const r = size * 0.45;
-    const points = 4;
-    const innerR = r * 0.4;
-
-    // 繪製 4 角星
-    g.moveTo(0, -r);
-    for (let i = 0; i < points; i++) {
-      const outerAngle = (i * Math.PI * 2) / points - Math.PI / 2;
-      const innerAngle = outerAngle + Math.PI / points;
-      const nextOuterAngle = ((i + 1) * Math.PI * 2) / points - Math.PI / 2;
-
-      g.lineTo(
-        Math.cos(innerAngle) * innerR,
-        Math.sin(innerAngle) * innerR,
-      );
-      g.lineTo(
-        Math.cos(nextOuterAngle) * r,
-        Math.sin(nextOuterAngle) * r,
-      );
-    }
-    g.fill({ color: colour, alpha: alpha * 0.8 });
-    g.stroke({ color: colour, width: 1.5, alpha });
-  }
-
-  /** 彩虹環（colour gem） */
-  private drawRainbowRing(g: Graphics, _colour: GemColour | null): void {
-    const ringRadius = GEM_RADIUS + 4;
-    // 多色環段
-    const segmentColours = [0xff3344, 0xff8833, 0xffcc00, 0x33cc66, 0x3388ff, 0xaa44ff];
-    const segmentAngle = (Math.PI * 2) / segmentColours.length;
-
-    for (let i = 0; i < segmentColours.length; i++) {
-      const startAngle = i * segmentAngle;
-      const endAngle = startAngle + segmentAngle;
-      g.arc(0, 0, ringRadius, startAngle, endAngle);
-      g.stroke({ color: segmentColours[i], width: 3, alpha: 0.8 });
-    }
   }
 
   /** shimmer 高光（小圓形亮點） */

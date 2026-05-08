@@ -47,6 +47,8 @@ export interface CreateButtonOptions {
   variant?: ButtonVariant;
   size?: 'sm' | 'md' | 'lg';
   width?: number;
+  /** 覆寫文字大小（預設使用 size 對應的 fontSize） */
+  fontSize?: number;
   accent?: number;
   onClick?: () => void;
 }
@@ -84,7 +86,7 @@ export function createButton(options: CreateButtonOptions): UIButton {
   container.bg = bg;
 
   // 文字
-  const style = makeTextStyle(sizeSpec.fontSize, colours.text);
+  const style = makeTextStyle(options.fontSize ?? sizeSpec.fontSize, colours.text);
   const label = new Text({ text, style });
   label.anchor.set(0.5, 0.5);
   label.position.set(btnWidth / 2, btnHeight / 2);

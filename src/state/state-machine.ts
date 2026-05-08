@@ -65,15 +65,19 @@ export class IllegalTransitionError extends Error {
  */
 export function transition(from: AppState, to: AppState): AppState {
   // ── 自我轉換檢查 ──────────────────────────────────────
-  // worldMap→worldMap 是唯一允許的自我轉換（世界切換）
+  // worldMap→worldMap 是允許的自我轉換（世界切換）
+  // game→game 是允許的自我轉換（重新開始關卡）
   if (from.kind === to.kind) {
     if (from.kind === 'worldMap' && to.kind === 'worldMap') {
+      return to;
+    }
+    if (from.kind === 'game' && to.kind === 'game') {
       return to;
     }
     throw new IllegalTransitionError(
       from.kind,
       to.kind,
-      `Self-transition not allowed: ${from.kind} → ${to.kind} (except worldMap)`,
+      `Self-transition not allowed: ${from.kind} → ${to.kind} (except worldMap, game)`,
     );
   }
 

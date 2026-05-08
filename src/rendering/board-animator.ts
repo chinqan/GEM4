@@ -39,6 +39,10 @@ import {
   MATCH_CLEAR_DURATION_MS,
   BREW_PHASE_DURATION_MS,
   BLAST_PARTICLE_MULTIPLIER,
+  BLAST_ZONE_COLOUR_LINE_H,
+  BLAST_ZONE_COLOUR_LINE_V,
+  BLAST_ZONE_COLOUR_AREA,
+  BLAST_ZONE_COLOUR_COLOUR,
   getSpecialActivationDuration,
 } from './design-tokens';
 import { computeStagedPhases } from './staged-blast';
@@ -71,7 +75,8 @@ const GRAVITY_WAIT_MS = 80;
 // Lightning-like outward radiation from each special's centre. Each cell's
 // match-clear fires when the wave reaches it: arriveAt = startTime +
 // chebyshev(source, cell) * CELL_RADIATION_SPEED_MS.
-const CELL_RADIATION_SPEED_MS = 20;
+// DEBUG: Set very slow (150ms) for visual verification of directional waves.
+const CELL_RADIATION_SPEED_MS = 150;
 // Stagger between simultaneous in-match (root) activations so multiple
 // roots don't perfectly overlap.
 const ROOT_STAGGER_MS = 80;
@@ -506,20 +511,29 @@ export class BoardAnimator {
       }
 
       // Area bomb: charge-up phase with red zone highlight before explosion
+      // Line bomb: also show red zone highlight on the affected row/col
       const isArea = event.type === 'area';
+      const isLine = event.type === 'lineH' || event.type === 'lineV';
       const chargeTime = isArea ? AREA_BOMB_CHARGE_MS : 0;
 
-      if (isArea) {
-        // Show red overlay on affected cells during charge-up
-        const allCells: CellPos[] = [event.pos, ...event.clearedCells];
+      if (isArea || isLine) {
+        // Show coloured overlay on affected cells
+        const overlayCells: CellPos[] = [event.pos, ...event.clearedCells];
+        const overlayDuration = isArea
+          ? chargeTime
+          : (Math.max(...overlayCells.map(c => this.chebyshev(event.pos, c))) * CELL_RADIATION_SPEED_MS + MATCH_CLEAR_DURATION_MS);
+        const overlayColour = isArea
+          ? BLAST_ZONE_COLOUR_AREA
+          : event.type === 'lineH' ? BLAST_ZONE_COLOUR_LINE_H : BLAST_ZONE_COLOUR_LINE_V;
         tasks.push({
           time: startTime,
           fn: () => {
             void this.playAnims([
               createBlastZoneOverlay(
-                allCells as Array<[number, number]>,
+                overlayCells as Array<[number, number]>,
                 this.layers.boardLayer,
-                chargeTime,
+                overlayDuration,
+                overlayColour,
               ),
             ]);
           },
@@ -747,29 +761,35 @@ export class BoardAnimator {
     const reducedMotion = detectPrefersReducedMotion();
     const tasks: ScheduledTask[] = [];
 
-    // ── Mark Phase: schedule mark effects at each target's arrival time ──
+    // ── Mark Phase: immediately convert each target to Line Bomb visual on arrival ──
     for (const { pos, arriveAt } of markSchedule) {
-      const markDuration = blastStartTime - arriveAt;
       tasks.push({
         time: arriveAt,
         fn: () => {
-          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
-          if (!spr) return;
-          const colourHex = colourByPos.get(`${pos[0]},${pos[1]}`);
-          const colourValue = colourHex ? GEM_COLOURS[colourHex] : 0xffffff;
-          void this.playAnims([
-            createMarkEffect({
-              sprite: spr as any,
-              duration: markDuration,
-              colour: colourValue,
-              reducedMotion,
-            }),
-          ]);
+          // Immediately replace sprite with standalone Line Bomb visual (emoji style)
+          const direction: 'lineH' | 'lineV' = (pos[0] + pos[1]) % 2 === 0 ? 'lineH' : 'lineV';
+          const singleCellSnapshot = {
+            width: pos[0] + 1,
+            height: pos[1] + 1,
+            cells: (() => {
+              const cells: any[][] = [];
+              for (let c = 0; c <= pos[0]; c++) {
+                cells[c] = [];
+                for (let r = 0; r <= pos[1]; r++) {
+                  cells[c][r] = { gem: null, isEmpty: false, deliveryItem: false };
+                }
+              }
+              // colour: null triggers the standalone special item path (dark circle + emoji)
+              cells[pos[0]][pos[1]] = { gem: { colour: null, special: direction }, isEmpty: false, deliveryItem: false };
+              return cells;
+            })(),
+          };
+          this.boardRenderer.updateCell(pos[0], pos[1], singleCellSnapshot as any);
         },
       });
     }
 
-    // ── Brew Phase: schedule brew animations for all marked gems ──
+    // ── Brew Phase: schedule brew animations for all converted bombs ──
     tasks.push({
       time: phases.brewStartTime,
       fn: () => {
@@ -787,38 +807,119 @@ export class BoardAnimator {
       },
     });
 
-    // ── Blast Phase: convert each target to Line Bomb visual and fire radiation ──
+    // ── Blast Phase: fire Line Bomb effects with directional radiation ──
     tasks.push({
       time: blastStartTime,
       fn: () => {
-        for (const { pos } of markSchedule) {
-          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
-          if (!spr) continue;
-          const gemColour = colourByPos.get(`${pos[0]},${pos[1]}`) ?? null;
+        // Shrink the source gem (colour gem) at blast time
+        this.shrinkCell(source, null, chain);
 
-          // Enhanced blast animation (line bomb conversion + explosion)
+        for (const { pos } of markSchedule) {
+          const gemColour = colourByPos.get(`${pos[0]},${pos[1]}`) ?? null;
+          const convertedSpr = this.boardRenderer.getSprite(pos[0], pos[1]);
+
+          // Fire Line Bomb activation effect (expanding ring at bomb position)
+          const [px, py] = this.cellToPixel(pos);
+          const direction: 'lineH' | 'lineV' = (pos[0] + pos[1]) % 2 === 0 ? 'lineH' : 'lineV';
+          const dur = getSpecialActivationDuration(direction, true);
           void this.playAnims([
-            createEnhancedBlastAnimation({
-              sprite: spr as any,
-              colour: gemColour,
-              particleMultiplier: BLAST_PARTICLE_MULTIPLIER,
-              fxLayer: this.layers.fxLayer,
-            }),
+            createSpecialActivationEffect(px, py, gemColour ? GEM_COLOURS[gemColour] : 0xffffff, this.layers.boardLayer, dur),
           ]);
 
-          // Particle FX
+          // Shrink the converted bomb sprite itself
+          if (convertedSpr) {
+            void this.playAnims([
+              createEnhancedBlastAnimation({
+                sprite: convertedSpr as any,
+                colour: gemColour,
+                particleMultiplier: BLAST_PARTICLE_MULTIPLIER,
+                fxLayer: this.layers.fxLayer,
+              }),
+            ]);
+          }
+
+          // Particle FX at bomb position
           if (gemColour) {
-            const [px, py] = this.cellToPixel(pos);
             const fxLevel = Math.min(chain - 1, 3);
             this.mergeFx.spawn(px, py, fxLevel, GEM_COLOURS[gemColour]);
           }
         }
-        // Shrink the source gem (colour gem) at blast time
-        this.shrinkCell(source, null, chain);
       },
     });
 
-    // ── Line Bomb radiation waves: fire from each target at blast time ──
+    // ── Line Bomb blast zone overlay: show coloured highlight on affected row/col ──
+    for (const { pos } of markSchedule) {
+      const direction: 'lineH' | 'lineV' = (pos[0] + pos[1]) % 2 === 0 ? 'lineH' : 'lineV';
+
+      // Compute all cells in the line (including the bomb itself)
+      const blastZoneCells: Array<[number, number]> = [];
+      if (direction === 'lineH') {
+        const boardWidth = targets.reduce((max, t) => Math.max(max, t[0]), 0) + 2;
+        const estimatedWidth = Math.max(boardWidth, 8);
+        for (let c = 0; c < estimatedWidth; c++) {
+          blastZoneCells.push([c, pos[1]]);
+        }
+      } else {
+        const boardHeight = targets.reduce((max, t) => Math.max(max, t[1]), 0) + 2;
+        const estimatedHeight = Math.max(boardHeight, 8);
+        for (let r = 0; r < estimatedHeight; r++) {
+          blastZoneCells.push([pos[0], r]);
+        }
+      }
+
+      // Show coloured zone overlay at blast time (fades out over the radiation duration)
+      const maxDist = blastZoneCells.reduce((max, cell) => Math.max(max, this.chebyshev(pos, cell)), 0);
+      const radiationDuration = maxDist * CELL_RADIATION_SPEED_MS + MATCH_CLEAR_DURATION_MS;
+      const zoneColour = direction === 'lineH' ? BLAST_ZONE_COLOUR_LINE_H : BLAST_ZONE_COLOUR_LINE_V;
+      tasks.push({
+        time: blastStartTime,
+        fn: () => {
+          void this.playAnims([
+            createBlastZoneOverlay(blastZoneCells, this.layers.boardLayer, radiationDuration, zoneColour),
+          ]);
+        },
+      });
+    }
+
+    // ── Line Bomb directional radiation: shrink cells along row/col from each bomb ──
+    for (const { pos } of markSchedule) {
+      const direction: 'lineH' | 'lineV' = (pos[0] + pos[1]) % 2 === 0 ? 'lineH' : 'lineV';
+      const gemColour = colourByPos.get(`${pos[0]},${pos[1]}`) ?? null;
+
+      // Find all cells this line bomb would clear (from passiveEvents data)
+      // Compute the line cells directly based on direction
+      const lineCells: CellPos[] = [];
+      if (direction === 'lineH') {
+        // Clear entire row
+        const boardWidth = targets.reduce((max, t) => Math.max(max, t[0]), 0) + 2;
+        const estimatedWidth = Math.max(boardWidth, 8);
+        for (let c = 0; c < estimatedWidth; c++) {
+          if (c !== pos[0]) lineCells.push([c, pos[1]]);
+        }
+      } else {
+        // Clear entire column
+        const boardHeight = targets.reduce((max, t) => Math.max(max, t[1]), 0) + 2;
+        const estimatedHeight = Math.max(boardHeight, 8);
+        for (let r = 0; r < estimatedHeight; r++) {
+          if (r !== pos[1]) lineCells.push([pos[0], r]);
+        }
+      }
+
+      // Schedule each cell's shrink at chebyshev distance * radiation speed from blast time
+      for (const cell of lineCells) {
+        const dist = this.chebyshev(pos, cell);
+        const arriveAt = blastStartTime + dist * CELL_RADIATION_SPEED_MS;
+        tasks.push({
+          time: arriveAt,
+          fn: () => {
+            const cellColour = colourByPos.get(`${cell[0]},${cell[1]}`) ?? gemColour;
+            this.shrinkCell(cell, cellColour, chain);
+          },
+        });
+      }
+    }
+
+    // ── Line Bomb passive triggers (chained specials hit by line blasts) ──
     for (const { event, triggerAt } of phases.passiveSchedule) {
       tasks.push({
         time: triggerAt,
@@ -878,29 +979,34 @@ export class BoardAnimator {
     const reducedMotion = detectPrefersReducedMotion();
     const tasks: ScheduledTask[] = [];
 
-    // ── Mark Phase: schedule mark effects at each target's arrival time ──
+    // ── Mark Phase: immediately convert each target to Area Bomb visual on arrival ──
     for (const { pos, arriveAt } of markSchedule) {
-      const markDuration = blastStartTime - arriveAt;
       tasks.push({
         time: arriveAt,
         fn: () => {
-          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
-          if (!spr) return;
-          const colourHex = colourByPos.get(`${pos[0]},${pos[1]}`);
-          const colourValue = colourHex ? GEM_COLOURS[colourHex] : 0xffffff;
-          void this.playAnims([
-            createMarkEffect({
-              sprite: spr as any,
-              duration: markDuration,
-              colour: colourValue,
-              reducedMotion,
-            }),
-          ]);
+          // Immediately replace sprite with standalone Area Bomb visual (emoji style)
+          const singleCellSnapshot = {
+            width: pos[0] + 1,
+            height: pos[1] + 1,
+            cells: (() => {
+              const cells: any[][] = [];
+              for (let c = 0; c <= pos[0]; c++) {
+                cells[c] = [];
+                for (let r = 0; r <= pos[1]; r++) {
+                  cells[c][r] = { gem: null, isEmpty: false, deliveryItem: false };
+                }
+              }
+              // colour: null triggers the standalone special item path (dark circle + emoji)
+              cells[pos[0]][pos[1]] = { gem: { colour: null, special: 'area' }, isEmpty: false, deliveryItem: false };
+              return cells;
+            })(),
+          };
+          this.boardRenderer.updateCell(pos[0], pos[1], singleCellSnapshot as any);
         },
       });
     }
 
-    // ── Brew Phase: schedule brew animations for all marked gems ──
+    // ── Brew Phase: schedule brew animations for all converted bombs ──
     tasks.push({
       time: phases.brewStartTime,
       fn: () => {
@@ -918,28 +1024,51 @@ export class BoardAnimator {
       },
     });
 
-    // ── Blast Phase: convert each target to Area Bomb visual and fire radiation ──
+    // ── Blast Phase: fire Area Bomb effects ──
     tasks.push({
       time: blastStartTime,
       fn: () => {
         for (const { pos } of markSchedule) {
-          const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
-          if (!spr) continue;
           const gemColour = colourByPos.get(`${pos[0]},${pos[1]}`) ?? null;
+          const convertedSpr = this.boardRenderer.getSprite(pos[0], pos[1]);
 
-          // Enhanced blast animation (area bomb conversion + explosion)
+          // Fire Area Bomb activation effect (3×3 charge-up + explosion)
+          const [px, py] = this.cellToPixel(pos);
+          const dur = getSpecialActivationDuration('area', true);
+
+          // Show red zone overlay for the 3×3 area
+          const areaCells: Array<[number, number]> = [];
+          for (let dc = -1; dc <= 1; dc++) {
+            for (let dr = -1; dr <= 1; dr++) {
+              const c = pos[0] + dc;
+              const r = pos[1] + dr;
+              if (c >= 0 && r >= 0) {
+                areaCells.push([c, r]);
+              }
+            }
+          }
           void this.playAnims([
-            createEnhancedBlastAnimation({
-              sprite: spr as any,
-              colour: gemColour,
-              particleMultiplier: BLAST_PARTICLE_MULTIPLIER,
-              fxLayer: this.layers.fxLayer,
-            }),
+            createBlastZoneOverlay(areaCells, this.layers.boardLayer, MATCH_CLEAR_DURATION_MS, BLAST_ZONE_COLOUR_AREA),
           ]);
+
+          void this.playAnims([
+            createSpecialActivationEffect(px, py, gemColour ? GEM_COLOURS[gemColour] : 0xffffff, this.layers.boardLayer, dur),
+          ]);
+
+          // Shrink the converted gem with enhanced blast
+          if (convertedSpr) {
+            void this.playAnims([
+              createEnhancedBlastAnimation({
+                sprite: convertedSpr as any,
+                colour: gemColour,
+                particleMultiplier: BLAST_PARTICLE_MULTIPLIER,
+                fxLayer: this.layers.fxLayer,
+              }),
+            ]);
+          }
 
           // Particle FX
           if (gemColour) {
-            const [px, py] = this.cellToPixel(pos);
             const fxLevel = Math.min(chain - 1, 3);
             this.mergeFx.spawn(px, py, fxLevel, GEM_COLOURS[gemColour]);
           }

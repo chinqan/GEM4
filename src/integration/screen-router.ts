@@ -166,7 +166,14 @@ export class ScreenRouter {
       width,
       height,
       onResume: () => this.config.transitionTo(pauseState.previous),
-      onRestart: () => this.config.transitionTo(pauseState.previous),
+      onRestart: () => {
+        // Restart the level (or endless) from scratch
+        if (pauseState.previous.kind === 'game') {
+          this.config.transitionTo({ kind: 'game', levelId: pauseState.previous.levelId });
+        } else {
+          this.config.transitionTo(pauseState.previous);
+        }
+      },
       onSettings: () => this.config.transitionTo({ kind: 'settings', returnTo: this.config.getCurrentState() } as any),
       onQuit: () => this.config.transitionTo({ kind: 'menu' }),
     });

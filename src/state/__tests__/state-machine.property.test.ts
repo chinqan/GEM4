@@ -115,11 +115,11 @@ const arbIllegalTransitionPair: fc.Arbitrary<{ from: AppState; to: AppState }> =
       (k) => !legalTargets.includes(k) && k !== fromKind && k !== 'settings',
     );
     if (illegalTargets.length === 0) {
-      // 如果所有非自身目標都合法，用自我轉換（非 worldMap）
+      // 如果所有非自身目標都合法，用自我轉換（非 worldMap, game）
       return fc.constant({
         from: { kind: fromKind } as AppState,
         to: { kind: fromKind } as AppState,
-      }).filter(({ from }) => from.kind !== 'worldMap');
+      }).filter(({ from }) => from.kind !== 'worldMap' && from.kind !== 'game');
     }
     return fc.tuple(
       arbSimpleState(fromKind),
@@ -210,12 +210,13 @@ describe('CP-7: 狀態機轉換合法性 (Property-Based)', () => {
     );
   });
 
-  // Property 5: 自我轉換被拒絕（worldMap 除外）
-  it('自我轉換被拒絕（worldMap 除外）', () => {
-    const nonWorldMapKinds = ALL_STATE_KINDS.filter((k) => k !== 'worldMap');
+  // Property 5: 自我轉換被拒絕（worldMap, game 除外）
+  it('自我轉換被拒絕（worldMap, game 除外）', () => {
+    const allowedSelfTransitions = ['worldMap', 'game'];
+    const nonAllowedKinds = ALL_STATE_KINDS.filter((k) => !allowedSelfTransitions.includes(k));
     fc.assert(
       fc.property(
-        fc.constantFrom(...nonWorldMapKinds).chain((kind) =>
+        fc.constantFrom(...nonAllowedKinds).chain((kind) =>
           fc.tuple(arbSimpleState(kind), arbSimpleState(kind)),
         ),
         ([from, to]) => {
@@ -268,8 +269,8 @@ describe('CP-7: 狀態機轉換合法性 (Property-Based)', () => {
                 // 進入 settings：from 必須在可進入 settings 的列表中
                 expect(LEGAL_TRANSITIONS[current.kind]).toContain('settings');
               } else if (current.kind === next.kind) {
-                // 自我轉換：只有 worldMap 允許
-                expect(current.kind).toBe('worldMap');
+                // 自我轉換：只有 worldMap 和 game 允許
+                expect(['worldMap', 'game']).toContain(current.kind);
               } else {
                 // 一般轉換：必須在合法表中
                 expect(LEGAL_TRANSITIONS[current.kind]).toContain(next.kind);

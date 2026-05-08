@@ -16,8 +16,11 @@ import { BREW_PHASE_DURATION_MS } from './design-tokens';
  * Radiation wave speed: milliseconds per Chebyshev-distance unit.
  * Mirrors the value in board-animator.ts so the pure function can
  * compute arrival times without depending on the animator module.
+ *
+ * Slowed down (from 20ms) to emphasise the mysterious colour gem effect.
+ * DEBUG: Currently set very slow (150ms) for visual verification.
  */
-export const CELL_RADIATION_SPEED_MS = 20;
+export const CELL_RADIATION_SPEED_MS = 150;
 
 // ─── Types ──────────────────────────────────────────────────
 

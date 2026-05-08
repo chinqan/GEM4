@@ -24,6 +24,7 @@ export interface ObjectiveProgress {
 
 export interface GameHUD extends Container {
   pauseButton: UIButton;
+  resetButton: UIButton;
   settingsButton: UIButton;
   starDisplay: UIStarDisplay;
   objectiveChip: UIObjectiveChip;
@@ -55,6 +56,7 @@ export interface CreateGameHUDOptions {
   objective?: { type: string; target?: unknown; objectives?: Array<{ type: string; target?: unknown }> };
   onPause?: () => void;
   onSettings?: () => void;
+  onReset?: () => void;
 }
 
 /**
@@ -75,6 +77,7 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
     objective,
     onPause,
     onSettings,
+    onReset,
   } = options;
 
   const container = new Container() as GameHUD;
@@ -87,8 +90,9 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
   const pauseButton = createButton({
     text: '⏸',
     variant: 'ghost',
-    size: 'sm',
-    width: 40,
+    size: 'md',
+    width: 48,
+    fontSize: 24,
     onClick: onPause,
   });
   pauseButton.position.set(margin, topY);
@@ -120,16 +124,29 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
   const settingsButton = createButton({
     text: '⚙',
     variant: 'ghost',
-    size: 'sm',
-    width: 40,
+    size: 'md',
+    width: 48,
+    fontSize: 24,
     onClick: onSettings,
   });
-  settingsButton.position.set(width - 40 - margin, topY);
+  settingsButton.position.set(width - 48 - margin, topY);
   container.addChild(settingsButton);
+
+  // ── 重置按鈕（右上，設定左側） ───────────────────────
+  const resetButton = createButton({
+    text: '↺',
+    variant: 'ghost',
+    size: 'md',
+    width: 48,
+    fontSize: 24,
+    onClick: onReset,
+  });
+  resetButton.position.set(width - 48 - margin - 52, topY);
+  container.addChild(resetButton);
 
   // ── 星星（右上偏左） ─────────────────────────────────
   const starDisplay = createStarDisplay({ starSize: 14, gap: 4, initialStars: 0 });
-  starDisplay.position.set(width - 40 - margin - 60, topY + 6);
+  starDisplay.position.set(width - 48 - margin - 52 - 64, topY + 8);
   container.addChild(starDisplay);
 
   // ── 目標 chip（左中） ─────────────────────────────────
@@ -202,6 +219,7 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
 
   // ── 公開參照 ──────────────────────────────────────────
   container.pauseButton = pauseButton;
+  container.resetButton = resetButton;
   container.settingsButton = settingsButton;
   container.starDisplay = starDisplay;
   container.objectiveChip = objectiveChip;

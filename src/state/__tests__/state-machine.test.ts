@@ -217,9 +217,18 @@ describe('State Machine', () => {
       expect((result as { worldId: number }).worldId).toBe(2);
     });
 
+    it('game → game 允許（重新開始關卡）', () => {
+      const from: AppState = { kind: 'game', levelId: 1 };
+      const to: AppState = { kind: 'game', levelId: 1 };
+      const result = transition(from, to);
+      expect(result.kind).toBe('game');
+      expect((result as { levelId: number }).levelId).toBe(1);
+    });
+
     it('其他狀態自我轉換拋錯', () => {
-      const nonWorldMapKinds = ALL_STATE_KINDS.filter((k) => k !== 'worldMap');
-      for (const kind of nonWorldMapKinds) {
+      const allowedSelfTransitions: AppStateKind[] = ['worldMap', 'game'];
+      const nonAllowedKinds = ALL_STATE_KINDS.filter((k) => !allowedSelfTransitions.includes(k));
+      for (const kind of nonAllowedKinds) {
         const state = makeState(kind);
         expect(
           () => transition(state, makeState(kind)),

@@ -400,6 +400,36 @@ export class GameIntegration {
     const { initBoard } = await import('../game/runtime/reshuffle');
     const board = initBoard(spec, rngStreams.boardInit);
 
+    // ─── DEBUG: Place a Colour Gem at center for testing ────
+    const debugCol = Math.floor(board.width / 2);
+    const debugRow = Math.floor(board.height / 2);
+    board.cells[debugCol][debugRow].gem = {
+      colour: null,
+      special: 'colour',
+      locked: false,
+      unstable: null,
+    };
+    // Place a Line Bomb to the left of the Colour Gem
+    if (debugCol - 1 >= 0) {
+      board.cells[debugCol - 1][debugRow].gem = {
+        colour: null,
+        special: 'lineH',
+        locked: false,
+        unstable: null,
+      };
+    }
+    // Place an Area Bomb to the right of the Colour Gem
+    if (debugCol + 1 < board.width) {
+      board.cells[debugCol + 1][debugRow].gem = {
+        colour: null,
+        special: 'area',
+        locked: false,
+        unstable: null,
+      };
+    }
+    console.log(`[DEBUG] Colour Gem at (${debugCol},${debugRow}), LineH at (${debugCol - 1},${debugRow}), Area Bomb at (${debugCol + 1},${debugRow})`);
+    // ────────────────────────────────────────────────────────
+
     // --- Create Game Session Controller ---
     const { GameSessionController } = await import('../game/runtime/game-session');
     const session = new GameSessionController({ spec, seed: gameSeed, rngStreams, board });
@@ -488,6 +518,7 @@ export class GameIntegration {
       mode: spec.constraints.timeBudget ? 'time' : 'moves',
       objective: spec.objective,
       onPause: () => this.transitionTo({ kind: 'pause', previous: this.currentState } as any),
+      onReset: () => this.transitionTo({ kind: 'game', levelId }),
     });
     const movesDisplay = session.movesRemaining === Infinity ? 99 : session.movesRemaining;
     hud.setMoves(movesDisplay);
