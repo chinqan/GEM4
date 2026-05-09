@@ -51,11 +51,24 @@ export class AudioSystem {
   private _unlockHandler: (() => void) | null = null;
   // visibility change 處理器參照
   private _visibilityHandler: (() => void) | null = null;
+  // Unsubscribe from AudioBuses changes (sfx-player module-level volume sync)
+  private _unsubBuses: (() => void) | null = null;
 
   constructor(options: AudioSystemOptions = {}) {
     this.buses = new AudioBuses(options.busSnapshot);
     this.sfx = new SfxCatalog(this.buses, options.sfxCatalogDef);
     this.music = new AdaptiveMusic(this.buses);
+
+    // Bridge AudioBuses → sfx-player module-level _globalVolume.
+    // playEvent() (used by board-animator for combo/special SFX) doesn't hold
+    // a reference to AudioBuses, so without this subscription it ignores
+    // master-mute, sfx-mute, and volume sliders entirely.
+    void import('./sfx-player').then(({ setGlobalSfxVolume }) => {
+      setGlobalSfxVolume(this.buses.effectiveSfxVolume);
+      this._unsubBuses = this.buses.onChange(() => {
+        setGlobalSfxVolume(this.buses.effectiveSfxVolume);
+      });
+    });
 
     this._setupAutoplayUnlock();
     this._setupVisibilityHandler();
@@ -369,6 +382,11 @@ export class AudioSystem {
   dispose(): void {
     this.disconnectEventBus();
     this._removeUnlockListeners();
+
+    if (this._unsubBuses) {
+      this._unsubBuses();
+      this._unsubBuses = null;
+    }
 
     if (this._visibilityHandler) {
       document.removeEventListener('visibilitychange', this._visibilityHandler);

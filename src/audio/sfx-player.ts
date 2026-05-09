@@ -9,8 +9,17 @@ import type { SfxEntry } from './sfx-catalog';
 
 // ─── 常數 ──────────────────────────────────────────────────
 
-/** 全域音量（可由 AudioSystem 覆蓋） */
+/**
+ * Effective SFX volume (master × sfx, zero when either is muted).
+ * Updated by AudioSystem on every AudioBuses change — see
+ * AudioSystem constructor's `buses.onChange(...)` subscription.
+ */
 let _globalVolume = 1;
+
+/** Set by AudioSystem when AudioBuses state changes. */
+export function setGlobalSfxVolume(volume: number): void {
+  _globalVolume = Math.max(0, Math.min(1, volume));
+}
 
 // ─── 內部狀態 ──────────────────────────────────────────────
 
@@ -37,6 +46,10 @@ function getOrCreateHowl(src: string[]): Howl {
  * 多變體時隨機選取（避免連續重複）。
  */
 export function playEvent(eventId: string, volumeOverride?: number, rateOverride?: number): void {
+  // Honour AudioBuses mute / volume — effective volume of 0 means
+  // master-mute, sfx-mute, or both volumes at 0. Skip the play() entirely.
+  if (_globalVolume <= 0) return;
+
   const entry = DEFAULT_SFX_CATALOG[eventId as SfxEvent];
   if (!entry) return;
 
