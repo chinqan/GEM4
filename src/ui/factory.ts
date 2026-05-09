@@ -102,6 +102,7 @@ export function createButton(options: CreateButtonOptions): UIButton {
     bg.alpha = 0.85;
     bg.position.y = -2;
     label.position.y = btnHeight / 2 - 2;
+    import('../audio/sfx-player').then(({ playUiHover }) => playUiHover());
   });
 
   container.on('pointerout', () => {
@@ -119,6 +120,14 @@ export function createButton(options: CreateButtonOptions): UIButton {
   container.on('pointerup', () => {
     if (!enabled) return;
     container.scale.set(1);
+    // Play click sound: strong for primary variant, soft for others
+    import('../audio/sfx-player').then(({ playUiClick, playUiClickStrong }) => {
+      if (variant === 'primary') {
+        playUiClickStrong();
+      } else {
+        playUiClick();
+      }
+    });
     onClick?.();
   });
 

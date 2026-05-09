@@ -19,7 +19,8 @@
         "cp *",
         "which *",
         "/opt/anaconda3/bin/python *",
-        "find *"
+        "find *",
+        "/Users/chinqan/opt/anaconda3/bin/python *"
     ],
     "files.watcherExclude": {
         "**/node_modules/**": true,

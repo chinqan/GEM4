@@ -221,6 +221,15 @@ export function createLevelCompleteScreen(options: CreateLevelCompleteOptions): 
     levelText.text = `Level ${String(r.levelId).padStart(2, '0')}`;
     starDisplay.setStars(r.stars);
 
+    // Play star grant sounds with staggered timing
+    if (r.stars >= 1) {
+      import('../../audio/sfx-player').then(({ playStarGrant }) => {
+        setTimeout(() => playStarGrant(1), 300);
+        if (r.stars >= 2) setTimeout(() => playStarGrant(2), 800);
+        if (r.stars >= 3) setTimeout(() => playStarGrant(3), 1300);
+      });
+    }
+
     const baseScore = r.score - r.movesRemaining * 1000;
     scoreValue.text = Math.max(0, baseScore).toLocaleString();
 

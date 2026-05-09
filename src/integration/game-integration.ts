@@ -511,7 +511,7 @@ export class GameIntegration {
 
     // --- Wire level.resolved event ---
     const { SaveManager } = await import('../state/save-state');
-    const { playLevelComplete, playLevelFail } = await import('../audio/sfx-player');
+    const { playLevelComplete, playLevelFail, playNewLevelUnlock } = await import('../audio/sfx-player');
 
     const unsubResolved = this.eventBus.on('level.resolved', (e) => {
       if (e.result.cleared) {
@@ -525,8 +525,11 @@ export class GameIntegration {
             attempts: (prev?.attempts ?? 0) + 1,
           };
           const nextLevel = e.result.levelId + 1;
-          if (!save.progress.unlockedLevels.includes(nextLevel)) {
+          const isNewUnlock = !save.progress.unlockedLevels.includes(nextLevel);
+          if (isNewUnlock) {
             save.progress.unlockedLevels.push(nextLevel);
+            // Play unlock sound after a short delay
+            setTimeout(() => playNewLevelUnlock(), 2000);
           }
           save.progress.totalStars = Object.values(save.levels).reduce((s, l) => s + l.stars, 0);
           sm.save(save, true);

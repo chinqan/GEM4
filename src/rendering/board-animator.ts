@@ -57,6 +57,7 @@ import {
   playLevelComplete,
   playLevelFail,
   playSpecialByKind,
+  playEvent,
 } from '../audio/sfx-player';
 
 // ─── Types ──────────────────────────────────────────────────
@@ -162,7 +163,7 @@ export class BoardAnimator {
       const { type, pos, clearedCells, passiveActivations, gravity, score } = result.initialActivation;
 
       if (type === 'combo') {
-        playCombo();
+        playCombo(result.initialActivation.comboType);
       }
 
       // ── colour.line combo: staged Mark → Brew → Blast with line bomb conversion ──
@@ -434,6 +435,10 @@ export class BoardAnimator {
       if (pureMatchCells.length > 0) {
         playMatchSfx(pureMatchCells.length, step.chain);
       }
+      // Play match.special emphasis when special gems are activated in this step
+      if (step.specialActivations.length > 0) {
+        playEvent('match.special');
+      }
       this.showScorePopup(step.score, step.clearedCells.map(c => c.pos), step.chain);
       this.showComboChainText(step.chain, step.clearedCells.map(c => c.pos));
 
@@ -567,7 +572,10 @@ export class BoardAnimator {
           void this.playAnims([
             createSpecialActivationEffect(ax, ay, 0xffffff, this.layers.boardLayer, dur),
           ]);
-          playSpecialByKind(event.type);
+          // Skip SFX for 'combo' type — already played by playCombo() earlier
+          if (event.type !== 'combo') {
+            playSpecialByKind(event.type);
+          }
         },
       });
 
@@ -649,7 +657,7 @@ export class BoardAnimator {
     const reducedMotion = detectPrefersReducedMotion();
     const tasks: ScheduledTask[] = [];
 
-    // ── Activation burst: visual effect at source position (time 0) ──
+    // ── Activation burst: visual effect + SFX at source position (time 0) ──
     tasks.push({
       time: 0,
       fn: () => {
@@ -657,6 +665,7 @@ export class BoardAnimator {
         void this.playAnims([
           createSpecialActivationEffect(sx, sy, BLAST_ZONE_COLOUR_COLOUR, this.layers.boardLayer, 600),
         ]);
+        playSpecialByKind('colour');
         // Show blast zone overlay on all target cells
         const overlayCells = targets as Array<[number, number]>;
         if (overlayCells.length > 0) {
@@ -712,6 +721,9 @@ export class BoardAnimator {
     tasks.push({
       time: blastStartTime,
       fn: () => {
+        // Play match sound for the mass destruction
+        playMatchSfx(targets.length, chain);
+
         for (const { pos } of markSchedule) {
           const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
           if (!spr) continue;

@@ -24,8 +24,8 @@
     "hash": "f3504064be7fca2e49fcfe33b8ab937a"
   },
   "/Users/chinqan/GEM4/src/ui/factory.ts": {
-    "mtime": 1778255171.243685,
-    "hash": "9540653c476d84cb0c238cdcf57dfe97"
+    "mtime": 1778318298.3421333,
+    "hash": "df709c9ad5a6d598629ea43fe5da8674"
   },
   "/Users/chinqan/GEM4/src/ui/theme.ts": {
     "mtime": 1778255171.2447782,
@@ -44,8 +44,8 @@
     "hash": "5991cc21820801c9b7eb78f6107dc745"
   },
   "/Users/chinqan/GEM4/src/ui/screens/level-complete.ts": {
-    "mtime": 1777129670.2783134,
-    "hash": "d0942580d562174e21002dd39f9724ed"
+    "mtime": 1778318241.2069778,
+    "hash": "7015a15fadd9700f00a931624f79b66d"
   },
   "/Users/chinqan/GEM4/src/ui/screens/world-map.ts": {
     "mtime": 1776900786.5302045,
@@ -71,17 +71,9 @@
     "mtime": 1776900856.0957851,
     "hash": "7bc73817dbb98e4e96638d5dab8d6dc2"
   },
-  "/Users/chinqan/GEM4/src/ui/screens/__tests__/level-select-bugfix.property.test.ts": {
-    "mtime": 1777609272.5750349,
-    "hash": "b84b175800543c6fc27aaa35de990f90"
-  },
-  "/Users/chinqan/GEM4/src/ui/screens/__tests__/level-select-preservation.property.test.ts": {
-    "mtime": 1777046205.000355,
-    "hash": "a101facab65ac2f572cc89f07c4b4254"
-  },
   "/Users/chinqan/GEM4/src/ui/juice/toast.ts": {
-    "mtime": 1776900975.7386513,
-    "hash": "a1edae2efd299b626c83e7ad25babe3b"
+    "mtime": 1778318277.616899,
+    "hash": "c4bae99084452d76d386f6e1fd47bdfc"
   },
   "/Users/chinqan/GEM4/src/ui/juice/score-popup.ts": {
     "mtime": 1776900994.5182831,
@@ -120,20 +112,12 @@
     "hash": "81e3016dd0ed5212e7a0aec24455c52b"
   },
   "/Users/chinqan/GEM4/src/integration/screen-router.ts": {
-    "mtime": 1778314386.5301573,
-    "hash": "98fe133480c6c70a7a935a01998d931f"
+    "mtime": 1778318227.8838785,
+    "hash": "95f0a2a376bed2c1f40f2b560ceb2cf9"
   },
   "/Users/chinqan/GEM4/src/integration/game-integration.ts": {
-    "mtime": 1778259503.24659,
-    "hash": "8b4bf53436e9612484d7e2fb3946a188"
-  },
-  "/Users/chinqan/GEM4/src/integration/__tests__/special-activation.test.ts": {
-    "mtime": 1778161685.8782978,
-    "hash": "19cd00446b863d1b7153649aacb660b8"
-  },
-  "/Users/chinqan/GEM4/src/integration/__tests__/special-activation.property.test.ts": {
-    "mtime": 1778161685.8781657,
-    "hash": "e75e7ade144f520217315ac5048e6245"
+    "mtime": 1778318254.7735124,
+    "hash": "c810e668bb1ec616ca744c4575f4f448"
   },
   "/Users/chinqan/GEM4/src/game/runtime/endless.ts": {
     "mtime": 1776901379.392903,
@@ -154,38 +138,6 @@
   "/Users/chinqan/GEM4/src/game/runtime/reshuffle.ts": {
     "mtime": 1778199018.1549757,
     "hash": "83f922d202c7817e2d36304b10a6726a"
-  },
-  "/Users/chinqan/GEM4/src/game/runtime/__tests__/reshuffle.test.ts": {
-    "mtime": 1776876256.368737,
-    "hash": "3fba21f13f4af002912b4e65cf29dc68"
-  },
-  "/Users/chinqan/GEM4/src/game/runtime/__tests__/reshuffle.property.test.ts": {
-    "mtime": 1778255171.2384207,
-    "hash": "3eeb30daa7264a81866c220bfa6b07a0"
-  },
-  "/Users/chinqan/GEM4/src/game/runtime/__tests__/game-session.test.ts": {
-    "mtime": 1778082393.9656913,
-    "hash": "7c1b5e8dc8f3934f7cc7013602cb431b"
-  },
-  "/Users/chinqan/GEM4/src/game/runtime/__tests__/drag-chain-bug.test.ts": {
-    "mtime": 1778174734.6206481,
-    "hash": "dfc5ee49f11bfced7b2bcfc843c4514e"
-  },
-  "/Users/chinqan/GEM4/src/game/runtime/__tests__/game-loop.test.ts": {
-    "mtime": 1777168767.094392,
-    "hash": "e1d11ed8b839c71dd12e393873a24015"
-  },
-  "/Users/chinqan/GEM4/src/game/runtime/__tests__/determinism.test.ts": {
-    "mtime": 1776877869.2224767,
-    "hash": "21cabd53f768d67f6ddc54e78a9fa431"
-  },
-  "/Users/chinqan/GEM4/src/game/runtime/__tests__/hint.test.ts": {
-    "mtime": 1776877041.6756074,
-    "hash": "c6c55106861017700c6c1c886c46f2cf"
-  },
-  "/Users/chinqan/GEM4/src/game/__tests__/test-helpers.ts": {
-    "mtime": 1778161685.8700614,
-    "hash": "fd2a025d0a0971f4e88f40647206d321"
   },
   "/Users/chinqan/GEM4/src/game/rules/cascade.ts": {
     "mtime": 1777609272.5683148,
@@ -215,34 +167,6 @@
     "mtime": 1777609272.5678554,
     "hash": "bf441c84f68497ec2d83525f6430ae7c"
   },
-  "/Users/chinqan/GEM4/src/game/rules/__tests__/scoring.test.ts": {
-    "mtime": 1777168734.591185,
-    "hash": "be2683e2d4f4c88c9929957ba5134086"
-  },
-  "/Users/chinqan/GEM4/src/game/rules/__tests__/board.test.ts": {
-    "mtime": 1777609272.5672429,
-    "hash": "16f0a2397bad623df654a1378a9f0c12"
-  },
-  "/Users/chinqan/GEM4/src/game/rules/__tests__/rng.test.ts": {
-    "mtime": 1776872602.292703,
-    "hash": "fb477c3ef514c8efc490248641e2b9bc"
-  },
-  "/Users/chinqan/GEM4/src/game/rules/__tests__/cascade.test.ts": {
-    "mtime": 1778161685.870596,
-    "hash": "f352d4a670d0bd6e25ab96a525448cf2"
-  },
-  "/Users/chinqan/GEM4/src/game/rules/__tests__/special-gems.test.ts": {
-    "mtime": 1778161685.8711383,
-    "hash": "5261840172b0612dbf8b078de6b9ebe9"
-  },
-  "/Users/chinqan/GEM4/src/game/rules/__tests__/match-detect.test.ts": {
-    "mtime": 1778161685.8709671,
-    "hash": "2527a0fb5219b0f80be14475421803f1"
-  },
-  "/Users/chinqan/GEM4/src/game/rules/__tests__/combo-matrix.test.ts": {
-    "mtime": 1778161685.8707838,
-    "hash": "ebf0c68415c5da308bebacf78e61e4b9"
-  },
   "/Users/chinqan/GEM4/src/game/level/level-spec.ts": {
     "mtime": 1777609272.5655255,
     "hash": "2362ee49f07f5da1e0622179495acd7f"
@@ -254,18 +178,6 @@
   "/Users/chinqan/GEM4/src/game/level/objective.ts": {
     "mtime": 1777129670.276345,
     "hash": "d3eef55b8cb10043f8b01d96bc3c259d"
-  },
-  "/Users/chinqan/GEM4/src/game/level/__tests__/objective-preservation.property.test.ts": {
-    "mtime": 1777046254.0033755,
-    "hash": "c303676bc1eaacc93550a1e843ce1034"
-  },
-  "/Users/chinqan/GEM4/src/game/level/__tests__/objective.test.ts": {
-    "mtime": 1776875246.3427727,
-    "hash": "3c11da7f8ff60ea6509a794bf85389e0"
-  },
-  "/Users/chinqan/GEM4/src/game/level/__tests__/blocker.test.ts": {
-    "mtime": 1776875872.9297998,
-    "hash": "6cb40d9431494859eadcc5d0fd47531f"
   },
   "/Users/chinqan/GEM4/src/game/level/levels/world-1.ts": {
     "mtime": 1777609272.5660217,
@@ -315,22 +227,6 @@
     "mtime": 1776878534.2531192,
     "hash": "dfafc1479d5609044d604f4d533062a6"
   },
-  "/Users/chinqan/GEM4/src/state/__tests__/events.test.ts": {
-    "mtime": 1776878408.8267024,
-    "hash": "6b19294afb981620e081623f7c2e18e6"
-  },
-  "/Users/chinqan/GEM4/src/state/__tests__/save-state.test.ts": {
-    "mtime": 1776878920.5814502,
-    "hash": "7cdfbd95a42d9c4472ec12b5a5450def"
-  },
-  "/Users/chinqan/GEM4/src/state/__tests__/state-machine.test.ts": {
-    "mtime": 1778255171.2429543,
-    "hash": "2f6308cb7facdf858949891bc6ff9d5e"
-  },
-  "/Users/chinqan/GEM4/src/state/__tests__/state-machine.property.test.ts": {
-    "mtime": 1778255171.2427223,
-    "hash": "f40804e75da02a7fd5dc2945276de608"
-  },
   "/Users/chinqan/GEM4/src/audio/synth-sfx.ts": {
     "mtime": 1778177179.9246943,
     "hash": "a6dd5117eca4c8112719a2922f12991c"
@@ -344,32 +240,16 @@
     "hash": "50a264134bd8d0816feade025380412e"
   },
   "/Users/chinqan/GEM4/src/audio/sfx-player.ts": {
-    "mtime": 1778314350.8084142,
-    "hash": "de916bf8e2d511bf15d5a76292c66899"
+    "mtime": 1778318176.6816292,
+    "hash": "43f5d3a4a2f6fb5051164048a0917711"
   },
   "/Users/chinqan/GEM4/src/audio/adaptive-music.ts": {
     "mtime": 1776900237.021851,
     "hash": "2d46700622c63ebd9dc229a8113fcab6"
   },
   "/Users/chinqan/GEM4/src/audio/audio-system.ts": {
-    "mtime": 1778314295.6412156,
-    "hash": "3086ada52f19ab00e76f015b90142065"
-  },
-  "/Users/chinqan/GEM4/src/audio/__tests__/buses.test.ts": {
-    "mtime": 1778161685.8697994,
-    "hash": "02438d5e90b72b1ca2965ecfcf022c16"
-  },
-  "/Users/chinqan/GEM4/src/audio/__tests__/adaptive-music.test.ts": {
-    "mtime": 1778161685.8694534,
-    "hash": "3d34a6daeb0a958ad8cd592b3fffa575"
-  },
-  "/Users/chinqan/GEM4/src/audio/__tests__/synth-sfx.test.ts": {
-    "mtime": 1778161685.8699198,
-    "hash": "38a689f513e5e23662871c422540aa3b"
-  },
-  "/Users/chinqan/GEM4/src/audio/__tests__/audio-system.test.ts": {
-    "mtime": 1778314415.0230618,
-    "hash": "2cc5b6b2bd9c1b1e64ac27862a98f7ea"
+    "mtime": 1778318184.2200646,
+    "hash": "b7f5326b08711d1753e7b4262b3f87b7"
   },
   "/Users/chinqan/GEM4/src/rendering/filters.ts": {
     "mtime": 1776896816.326286,
@@ -396,8 +276,8 @@
     "hash": "8ae8be70999c90e1b42dadbeeed4fc83"
   },
   "/Users/chinqan/GEM4/src/rendering/board-animator.ts": {
-    "mtime": 1778260121.7644815,
-    "hash": "ec089948e65fadf05de2fe336627940c"
+    "mtime": 1778318221.2547688,
+    "hash": "3ba8a3e45d0524d11e2af0f2f90d7873"
   },
   "/Users/chinqan/GEM4/src/rendering/app-layers.ts": {
     "mtime": 1776895983.8618214,
@@ -414,30 +294,6 @@
   "/Users/chinqan/GEM4/src/rendering/gem-sprites.ts": {
     "mtime": 1778255171.2422101,
     "hash": "330c44ea1e54537a003e184b2d3cff9c"
-  },
-  "/Users/chinqan/GEM4/src/rendering/__tests__/animation-flow.test.ts": {
-    "mtime": 1778161685.878893,
-    "hash": "e5f1cc8c3a4bce9e986db68a428c6408"
-  },
-  "/Users/chinqan/GEM4/src/rendering/__tests__/filters.test.ts": {
-    "mtime": 1778161685.879282,
-    "hash": "fe0c097447f574d39dea7ef69b29239b"
-  },
-  "/Users/chinqan/GEM4/src/rendering/__tests__/animations.test.ts": {
-    "mtime": 1778161685.8790188,
-    "hash": "7b07990e87d53b4785d48bd263e45195"
-  },
-  "/Users/chinqan/GEM4/src/rendering/__tests__/particles.test.ts": {
-    "mtime": 1778161685.8796318,
-    "hash": "d7f9d131fc30a7db98f8d05231413ed3"
-  },
-  "/Users/chinqan/GEM4/src/rendering/__tests__/board-animator.test.ts": {
-    "mtime": 1778259560.8385844,
-    "hash": "d43f6fea2b95c274b8b008cebbf7a083"
-  },
-  "/Users/chinqan/GEM4/src/rendering/__tests__/viewport.test.ts": {
-    "mtime": 1777129670.2771382,
-    "hash": "6d73a7c7e303902f7d5d873e257eaa27"
   },
   "/Users/chinqan/GEM4/src/telemetry/events.ts": {
     "mtime": 1776901996.5584416,
@@ -460,8 +316,8 @@
     "hash": "678e2c351f051fa5685633e111afbd1e"
   },
   "/Users/chinqan/GEM4/src/ui-dom/settings/settings-form.ts": {
-    "mtime": 1776901210.1981933,
-    "hash": "3797cc66876d770640a34c98147f2058"
+    "mtime": 1778318332.164348,
+    "hash": "0f5273444f2d11c7c60027915911e887"
   },
   "/Users/chinqan/GEM4/src/ui-dom/settings/index.ts": {
     "mtime": 1776901215.6153064,
@@ -526,30 +382,6 @@
   "/Users/chinqan/GEM4/gdd/2026-05-08-consolidated-requirements.md": {
     "mtime": 1778255171.2170036,
     "hash": "b8b72aa92b0dbe0d643a4fdcd5e7ddf0"
-  },
-  "/Users/chinqan/GEM4/gdd/registries/placeholders.md": {
-    "mtime": 1776781948.3318017,
-    "hash": "ea180d7269f160fddcdcef5c416978d3"
-  },
-  "/Users/chinqan/GEM4/gdd/registries/README.md": {
-    "mtime": 1776781948.3309565,
-    "hash": "96a46c6112e1891b58ee52a30486b912"
-  },
-  "/Users/chinqan/GEM4/gdd/registries/terms.md": {
-    "mtime": 1776781948.3320544,
-    "hash": "f3772e1dc701f855164a52050d6ce2aa"
-  },
-  "/Users/chinqan/GEM4/gdd/registries/open-questions.md": {
-    "mtime": 1776781948.331575,
-    "hash": "36fb7df435c8b4a30065ff886362ca56"
-  },
-  "/Users/chinqan/GEM4/gdd/registries/numbers.md": {
-    "mtime": 1776781948.331269,
-    "hash": "3b61226094748f2e705bc4d965ff4180"
-  },
-  "/Users/chinqan/GEM4/gdd/registries/types.md": {
-    "mtime": 1776781948.332272,
-    "hash": "7af5b24e5a08d0cd215ee94dc67a4edf"
   },
   "/Users/chinqan/GEM4/gdd/audio-outsource/event_sound_mapping.md": {
     "mtime": 1778315364.8519478,

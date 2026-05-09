@@ -285,5 +285,7 @@ export class ScreenRouter {
     this.clearScreen();
     this.activeScreen = screen;
     this.config.getUiLayer().addChild(screen);
+    // Play page transition sound
+    import('../audio/sfx-player').then(({ playPageTransition }) => playPageTransition());
   }
 }

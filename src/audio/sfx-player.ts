@@ -125,15 +125,52 @@ export function playLevelFail(): void {
   playEvent('level.fail');
 }
 
-/** 播放組合音效 */
-export function playCombo(): void {
-  // 通用 combo — 使用 bomb.bomb 作為 fallback
-  playEvent('combo.bomb.bomb');
+/** 播放組合音效（依 combo 類型選擇對應音效） */
+export function playCombo(comboType?: string): void {
+  switch (comboType) {
+    case 'bomb.bomb':
+      playEvent('combo.bomb.bomb');
+      break;
+    case 'line.line':
+      playEvent('combo.line.line');
+      break;
+    case 'bomb.line':
+      playEvent('combo.bomb.line');
+      break;
+    case 'bomb.colour':
+      playEvent('combo.bomb.colour');
+      break;
+    case 'line.colour':
+    case 'colour.line':
+      playEvent('combo.line.colour');
+      break;
+    case 'colour.colour':
+      playEvent('combo.colour.colour');
+      break;
+    case 'colour.bomb':
+      playEvent('combo.bomb.colour');
+      break;
+    default:
+      playEvent('combo.bomb.bomb');
+      break;
+  }
 }
 
-/** 播放特殊寶石生成音效 */
-export function playSpecialSpawn(): void {
-  playEvent('special.spawn.bomb');
+/** 播放特殊寶石生成音效（依類型） */
+export function playSpecialSpawn(kind?: string): void {
+  switch (kind) {
+    case 'lineH':
+    case 'lineV':
+      playEvent('special.spawn.line');
+      break;
+    case 'colour':
+      playEvent('special.spawn.colour');
+      break;
+    case 'area':
+    default:
+      playEvent('special.spawn.bomb');
+      break;
+  }
 }
 
 /** 播放特殊寶石啟動音效 */
@@ -186,4 +223,66 @@ export function preloadStoneSfx(): Promise<void> {
 /** 播放石頭碎裂音效（相容介面，改為播放 match.base） */
 export function playStone(_level: number): void {
   playEvent('match.base');
+}
+
+// ─── 新增：未實作事件的便捷函式 ─────────────────────────────
+
+/** 播放 match.special（特殊寶石消除強調音） */
+export function playMatchSpecial(): void {
+  playEvent('match.special');
+}
+
+/** 播放星星授予音效 */
+export function playStarGrant(star: 1 | 2 | 3): void {
+  playEvent(`stars.grant${star}`);
+}
+
+/** 播放世界完成音效 */
+export function playWorldComplete(): void {
+  playEvent('world.complete');
+}
+
+/** 播放新關卡解鎖音效 */
+export function playNewLevelUnlock(): void {
+  playEvent('new.level.unlock');
+}
+
+/** 播放重洗音效 */
+export function playReshuffle(): void {
+  playEvent('ui.reshuffle');
+}
+
+/** 播放 UI 點擊音效（強） */
+export function playUiClickStrong(): void {
+  playEvent('ui.click.strong');
+}
+
+/** 播放 UI hover 音效 */
+export function playUiHover(): void {
+  playEvent('ui.hover');
+}
+
+/** 播放 Modal 開啟音效 */
+export function playModalOpen(): void {
+  playEvent('ui.modal.open');
+}
+
+/** 播放 Modal 關閉音效 */
+export function playModalClose(): void {
+  playEvent('ui.modal.close');
+}
+
+/** 播放 Toast 顯示音效 */
+export function playToastShow(): void {
+  playEvent('ui.toast.show');
+}
+
+/** 播放 Toast 隱藏音效 */
+export function playToastHide(): void {
+  playEvent('ui.toast.hide');
+}
+
+/** 播放頁面切換音效 */
+export function playPageTransition(): void {
+  playEvent('ui.page.transition');
 }

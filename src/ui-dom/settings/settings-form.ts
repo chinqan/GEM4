@@ -206,6 +206,9 @@ export class SettingsForm {
   show(): void {
     if (this.root) return;
 
+    // Play modal open sound
+    import('../../audio/sfx-player').then(({ playModalOpen }) => playModalOpen());
+
     // 注入 CSS
     this.styleEl = document.createElement('style');
     this.styleEl.textContent = SETTINGS_CSS;
@@ -263,6 +266,10 @@ export class SettingsForm {
   /** 隱藏設定表單 */
   hide(): void {
     this.cancelBinding();
+
+    // Play modal close sound
+    import('../../audio/sfx-player').then(({ playModalClose }) => playModalClose());
+
     if (this.root) {
       document.body.removeChild(this.root);
       this.root = null;

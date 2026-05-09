@@ -102,6 +102,13 @@
       "input_tokens": 0,
       "output_tokens": 0,
       "files": 140
+    },
+    {
+      "date": "2026-05-09T09:23:49.139657+00:00",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "files": 9,
+      "note": "code-only update (AST only)"
     }
   ],
   "total_input_tokens": 279725,

@@ -226,6 +226,13 @@ export class AudioSystem {
       }),
     );
 
+    // 重洗觸發
+    this.unsubscribers.push(
+      bus.on('reshuffle.triggered', () => {
+        this.sfx.play('ui.reshuffle');
+      }),
+    );
+
     // Intensity 更新 → 驅動自適應音樂
     this.unsubscribers.push(
       bus.on('intensity.updated', (e) => {

@@ -65,6 +65,9 @@ export function createToast(config: ToastConfig): ToastHandle {
     viewportHeight,
   } = config;
 
+  // Play toast show sound
+  import('../../audio/sfx-player').then(({ playToastShow }) => playToastShow());
+
   const container = new Container();
   container.label = 'toast';
 
@@ -124,6 +127,9 @@ export function createToast(config: ToastConfig): ToastHandle {
   function dismiss(): void {
     if (!visible) return;
     visible = false;
+
+    // Play toast hide sound
+    import('../../audio/sfx-player').then(({ playToastHide }) => playToastHide());
 
     if (dismissTimer !== null) {
       clearTimeout(dismissTimer);
