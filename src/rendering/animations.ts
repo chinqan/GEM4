@@ -11,9 +11,6 @@ import {
   CASCADE_DROP_MS_PER_ROW,
   SPECIAL_SPAWN_SHOCKWAVE_MS,
   SPECIAL_ACTIVATION_MS,
-  CHAIN_SATURATION_PULSE_MS,
-  CHAIN_SATURATION_THRESHOLD,
-  CHAIN_SATURATION_BOOST,
   MARK_GLOW_ALPHA_MIN,
   MARK_GLOW_ALPHA_MAX,
   MARK_PULSE_CYCLE_MS,
@@ -419,67 +416,6 @@ export function createSpecialActivationEffect(
     complete(): void {
       fxLayer.removeChild(container);
       container.destroy({ children: true });
-    },
-  };
-}
-
-// ─── 22.7 Chain ≥3 飽和脈衝 ────────────────────────────────
-
-/**
- * 建立 chain ≥3 飽和脈衝動畫：300ms ColorMatrix 飽和度增強。
- *
- * 當連鎖達到 3 或以上時，對整個棋盤圖層套用短暫的飽和度提升，
- * 產生視覺衝擊感。
- *
- * @param chainCount 目前連鎖數
- * @param boardLayer 棋盤容器（套用 ColorMatrixFilter）
- */
-export function createChainSaturationPulse(
-  chainCount: number,
-  boardLayer: Container,
-): Animation | null {
-  if (chainCount < CHAIN_SATURATION_THRESHOLD) return null;
-
-  const filter = new ColorMatrixFilter();
-  const existingFilters = boardLayer.filters ? [...boardLayer.filters] : [];
-  boardLayer.filters = [...existingFilters, filter];
-
-  // 飽和度隨連鎖數微增（上限 3.0）
-  const maxSaturation = Math.min(
-    CHAIN_SATURATION_BOOST + (chainCount - CHAIN_SATURATION_THRESHOLD) * 0.2,
-    3.0,
-  );
-
-  return {
-    elapsed: 0,
-    duration: CHAIN_SATURATION_PULSE_MS,
-
-    update(dtMs: number): boolean {
-      this.elapsed += dtMs;
-      const progress = Math.min(this.elapsed / this.duration, 1);
-
-      // 快速升高、緩慢回落的脈衝曲線
-      const pulse = progress < 0.3
-        ? smoothstep(progress / 0.3)
-        : 1 - smoothstep((progress - 0.3) / 0.7);
-
-      const saturation = lerp(1, maxSaturation, pulse);
-
-      // 重置 matrix 並套用飽和度
-      filter.reset();
-      filter.saturate(saturation - 1, false);
-
-      return this.elapsed >= this.duration;
-    },
-
-    complete(): void {
-      // 移除 filter
-      if (boardLayer.filters) {
-        boardLayer.filters = boardLayer.filters.filter((f) => f !== filter);
-        if (boardLayer.filters.length === 0) {
-          boardLayer.filters = null;
-        }
-      }
     },
   };
 }

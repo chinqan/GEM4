@@ -886,11 +886,14 @@ export class BoardAnimator {
         },
       });
     }
-    // Mark Phase SFX: play spawn sound when first target converts to Line Bomb
-    if (markSchedule.length > 0) {
+    // Mark Phase SFX: per-target spawn sound aligned with each gem's transform.
+    // Volume decays so stacked plays don't pile up; rate detunes per-index for variety.
+    for (let i = 0; i < markSchedule.length; i++) {
+      const vol = Math.max(0.35, 1 - i * 0.12);
+      const rate = 1 + ((i % 4) - 1.5) * 0.04;
       tasks.push({
-        time: markSchedule[0].arriveAt,
-        fn: () => { playEvent('special.spawn.line'); },
+        time: markSchedule[i].arriveAt,
+        fn: () => { playEvent('special.spawn.line', vol, rate); },
       });
     }
 
@@ -1129,11 +1132,14 @@ export class BoardAnimator {
         },
       });
     }
-    // Mark Phase SFX: play spawn sound when first target converts to Area Bomb
-    if (markSchedule.length > 0) {
+    // Mark Phase SFX: per-target spawn sound aligned with each gem's transform.
+    // Volume decays so stacked plays don't pile up; rate detunes per-index for variety.
+    for (let i = 0; i < markSchedule.length; i++) {
+      const vol = Math.max(0.35, 1 - i * 0.12);
+      const rate = 1 + ((i % 4) - 1.5) * 0.04;
       tasks.push({
-        time: markSchedule[0].arriveAt,
-        fn: () => { playEvent('special.spawn.bomb'); },
+        time: markSchedule[i].arriveAt,
+        fn: () => { playEvent('special.spawn.bomb', vol, rate); },
       });
     }
 

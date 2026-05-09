@@ -61,6 +61,9 @@ export class ScreenRouter {
 
     splash.eventMode = 'static';
     splash.on('pointertap', () => {
+      // Splash tap is the mandatory user gesture that unlocks AudioContext —
+      // kick off SFX preload here so Howls are decoded before first gameplay.
+      void import('../audio/sfx-player').then(({ preloadAllMapped }) => preloadAllMapped());
       this.config.transitionTo({ kind: 'menu' });
     });
   }

@@ -17,7 +17,8 @@
     "validate-budgets": "node build-tools/validate-budgets.mjs",
     "validate-production": "node build-tools/validate-production.mjs",
     "perf-validation": "node build-tools/perf-validation.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "ci": "npm run lint && npm run type-check && npm run test:ci && npm run build && npm run validate-production && npm run perf-validation"
   },
   "keywords": [],
   "author": "",

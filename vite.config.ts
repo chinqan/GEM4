@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   test: {
     exclude: ['node_modules', 'dist', 'e2e', '.kiro'],
   },
@@ -35,6 +35,8 @@ export default defineConfig({
   define: {
     __TELEMETRY_ENDPOINT__: JSON.stringify(process.env.VITE_TELEMETRY_ENDPOINT ?? ''),
     __BUILD_VERSION__: JSON.stringify(process.env.VITE_BUILD_VERSION ?? '0.0.0'),
-    __ENABLE_DEVTOOLS__: JSON.stringify(process.env.VITE_ENABLE_DEVTOOLS ?? 'false'),
+    __ENABLE_DEVTOOLS__: JSON.stringify(
+      process.env.VITE_ENABLE_DEVTOOLS ?? (command === 'serve' ? 'true' : 'false'),
+    ),
   },
-});
+}));
