@@ -228,12 +228,12 @@ export function playLevelStart(): void {
   playEvent('level.start');
 }
 
-/** 預載音效（相容 synth-sfx 的 preloadStoneSfx） */
+/** Preload alias kept for index.ts boot wiring. */
 export function preloadStoneSfx(): Promise<void> {
   return preloadAllMapped();
 }
 
-/** 播放石頭碎裂音效（相容介面，改為播放 match.base） */
+/** Stone-crack alias kept for the dev SFX test panel in index.ts. */
 export function playStone(_level: number): void {
   playEvent('match.base');
 }
