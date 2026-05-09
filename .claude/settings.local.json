@@ -1,21 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run *)",
-      "Bash(npx vitest *)",
-      "Bash(npx tsc *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
       "Bash(open *)",
-      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3001/)",
-      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/)",
-      "Bash(graphify export *)",
-      "Bash(graphify benchmark *)",
-      "Bash(awk '/^## God Nodes|^## Surprising Connections|^## Suggested Questions/{flag=1} /^## /{ if\\($0 !~ /God Nodes|Surprising|Suggested Questions/\\) flag=0 } flag' graphify-out/GRAPH_REPORT.md)",
-      "Bash(graphify claude *)",
-      "Bash(graphify query *)",
-      "Bash(awk -F: '$1 < 1203 {x=$0} END{print x}')",
-      "Bash(pkill -f \"vite\")",
-      "Bash(lsof -ti:3000,3001)",
-      "Bash(xargs kill -9)"
+      "Bash(curl *)",
+      "Bash(graphify *)",
+      "Bash(pkill *)",
+      "Bash(lsof *)",
+      "Bash(git *)",
+      "Bash(python3 *)",
+      "Bash(xargs *)",
+      "Bash(awk *)"
     ]
   }
 }

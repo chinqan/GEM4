@@ -112,12 +112,12 @@
     "hash": "81e3016dd0ed5212e7a0aec24455c52b"
   },
   "/Users/chinqan/GEM4/src/integration/screen-router.ts": {
-    "mtime": 1778318227.8838785,
-    "hash": "95f0a2a376bed2c1f40f2b560ceb2cf9"
+    "mtime": 1778335213.4198024,
+    "hash": "9a7eba98e764b42cf75a3afdc0bcb5b9"
   },
   "/Users/chinqan/GEM4/src/integration/game-integration.ts": {
-    "mtime": 1778318254.7735124,
-    "hash": "c810e668bb1ec616ca744c4575f4f448"
+    "mtime": 1778329859.1055598,
+    "hash": "769e996d905f8f30c15b1b1b6286c40b"
   },
   "/Users/chinqan/GEM4/src/game/runtime/endless.ts": {
     "mtime": 1776901379.392903,
@@ -251,10 +251,6 @@
     "mtime": 1778318184.2200646,
     "hash": "b7f5326b08711d1753e7b4262b3f87b7"
   },
-  "/Users/chinqan/GEM4/src/rendering/filters.ts": {
-    "mtime": 1776896816.326286,
-    "hash": "011ca86a1fb9b45b4f70c5c6eb6e370a"
-  },
   "/Users/chinqan/GEM4/src/rendering/board-renderer.ts": {
     "mtime": 1778172731.4788759,
     "hash": "9c4d2b4598018e9569666f7dfb44d344"
@@ -268,16 +264,16 @@
     "hash": "76a2a611a7fd77d93dcd2814aa33eb29"
   },
   "/Users/chinqan/GEM4/src/rendering/particles.ts": {
-    "mtime": 1776951891.1815133,
-    "hash": "04a633a600aed6a7897b7f9c7e1cf1fd"
+    "mtime": 1778337102.8358567,
+    "hash": "679c4b918cf38127a76f10d00a47a80b"
   },
   "/Users/chinqan/GEM4/src/rendering/special-overlay.ts": {
     "mtime": 1776896464.2411954,
     "hash": "8ae8be70999c90e1b42dadbeeed4fc83"
   },
   "/Users/chinqan/GEM4/src/rendering/board-animator.ts": {
-    "mtime": 1778326113.9457676,
-    "hash": "f6e6ad3c55ddf9147e9279b2f39e36e4"
+    "mtime": 1778335213.4207695,
+    "hash": "9434dcaadffe44deb93a27531c348237"
   },
   "/Users/chinqan/GEM4/src/rendering/app-layers.ts": {
     "mtime": 1776895983.8618214,
@@ -288,8 +284,8 @@
     "hash": "b3e3c2ac080c9f74c0ff9fb4c2d499b8"
   },
   "/Users/chinqan/GEM4/src/rendering/animations.ts": {
-    "mtime": 1778255171.2416446,
-    "hash": "974f2359989da1950e88ac3075bb4586"
+    "mtime": 1778335102.596124,
+    "hash": "1081a1d5c7d5ab824215a247d21a3ab3"
   },
   "/Users/chinqan/GEM4/src/rendering/gem-sprites.ts": {
     "mtime": 1778255171.2422101,
@@ -384,7 +380,7 @@
     "hash": "b8b72aa92b0dbe0d643a4fdcd5e7ddf0"
   },
   "/Users/chinqan/GEM4/gdd/audio-outsource/event_sound_mapping.md": {
-    "mtime": 1778325066.4760668,
+    "mtime": 1778335003.4583418,
     "hash": "9e880e399a2f79256cc88ca18215b920"
   },
   "/Users/chinqan/GEM4/gdd/audio-outsource/audio-outsource-spec.md": {
