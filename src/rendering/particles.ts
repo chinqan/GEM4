@@ -238,7 +238,10 @@ export class ParticlePool {
       const p = this.active[i];
       p.update(dtMs);
       if (p.isDead) {
-        this.active.splice(i, 1);
+        // Swap-remove: O(1) instead of splice's O(N). Particles are unordered visuals.
+        const last = this.active.length - 1;
+        if (i !== last) this.active[i] = this.active[last];
+        this.active.pop();
         p.reset();
         this.pool.push(p);
       }
@@ -325,6 +328,14 @@ export class MergeParticleSystem {
   private active = false;
   private renderer: Renderer;
 
+  // Display object pools — combos spawn dozens of sprites/graphics per call.
+  // Reusing them avoids per-particle GC + Pixi display-list reflow on
+  // removeChild/addChild. Pooled objects stay parented; we toggle `visible`.
+  private static readonly POOL_CAP = 128;
+  private ringPool: Sprite[] = [];
+  private shardPool: Graphics[] = [];
+  private dotPool: Graphics[] = [];
+
   constructor(parentLayer: Container, renderer: Renderer) {
     this.renderer = renderer;
     this.container = new Container();
@@ -332,16 +343,82 @@ export class MergeParticleSystem {
     parentLayer.addChild(this.container);
   }
 
+  private acquireRing(colour: number): Sprite {
+    let s = this.ringPool.pop();
+    if (!s) {
+      s = new Sprite(getRingTex(this.renderer, colour));
+      s.anchor.set(0.5);
+      s.blendMode = 'add';
+      this.container.addChild(s);
+    } else {
+      s.texture = getRingTex(this.renderer, colour);
+    }
+    s.visible = true;
+    s.scale.set(1, 1);
+    return s;
+  }
+
+  private releaseRing(s: Sprite): void {
+    s.visible = false;
+    if (this.ringPool.length < MergeParticleSystem.POOL_CAP) {
+      this.ringPool.push(s);
+    } else {
+      this.container.removeChild(s);
+      s.destroy();
+    }
+  }
+
+  private acquireShard(): Graphics {
+    let g = this.shardPool.pop();
+    if (!g) {
+      g = new Graphics();
+      g.blendMode = 'add';
+      this.container.addChild(g);
+    }
+    g.clear();
+    g.visible = true;
+    return g;
+  }
+
+  private releaseShard(g: Graphics): void {
+    g.visible = false;
+    if (this.shardPool.length < MergeParticleSystem.POOL_CAP) {
+      this.shardPool.push(g);
+    } else {
+      this.container.removeChild(g);
+      g.destroy();
+    }
+  }
+
+  private acquireDot(): Graphics {
+    let g = this.dotPool.pop();
+    if (!g) {
+      g = new Graphics();
+      g.blendMode = 'add';
+      this.container.addChild(g);
+    }
+    g.clear();
+    g.visible = true;
+    return g;
+  }
+
+  private releaseDot(g: Graphics): void {
+    g.visible = false;
+    if (this.dotPool.length < MergeParticleSystem.POOL_CAP) {
+      this.dotPool.push(g);
+    } else {
+      this.container.removeChild(g);
+      g.destroy();
+    }
+  }
+
   /** 在指定位置產生合成粒子效果 */
   spawn(x: number, y: number, level: number, colour: number): void {
     // ── Ring：擴散光環（Sprite + scale，參考版做法）──
     const ringBaseR = 5;
-    const ring = new Sprite(getRingTex(this.renderer, colour));
-    ring.anchor.set(0.5);
+    const ring = this.acquireRing(colour);
     ring.x = x;
     ring.y = y;
-    ring.blendMode = 'add';
-    this.container.addChild(ring);
 
     this.particles.push({
       type: 'ring',
@@ -364,7 +441,7 @@ export class MergeParticleSystem {
       const sc = 0.32 + Math.random() * 0.26;
       const size = 3 + Math.random() * 3;
 
-      const shard = new Graphics();
+      const shard = this.acquireShard();
       shard.moveTo(0, -size);
       shard.lineTo(size * 0.5, 0);
       shard.lineTo(0, size * 0.6);
@@ -374,8 +451,7 @@ export class MergeParticleSystem {
       shard.position.set(x, y);
       shard.scale.set(sc);
       shard.rotation = Math.random() * Math.PI * 2;
-      shard.blendMode = 'add';
-      this.container.addChild(shard);
+      shard.alpha = 1;
 
       this.particles.push({
         type: 'shard',
@@ -396,12 +472,12 @@ export class MergeParticleSystem {
       const speed = 2 + Math.random() * 7;
       const sz = 2 + Math.random() * 5;
 
-      const dot = new Graphics();
+      const dot = this.acquireDot();
       dot.circle(0, 0, sz);
       dot.fill({ color: colour, alpha: 1 });
       dot.position.set(x, y);
-      dot.blendMode = 'add';
-      this.container.addChild(dot);
+      dot.alpha = 1;
+      dot.scale.set(1, 1);
 
       this.particles.push({
         type: 'dot',
@@ -427,9 +503,14 @@ export class MergeParticleSystem {
       p.life -= p.decay * dtFactor;
 
       if (p.life <= 0) {
-        this.container.removeChild(p.display);
-        p.display.destroy();
-        this.particles.splice(i, 1);
+        // Return display to its pool (kept parented, just hidden) and
+        // swap-remove from the active list — O(1) instead of splice's O(N).
+        if (p.type === 'ring') this.releaseRing(p.display as Sprite);
+        else if (p.type === 'shard') this.releaseShard(p.display as Graphics);
+        else this.releaseDot(p.display as Graphics);
+        const last = this.particles.length - 1;
+        if (i !== last) this.particles[i] = this.particles[last];
+        this.particles.pop();
         continue;
       }
 
