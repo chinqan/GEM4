@@ -213,22 +213,34 @@ describe('AudioSystem', () => {
       expect(playSpy).toHaveBeenCalledWith('chain.wow');
     });
 
-    it('special.spawned 事件觸發 special.spawn SFX', () => {
+    it('special.spawned 事件觸發 special.spawn.* SFX', () => {
       const bus = createMockEventBus();
       const playSpy = vi.spyOn(system.sfx, 'play');
       system.connectEventBus(bus as any);
 
-      bus.emit('special.spawned', {});
-      expect(playSpy).toHaveBeenCalledWith('special.spawn');
+      bus.emit('special.spawned', { type: 'area' });
+      expect(playSpy).toHaveBeenCalledWith('special.spawn.bomb');
+
+      playSpy.mockClear();
+      bus.emit('special.spawned', { type: 'lineH' });
+      expect(playSpy).toHaveBeenCalledWith('special.spawn.line');
+
+      playSpy.mockClear();
+      bus.emit('special.spawned', { type: 'colour' });
+      expect(playSpy).toHaveBeenCalledWith('special.spawn.colour');
     });
 
-    it('combo.triggered 事件觸發 combo.blast SFX', () => {
+    it('combo.triggered 事件觸發對應 combo SFX', () => {
       const bus = createMockEventBus();
       const playSpy = vi.spyOn(system.sfx, 'play');
       system.connectEventBus(bus as any);
 
-      bus.emit('combo.triggered', {});
-      expect(playSpy).toHaveBeenCalledWith('combo.blast');
+      bus.emit('combo.triggered', { type: 'bomb.bomb' });
+      expect(playSpy).toHaveBeenCalledWith('combo.bomb.bomb');
+
+      playSpy.mockClear();
+      bus.emit('combo.triggered', { type: 'colour.colour' });
+      expect(playSpy).toHaveBeenCalledWith('combo.colour.colour');
     });
 
     it('intensity.updated 事件更新內部 intensity', () => {

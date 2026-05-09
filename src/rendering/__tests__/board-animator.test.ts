@@ -56,9 +56,9 @@ vi.mock('pixi.js', () => {
   };
 });
 
-// ─── Mock synth-sfx ─────────────────────────────────────────
+// ─── Mock sfx-player ────────────────────────────────────────
 
-vi.mock('../../audio/synth-sfx', () => ({
+vi.mock('../../audio/sfx-player', () => ({
   playMatchSfx: vi.fn(),
   playSwap: vi.fn(),
   playInvalid: vi.fn(),
@@ -160,7 +160,7 @@ vi.mock('../accessibility', () => ({
   detectPrefersReducedMotion: vi.fn(() => false),
 }));
 
-import { playMatchSfx, playInvalid, playCombo } from '../../audio/synth-sfx';
+import { playMatchSfx, playInvalid, playCombo } from '../../audio/sfx-player';
 import { BoardAnimator } from '../board-animator';
 import type { BoardAnimatorConfig } from '../board-animator';
 

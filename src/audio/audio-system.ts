@@ -101,7 +101,7 @@ export class AudioSystem {
   // ─── EventBus 整合 ────────────────────────────────────
 
   /**
-   * 連接 EventBus，開始監聽遊戲事件並觸發對應 SFX。
+   * 連接 EventBus，開始監聯遊戲事件並觸發對應 SFX。
    * 可在 AudioSystem 建構後再呼叫（延遲綁定）。
    */
   connectEventBus(eventBus: EventBus): void {
@@ -146,24 +146,76 @@ export class AudioSystem {
       }),
     );
 
-    // 特殊寶石生成
+    // 特殊寶石生成 — 依類型播放對應音效
     this.unsubscribers.push(
-      bus.on('special.spawned', () => {
-        this.sfx.play('special.spawn');
+      bus.on('special.spawned', (e) => {
+        switch (e.type) {
+          case 'area':
+            this.sfx.play('special.spawn.bomb');
+            break;
+          case 'lineH':
+          case 'lineV':
+            this.sfx.play('special.spawn.line');
+            break;
+          case 'colour':
+            this.sfx.play('special.spawn.colour');
+            break;
+          default:
+            this.sfx.play('special.spawn.bomb');
+            break;
+        }
       }),
     );
 
-    // 特殊寶石啟動
+    // 特殊寶石啟動 — 依類型播放對應音效
     this.unsubscribers.push(
-      bus.on('special.activated', () => {
-        this.sfx.play('special.activate');
+      bus.on('special.activated', (e) => {
+        switch (e.type) {
+          case 'area':
+            this.sfx.play('special.activate.bomb');
+            break;
+          case 'lineH':
+            this.sfx.play('special.activate.line.h');
+            break;
+          case 'lineV':
+            this.sfx.play('special.activate.line.v');
+            break;
+          case 'colour':
+            this.sfx.play('special.activate.colour');
+            break;
+          default:
+            this.sfx.play('special.activate.bomb');
+            break;
+        }
       }),
     );
 
-    // 組合觸發
+    // 組合觸發 — 依組合類型播放對應音效
     this.unsubscribers.push(
-      bus.on('combo.triggered', () => {
-        this.sfx.play('combo.blast');
+      bus.on('combo.triggered', (e) => {
+        switch (e.type) {
+          case 'bomb.bomb':
+            this.sfx.play('combo.bomb.bomb');
+            break;
+          case 'line.line':
+            this.sfx.play('combo.line.line');
+            break;
+          case 'bomb.line':
+            this.sfx.play('combo.bomb.line');
+            break;
+          case 'colour.bomb':
+            this.sfx.play('combo.bomb.colour');
+            break;
+          case 'colour.line':
+            this.sfx.play('combo.line.colour');
+            break;
+          case 'colour.colour':
+            this.sfx.play('combo.colour.colour');
+            break;
+          default:
+            this.sfx.play('combo.bomb.bomb');
+            break;
+        }
       }),
     );
 

@@ -18,7 +18,8 @@
         "$(cat *",
         "cp *",
         "which *",
-        "/opt/anaconda3/bin/python *"
+        "/opt/anaconda3/bin/python *",
+        "find *"
     ],
     "files.watcherExclude": {
         "**/node_modules/**": true,

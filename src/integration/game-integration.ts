@@ -511,7 +511,7 @@ export class GameIntegration {
 
     // --- Wire level.resolved event ---
     const { SaveManager } = await import('../state/save-state');
-    const { playLevelComplete, playLevelFail } = await import('../audio/synth-sfx');
+    const { playLevelComplete, playLevelFail } = await import('../audio/sfx-player');
 
     const unsubResolved = this.eventBus.on('level.resolved', (e) => {
       if (e.result.cleared) {

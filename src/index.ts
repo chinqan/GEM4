@@ -2,7 +2,7 @@
 // Bootstrap the game and handle fatal errors gracefully.
 
 import { createGame } from './integration/game-integration';
-import { playStone, preloadStoneSfx } from './audio/synth-sfx';
+import { playStone, preloadStoneSfx } from './audio/sfx-player';
 
 function createSfxTestPanel(): void {
   const panel = document.createElement('div');

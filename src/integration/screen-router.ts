@@ -252,6 +252,8 @@ export class ScreenRouter {
     this.setScreen(screen);
   }
 
+  // Audio settings panel removed — outsourced audio is now directly integrated
+
   // ─── Public: Splash Progress ────────────────────────────
 
   updateSplashProgress(progress: number): void {

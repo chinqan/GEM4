@@ -1,0 +1,293 @@
+{
+  "projectName": "Gem SFX",
+  "exportDate": "2026-05-09T07:51:12.759Z",
+  "version": "v1.1",
+  "events": {
+    "gem.pick": [
+      {
+        "file": "gem_pick_01.wav",
+        "duration": 440
+      },
+      {
+        "file": "gem_pick_02.wav",
+        "duration": 326
+      },
+      {
+        "file": "gem_pick_03.wav",
+        "duration": 500
+      }
+    ],
+    "gem.hover": [
+      {
+        "file": "gem_hover_01.wav",
+        "duration": 106
+      }
+    ],
+    "swap.valid": [
+      {
+        "file": "swap_valid_01.wav",
+        "duration": 507
+      },
+      {
+        "file": "swap_valid_02.wav",
+        "duration": 1488
+      }
+    ],
+    "swap.invalid": [
+      {
+        "file": "swap_invalid_01.wav",
+        "duration": 364
+      }
+    ],
+    "match.base": [
+      {
+        "file": "match_base_01.wav",
+        "duration": 541
+      },
+      {
+        "file": "match_base_02.wav",
+        "duration": 866
+      },
+      {
+        "file": "match_base_03.wav",
+        "duration": 214
+      },
+      {
+        "file": "match_base_04.wav",
+        "duration": 899
+      },
+      {
+        "file": "match_base_05.wav",
+        "duration": 419
+      },
+      {
+        "file": "match_base_06.wav",
+        "duration": 408
+      }
+    ],
+    "match.special": [
+      {
+        "file": "match_special_01.wav",
+        "duration": 866
+      },
+      {
+        "file": "match_special_02.wav",
+        "duration": 541
+      }
+    ],
+    "cascade.loop": [
+      {
+        "file": "cascade_loop_01.wav",
+        "duration": 3918
+      }
+    ],
+    "chain.tier1": [
+      {
+        "file": "chain_tier1_01.wav",
+        "duration": 890
+      }
+    ],
+    "chain.tier2": [
+      {
+        "file": "chain_tier2_01.wav",
+        "duration": 1079
+      }
+    ],
+    "chain.tier3": [
+      {
+        "file": "chain_tier3_01.wav",
+        "duration": 2343
+      }
+    ],
+    "chain.wow": [
+      {
+        "file": "chain_wow_01.wav",
+        "duration": 1659
+      }
+    ],
+    "special.spawn.bomb": [
+      {
+        "file": "special_spawn_bomb_01.wav",
+        "duration": 807
+      }
+    ],
+    "special.spawn.line": [
+      {
+        "file": "special_spawn_line_01.wav",
+        "duration": 1323
+      }
+    ],
+    "special.spawn.colour": [
+      {
+        "file": "special_spawn_colour_01.wav",
+        "duration": 1305
+      }
+    ],
+    "special.activate.bomb": [
+      {
+        "file": "special_activate_bomb_01.wav",
+        "duration": 1235
+      },
+      {
+        "file": "special_activate_bomb_02.wav",
+        "duration": 765
+      }
+    ],
+    "special.activate.line.h": [
+      {
+        "file": "special_activate_line_h_01.wav",
+        "duration": 773
+      }
+    ],
+    "special.activate.line.v": [
+      {
+        "file": "special_activate_line_v_01.wav",
+        "duration": 1079
+      }
+    ],
+    "special.activate.colour": [
+      {
+        "file": "special_activate_colour_01.wav",
+        "duration": 786
+      }
+    ],
+    "combo.bomb.bomb": [
+      {
+        "file": "combo_bomb_bomb_01.wav",
+        "duration": 2117
+      }
+    ],
+    "combo.line.line": [
+      {
+        "file": "combo_line_line_01.wav",
+        "duration": 786
+      }
+    ],
+    "combo.bomb.line": [
+      {
+        "file": "combo_bomb_line_01.wav",
+        "duration": 2830
+      }
+    ],
+    "combo.bomb.colour": [
+      {
+        "file": "combo_bomb_colour_01.wav",
+        "duration": 4878
+      }
+    ],
+    "combo.line.colour": [
+      {
+        "file": "combo_line_colour_01.wav",
+        "duration": 3918
+      }
+    ],
+    "combo.colour.colour": [
+      {
+        "file": "combo_colour_colour_01.wav",
+        "duration": 4878
+      }
+    ],
+    "level.start": [
+      {
+        "file": "level_start_01.wav",
+        "duration": 2669
+      }
+    ],
+    "level.complete": [
+      {
+        "file": "level_complete_01.wav",
+        "duration": 5516
+      }
+    ],
+    "level.fail": [
+      {
+        "file": "level_fail_01.wav",
+        "duration": 1819
+      }
+    ],
+    "stars.grant1": [
+      {
+        "file": "stars_grant1_01.wav",
+        "duration": 1005
+      }
+    ],
+    "stars.grant2": [
+      {
+        "file": "stars_grant2_01.wav",
+        "duration": 1416
+      }
+    ],
+    "stars.grant3": [
+      {
+        "file": "stars_grant3_01.wav",
+        "duration": 2068
+      }
+    ],
+    "world.complete": [
+      {
+        "file": "world_complete_01.wav",
+        "duration": 3125
+      }
+    ],
+    "new.level.unlock": [
+      {
+        "file": "new_level_unlock_01.wav",
+        "duration": 2132
+      }
+    ],
+    "ui.reshuffle": [
+      {
+        "file": "ui_reshuffle_01.wav",
+        "duration": 653
+      }
+    ],
+    "ui.click.soft": [
+      {
+        "file": "ui_click_soft_01.wav",
+        "duration": 138
+      }
+    ],
+    "ui.click.strong": [
+      {
+        "file": "ui_click_strong_01.wav",
+        "duration": 131
+      }
+    ],
+    "ui.hover": [
+      {
+        "file": "ui_hover_01.wav",
+        "duration": 138
+      }
+    ],
+    "ui.modal.open": [
+      {
+        "file": "ui_modal_open_01.wav",
+        "duration": 2764
+      }
+    ],
+    "ui.modal.close": [
+      {
+        "file": "ui_modal_close_01.wav",
+        "duration": 138
+      }
+    ],
+    "ui.toast.show": [
+      {
+        "file": "ui_toast_show_01.wav",
+        "duration": 507
+      }
+    ],
+    "ui.toast.hide": [
+      {
+        "file": "ui_toast_hide_01.wav",
+        "duration": 922
+      }
+    ],
+    "ui.page.transition": [
+      {
+        "file": "ui_page_transition_01.wav",
+        "duration": 942
+      }
+    ]
+  }
+}

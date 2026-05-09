@@ -56,7 +56,8 @@ import {
   playCombo,
   playLevelComplete,
   playLevelFail,
-} from '../audio/synth-sfx';
+  playSpecialByKind,
+} from '../audio/sfx-player';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -566,7 +567,7 @@ export class BoardAnimator {
           void this.playAnims([
             createSpecialActivationEffect(ax, ay, 0xffffff, this.layers.boardLayer, dur),
           ]);
-          playMatchSfx(event.clearedCells.length, chain);
+          playSpecialByKind(event.type);
         },
       });
 
@@ -746,7 +747,7 @@ export class BoardAnimator {
           void this.playAnims([
             createSpecialActivationEffect(ax, ay, 0xffffff, this.layers.boardLayer, dur),
           ]);
-          playMatchSfx(event.clearedCells.length, chain);
+          playSpecialByKind(event.type);
         },
       });
     }
@@ -982,7 +983,7 @@ export class BoardAnimator {
           void this.playAnims([
             createSpecialActivationEffect(ax, ay, 0xffffff, this.layers.boardLayer, dur),
           ]);
-          playMatchSfx(event.clearedCells.length, chain);
+          playSpecialByKind(event.type);
         },
       });
     }
@@ -1159,7 +1160,7 @@ export class BoardAnimator {
           void this.playAnims([
             createSpecialActivationEffect(ax, ay, 0xffffff, this.layers.boardLayer, dur),
           ]);
-          playMatchSfx(event.clearedCells.length, chain);
+          playSpecialByKind(event.type);
         },
       });
     }
