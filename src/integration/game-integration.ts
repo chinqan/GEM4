@@ -436,6 +436,9 @@ export class GameIntegration {
     });
     this.activeBoardAnimator = animator;
 
+    // --- Preload all SFX (ensures combo/special sounds are ready on first trigger) ---
+    import('../audio/sfx-player').then(({ preloadAllMapped }) => preloadAllMapped());
+
     // --- Create Board Interaction ---
     const { getCell } = await import('../game/rules/board');
     const { BoardInteraction } = await import('../input/board-interaction');

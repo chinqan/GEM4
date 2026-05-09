@@ -74,11 +74,32 @@ const STALL_TIMEOUT_MS = 10_000;
 const GRAVITY_WAIT_MS = 80;
 
 // ─── Radiation timeline tuning ──────────────────────────────
-// Lightning-like outward radiation from each special's centre. Each cell's
-// match-clear fires when the wave reaches it: arriveAt = startTime +
-// chebyshev(source, cell) * CELL_RADIATION_SPEED_MS.
-// DEBUG: Set very slow (150ms) for visual verification of directional waves.
-const CELL_RADIATION_SPEED_MS = 150;
+
+/** 各類型特殊寶石/組合的輻射擴散速度（ms/格 Chebyshev distance） */
+const RADIATION_SPEED: Record<string, number> = {
+  // 單體特殊寶石
+  lineH:          50,
+  lineV:          50,
+  area:           150,
+  colour:         150,
+
+  // 組合（走 default combo path）
+  'line.line':    50,   // 十字光束 — 快速
+  'bomb.bomb':    120,  // 大範圍爆炸 — 稍慢
+  'bomb.line':    70,   // 介於 bomb 和 line 之間
+
+  // fallback
+  combo:          150,
+};
+
+/** 取得輻射速度（ms/格），找不到時用 150ms */
+function getRadiationSpeed(type: string, comboType?: string): number {
+  if (type === 'combo' && comboType && RADIATION_SPEED[comboType] !== undefined) {
+    return RADIATION_SPEED[comboType];
+  }
+  return RADIATION_SPEED[type] ?? 150;
+}
+
 // Stagger between simultaneous in-match (root) activations so multiple
 // roots don't perfectly overlap.
 const ROOT_STAGGER_MS = 80;
@@ -97,6 +118,7 @@ const AREA_BOMB_CHARGE_MS = 350;
 interface RadiationEvent {
   pos: CellPos;
   type: SpecialActivationKind;
+  comboType?: string;
   clearedCells: CellPos[];
   score: number;
 }
@@ -315,6 +337,7 @@ export class BoardAnimator {
         const root: RadiationEvent = {
           pos,
           type: type as SpecialActivationKind,
+          comboType: result.initialActivation.comboType,
           clearedCells: initialBlast,
           score,
         };
@@ -536,13 +559,14 @@ export class BoardAnimator {
       const isArea = event.type === 'area';
       const isLine = event.type === 'lineH' || event.type === 'lineV';
       const chargeTime = isArea ? AREA_BOMB_CHARGE_MS : 0;
+      const radiationSpeed = getRadiationSpeed(event.type, event.comboType);
 
       if (isArea || isLine) {
         // Show coloured overlay on affected cells
         const overlayCells: CellPos[] = [event.pos, ...event.clearedCells];
         const overlayDuration = isArea
           ? chargeTime
-          : (Math.max(...overlayCells.map(c => this.chebyshev(event.pos, c))) * CELL_RADIATION_SPEED_MS + MATCH_CLEAR_DURATION_MS);
+          : (Math.max(...overlayCells.map(c => this.chebyshev(event.pos, c))) * radiationSpeed + MATCH_CLEAR_DURATION_MS);
         const overlayColour = isArea
           ? BLAST_ZONE_COLOUR_AREA
           : event.type === 'lineH' ? BLAST_ZONE_COLOUR_LINE_H : BLAST_ZONE_COLOUR_LINE_V;
@@ -585,7 +609,7 @@ export class BoardAnimator {
       for (const cell of allCells) {
         const ck = `${cell[0]},${cell[1]}`;
         const dist = this.chebyshev(event.pos, cell);
-        const arriveAt = startTime + chargeTime + dist * CELL_RADIATION_SPEED_MS;
+        const arriveAt = startTime + chargeTime + dist * radiationSpeed;
         if (arriveAt > waveEnd) waveEnd = arriveAt;
 
         // Chain trigger: if the wave reaches another special's source, that
@@ -862,11 +886,11 @@ export class BoardAnimator {
         },
       });
     }
-    // Mark Phase SFX: play combo.line.colour when first target converts
+    // Mark Phase SFX: play spawn sound when first target converts to Line Bomb
     if (markSchedule.length > 0) {
       tasks.push({
         time: markSchedule[0].arriveAt,
-        fn: () => { playEvent('combo.line.colour'); },
+        fn: () => { playEvent('special.spawn.line'); },
       });
     }
 
@@ -951,7 +975,7 @@ export class BoardAnimator {
 
       // Show coloured zone overlay at blast time (fades out over the radiation duration)
       const maxDist = blastZoneCells.reduce((max, cell) => Math.max(max, this.chebyshev(pos, cell)), 0);
-      const radiationDuration = maxDist * CELL_RADIATION_SPEED_MS + MATCH_CLEAR_DURATION_MS;
+      const radiationDuration = maxDist * getRadiationSpeed(direction) + MATCH_CLEAR_DURATION_MS;
       const zoneColour = direction === 'lineH' ? BLAST_ZONE_COLOUR_LINE_H : BLAST_ZONE_COLOUR_LINE_V;
       tasks.push({
         time: blastStartTime,
@@ -990,7 +1014,7 @@ export class BoardAnimator {
       // Schedule each cell's shrink at chebyshev distance * radiation speed from blast time
       for (const cell of lineCells) {
         const dist = this.chebyshev(pos, cell);
-        const arriveAt = blastStartTime + dist * CELL_RADIATION_SPEED_MS;
+        const arriveAt = blastStartTime + dist * getRadiationSpeed(direction);
         tasks.push({
           time: arriveAt,
           fn: () => {
@@ -1105,11 +1129,11 @@ export class BoardAnimator {
         },
       });
     }
-    // Mark Phase SFX: play combo.bomb.colour when first target converts
+    // Mark Phase SFX: play spawn sound when first target converts to Area Bomb
     if (markSchedule.length > 0) {
       tasks.push({
         time: markSchedule[0].arriveAt,
-        fn: () => { playEvent('combo.bomb.colour'); },
+        fn: () => { playEvent('special.spawn.bomb'); },
       });
     }
 

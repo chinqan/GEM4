@@ -109,6 +109,13 @@
       "output_tokens": 0,
       "files": 9,
       "note": "code-only update (AST only)"
+    },
+    {
+      "date": "2026-05-09T11:31:43.845819+00:00",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "files": 2,
+      "note": "code + doc update"
     }
   ],
   "total_input_tokens": 279725,
