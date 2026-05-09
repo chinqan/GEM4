@@ -2,7 +2,7 @@
 
 > **專案**: Gem SFX  
 > **規格版本**: v1.1  
-> **匯出時間**: 2026-05-09T07:51:12.759Z  
+> **匯出時間**: 2026-05-09T11:11:06.411Z  
 > **完成度**: 41/41 事件, 51/51 檔案
 
 ---
@@ -80,7 +80,7 @@
 | 13 | `match.base` | #6 | match_base_06.wav | Royal Kingdom main/boss_pumpkin_destroy_2.wav | 408ms |
 | 14 | `match.special` | #1 | match_special_01.wav | Royal Kingdom main/crystal_destroy_2.wav | 866ms |
 | 15 | `match.special` | #2 | match_special_02.wav | Royal Kingdom download/gem_destroy_1.wav | 541ms |
-| 16 | `cascade.loop` | #1 | cascade_loop_01.wav | Royal Kingdom download/electro_ball_electro_ball_combo.wav | 3918ms |
+| 16 | `cascade.loop` | #1 | cascade_loop_01.wav | AudioClip/ChainsBurst.wav | 1520ms |
 | 17 | `chain.tier1` | #1 | chain_tier1_01.wav | AudioClip/RazorWind.wav | 890ms |
 | 18 | `chain.tier2` | #1 | chain_tier2_01.wav | Royal Kingdom main/power_rush_icon_collect.wav | 1079ms |
 | 19 | `chain.tier3` | #1 | chain_tier3_01.wav | Disney Solitaire Audio/sfx_metaGame_scene_mermaid_mission03_majesticEntrance.wav | 2343ms |

@@ -1,6 +1,6 @@
 {
   "projectName": "Gem SFX",
-  "exportDate": "2026-05-09T07:51:12.759Z",
+  "exportDate": "2026-05-09T11:11:06.411Z",
   "version": "v1.1",
   "events": {
     "gem.pick": [
@@ -78,7 +78,7 @@
     "cascade.loop": [
       {
         "file": "cascade_loop_01.wav",
-        "duration": 3918
+        "duration": 1520
       }
     ],
     "chain.tier1": [

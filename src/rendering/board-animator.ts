@@ -698,11 +698,19 @@ export class BoardAnimator {
         },
       });
     }
+    // Mark Phase SFX: play once when first target is marked
+    if (markSchedule.length > 0) {
+      tasks.push({
+        time: markSchedule[0].arriveAt,
+        fn: () => { playEvent('match.special'); },
+      });
+    }
 
     // ── Brew Phase: schedule brew animations for all marked gems ──
     tasks.push({
       time: phases.brewStartTime,
       fn: () => {
+        playEvent('cascade.loop');
         for (const { pos } of markSchedule) {
           const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
           if (!spr) continue;
@@ -721,8 +729,9 @@ export class BoardAnimator {
     tasks.push({
       time: blastStartTime,
       fn: () => {
-        // Play match sound for the mass destruction
+        // Play dedicated blast sound for colour gem mass destruction
         playMatchSfx(targets.length, chain);
+        playEvent('match.special');
 
         for (const { pos } of markSchedule) {
           const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
@@ -853,11 +862,19 @@ export class BoardAnimator {
         },
       });
     }
+    // Mark Phase SFX: play combo.line.colour when first target converts
+    if (markSchedule.length > 0) {
+      tasks.push({
+        time: markSchedule[0].arriveAt,
+        fn: () => { playEvent('combo.line.colour'); },
+      });
+    }
 
     // ── Brew Phase: schedule brew animations for all converted bombs ──
     tasks.push({
       time: phases.brewStartTime,
       fn: () => {
+        playEvent('cascade.loop');
         for (const { pos } of markSchedule) {
           const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
           if (!spr) continue;
@@ -1088,11 +1105,19 @@ export class BoardAnimator {
         },
       });
     }
+    // Mark Phase SFX: play combo.bomb.colour when first target converts
+    if (markSchedule.length > 0) {
+      tasks.push({
+        time: markSchedule[0].arriveAt,
+        fn: () => { playEvent('combo.bomb.colour'); },
+      });
+    }
 
     // ── Brew Phase: schedule brew animations for all converted bombs ──
     tasks.push({
       time: phases.brewStartTime,
       fn: () => {
+        playEvent('cascade.loop');
         for (const { pos } of markSchedule) {
           const spr = this.boardRenderer.getSprite(pos[0], pos[1]);
           if (!spr) continue;
