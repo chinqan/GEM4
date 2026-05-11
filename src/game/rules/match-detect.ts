@@ -319,7 +319,7 @@ export function mergeRuns(runs: RawRun[]): MatchDescriptor[] {
   for (const [, group] of groups) {
     const cells = mergeManyCells(group);
     const { shape, direction } = classifyGroup(group);
-    const special = determineSpecial(shape, direction);
+    const special = determineSpecial(shape, direction, cells.length);
 
     const desc: MatchDescriptor = {
       cells,
@@ -343,6 +343,7 @@ export function mergeRuns(runs: RawRun[]): MatchDescriptor[] {
 export function determineSpecial(
   shape: MatchShape,
   direction: 'horizontal' | 'vertical',
+  totalCells: number = 0,
 ): SpecialGemType | undefined {
   switch (shape) {
     case 'straight3':
@@ -355,7 +356,8 @@ export function determineSpecial(
     case 'T':
     case 'L':
     case 'cross':
-      return 'area';
+      // ≥7 格的大型 T/L/cross → colour gem；5-6 格 → area bomb
+      return totalCells >= 7 ? 'colour' : 'area';
   }
 }
 

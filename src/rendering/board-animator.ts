@@ -20,6 +20,7 @@ import type {
   DropInfo,
   SpecialActivationEvent,
   GravityResult,
+  BlockerHit,
 } from '../game/runtime/game-session';
 import type { SpecialActivationKind } from './design-tokens';
 
@@ -47,7 +48,7 @@ import {
 } from './design-tokens';
 import { computeStagedPhases } from './staged-blast';
 import { detectPrefersReducedMotion } from './accessibility';
-import { MergeParticleSystem } from './particles';
+import { MergeParticleSystem, JellyParticleSystem } from './particles';
 import { createScorePopup } from '../ui/juice/score-popup';
 import {
   playMatchSfx,
@@ -58,6 +59,8 @@ import {
   playLevelFail,
   playSpecialByKind,
   playEvent,
+  playBlockerImmovable,
+  playJellyHitByLayer,
 } from '../audio/sfx-player';
 
 // ─── Types ──────────────────────────────────────────────────
@@ -140,11 +143,13 @@ export class BoardAnimator {
   private readonly boardRenderer: BoardRenderer;
   private readonly layers: LayerRefs;
   private readonly mergeFx: MergeParticleSystem;
+  private readonly jellyFx: JellyParticleSystem;
 
   constructor(config: BoardAnimatorConfig) {
     this.boardRenderer = config.boardRenderer;
     this.layers = config.layers;
     this.mergeFx = new MergeParticleSystem(config.layers.boardLayer, config.renderer);
+    this.jellyFx = new JellyParticleSystem(config.layers.boardLayer);
   }
 
   // ─── Public: Animate a Swap Result ────────────────────────
@@ -165,9 +170,8 @@ export class BoardAnimator {
     board: Board,
   ): Promise<void> {
     if (!result.valid) {
-      // Invalid swap: play swap animation then revert
       await this.playSwapSlide(from, to);
-      playInvalid();
+      result.type === 'jellyBlocked' ? playBlockerImmovable() : playInvalid();
       await this.playSwapSlide(to, from);
       return;
     }
@@ -231,8 +235,7 @@ export class BoardAnimator {
           1,
         );
 
-        this.boardRenderer.syncFromSnapshot(result.initialActivation.boardSnapshot);
-        await this.playGravityFromResult(gravity, board);
+        await this.afterClear(result.initialActivation.boardSnapshot, gravity, result.initialActivation.blockerHits);
 
       // ── colour.bomb combo: staged Mark → Brew → Blast with area bomb conversion ──
       } else if (type === 'combo' && result.initialActivation.comboType === 'colour.bomb') {
@@ -277,8 +280,7 @@ export class BoardAnimator {
           1,
         );
 
-        this.boardRenderer.syncFromSnapshot(result.initialActivation.boardSnapshot);
-        await this.playGravityFromResult(gravity, board);
+        await this.afterClear(result.initialActivation.boardSnapshot, gravity, result.initialActivation.blockerHits);
 
       // ── colour.colour combo: staged Mark → Brew → Blast for entire board ──
       } else if (type === 'combo' && result.initialActivation.comboType === 'colour.colour') {
@@ -302,8 +304,7 @@ export class BoardAnimator {
           1,
         );
 
-        this.boardRenderer.syncFromSnapshot(result.initialActivation.boardSnapshot);
-        await this.playGravityFromResult(gravity, board);
+        await this.afterClear(result.initialActivation.boardSnapshot, gravity, result.initialActivation.blockerHits);
       } else {
         // Default combo / colour / directBomb path
         // The initial activation's clearedCells is the FULL set (initial blast +
@@ -353,10 +354,10 @@ export class BoardAnimator {
           [],
           colourByPos,
           1,
+          result.initialActivation.blockerHits,
         );
 
-        this.boardRenderer.syncFromSnapshot(result.initialActivation.boardSnapshot);
-        await this.playGravityFromResult(gravity, board);
+        await this.afterClear(result.initialActivation.boardSnapshot, gravity, []);
       }
     } else {
       // Normal swap: play swap SFX
@@ -406,10 +407,10 @@ export class BoardAnimator {
       [],
       colourByPos,
       1,
+      result.blockerHits,
     );
 
-    this.boardRenderer.syncFromSnapshot(result.boardSnapshot);
-    await this.playGravityFromResult(gravity, board);
+    await this.afterClear(result.boardSnapshot, gravity, []);
     await this.animateCascadeSteps(cascadeSteps, board);
   }
 
@@ -420,12 +421,14 @@ export class BoardAnimator {
    */
   update(dtMs: number): void {
     this.mergeFx.update(dtMs);
+    this.jellyFx.update(dtMs);
   }
 
   // ─── Public: Cleanup ──────────────────────────────────────
 
   destroy(): void {
     this.mergeFx.destroy();
+    this.jellyFx.destroy();
   }
 
   // ─── Private: Cascade Steps ─────────────────────────────
@@ -471,10 +474,10 @@ export class BoardAnimator {
         pureMatchCells,
         colourByPos,
         step.chain,
+        step.blockerHits,
       );
 
-      this.boardRenderer.syncFromSnapshot(step.boardSnapshot);
-      await this.playGravityFromResult(step.gravity, board);
+      await this.afterClear(step.boardSnapshot, step.gravity, []);
     }
   }
 
@@ -487,6 +490,27 @@ export class BoardAnimator {
     score: e.score,
   });
 
+  /**
+   * 在清除動畫結束後、重力下落前：
+   * 1. 即時更新 jelly overlay（syncBlockers）
+   * 2. 播放 jelly 粒子特效與音效
+   * 3. 重置寶石 sprite 到下落前狀態（syncFromSnapshot）
+   * 4. 播放重力下落動畫
+   */
+  private async afterClear(
+    snapshot: import('../game/runtime/game-session').BoardSnapshot,
+    gravity: import('../game/runtime/game-session').GravityResult,
+    blockerHits: BlockerHit[],
+  ): Promise<void> {
+    this.boardRenderer.applyBlockerHits(blockerHits);
+    for (const { pos: [col, row], fromLayer, cleared } of blockerHits) {
+      playJellyHitByLayer(cleared ? 1 : fromLayer as 3 | 2 | 1);
+      this.jellyFx.spawn(col * CELL_SIZE + CELL_SIZE / 2, row * CELL_SIZE + CELL_SIZE / 2, cleared);
+    }
+    this.boardRenderer.syncFromSnapshot(snapshot);
+    await this.playGravityFromResult(gravity);
+  }
+
   private chebyshev(a: CellPos, b: CellPos): number {
     return Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]));
   }
@@ -497,6 +521,7 @@ export class BoardAnimator {
     pureMatchCells: ClearedCellInfo[],
     colourByPos: Map<string, GemColour | null>,
     chain: number,
+    blockerHits: BlockerHit[] = [],
   ): Promise<void> {
     const eventByPos = new Map<string, RadiationEvent>();
     for (const e of rootEvents) eventByPos.set(`${e.pos[0]},${e.pos[1]}`, e);
@@ -507,12 +532,32 @@ export class BoardAnimator {
     const tasks: ScheduledTask[] = [];
     let endTime = MATCH_CLEAR_DURATION_MS;
 
+    // Build pos → hit lookup so each cell can fire its blocker update inline.
+    // Every hit pos is guaranteed to appear in either pureMatchCells or an
+    // event's clearedCells, so callers can safely pass [] to afterClear.
+    const blockerHitByPos = new Map<string, BlockerHit>();
+    for (const hit of blockerHits) {
+      blockerHitByPos.set(`${hit.pos[0]},${hit.pos[1]}`, hit);
+    }
+
     // Pure-match cells clear immediately at T+0
     for (const c of pureMatchCells) {
       const k = `${c.pos[0]},${c.pos[1]}`;
       if (animatedClears.has(k)) continue;
       animatedClears.add(k);
       tasks.push({ time: 0, fn: () => this.shrinkCell(c.pos, c.colour, chain) });
+      const pureHit = blockerHitByPos.get(k);
+      if (pureHit) {
+        const [hcol, hrow] = pureHit.pos;
+        tasks.push({
+          time: MATCH_CLEAR_DURATION_MS,
+          fn: () => {
+            this.boardRenderer.applyBlockerHits([pureHit]);
+            playJellyHitByLayer(pureHit.cleared ? 1 : pureHit.fromLayer as 3 | 2 | 1);
+            this.jellyFx.spawn(hcol * CELL_SIZE + CELL_SIZE / 2, hrow * CELL_SIZE + CELL_SIZE / 2, pureHit.cleared);
+          },
+        });
+      }
     }
 
     // Collect async colour gem staged timeline promises to await alongside runTimeline
@@ -626,6 +671,20 @@ export class BoardAnimator {
           time: arriveAt,
           fn: () => this.shrinkCell(cell, colourByPos.get(ck) ?? null, chain),
         });
+        // Fire blocker visual + SFX + particle the moment the wave arrives,
+        // not after the entire radiation finishes.
+        const radHit = blockerHitByPos.get(ck);
+        if (radHit) {
+          const [hcol, hrow] = radHit.pos;
+          tasks.push({
+            time: arriveAt,
+            fn: () => {
+              this.boardRenderer.applyBlockerHits([radHit]);
+              playJellyHitByLayer(radHit.cleared ? 1 : radHit.fromLayer as 3 | 2 | 1);
+              this.jellyFx.spawn(hcol * CELL_SIZE + CELL_SIZE / 2, hrow * CELL_SIZE + CELL_SIZE / 2, radHit.cleared);
+            },
+          });
+        }
       }
 
       // Score popup lands just after the wave's last cell.
@@ -1323,7 +1382,7 @@ export class BoardAnimator {
 
   // ─── Private: Gravity From Result ─────────────────────────
 
-  private async playGravityFromResult(gravity: GravityResult, board: Board): Promise<void> {
+  private async playGravityFromResult(gravity: GravityResult): Promise<void> {
     const dropAnims: Animation[] = [];
 
     for (const drop of gravity.drops) {

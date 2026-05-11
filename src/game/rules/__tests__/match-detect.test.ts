@@ -245,16 +245,17 @@ describe('mergeRuns', () => {
     expect(runs[0].cells.length).toBe(5);
   });
 
-  it('十字形合併（兩個 4 連交叉）', () => {
+  it('十字形合併（兩個 4 連交叉）→ 7 格 → colour gem', () => {
     // Horizontal 4: [0,2],[1,2],[2,2],[3,2]
     // Vertical 4: [2,0],[2,1],[2,2],[2,3]
+    // 4+4-1 = 7 unique cells → ≥7 門檻 → colour gem
     const runs = mergeRuns([
       { cells: [[0, 2], [1, 2], [2, 2], [3, 2]], colour: 'Y', direction: 'horizontal' },
       { cells: [[2, 0], [2, 1], [2, 2], [2, 3]], colour: 'Y', direction: 'vertical' },
     ]);
     expect(runs.length).toBe(1);
     expect(runs[0].shape).toBe('cross');
-    expect(runs[0].spawnsSpecial).toBe('area');
+    expect(runs[0].spawnsSpecial).toBe('colour');
   });
 
   it('不同色的 run 不合併', () => {

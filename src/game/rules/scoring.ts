@@ -29,8 +29,13 @@ export function matchScore(
   shape: MatchShape,
   chain: number,
   cascadeStep: number,
+  totalCells: number = 0,
 ): number {
-  const base = BASE_SCORES[shape];
+  let base = BASE_SCORES[shape];
+  // T/L/cross ≥7 格升級為 Colour Gem，基礎分也對應提升
+  if ((shape === 'T' || shape === 'L' || shape === 'cross') && totalCells >= 7) {
+    base = 400;
+  }
   const mult = chainMultiplier(chain);
   const cascadeBonus = cascadeStep > 0 ? 50 : 0;
   return Math.round(base * mult + cascadeBonus);

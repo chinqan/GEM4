@@ -164,9 +164,10 @@
 |---|---|---|---|
 | 4 連橫 / 縱 | **Line Bomb** (方向 = 原連線方向) | 玩家交換後到達該連線的寶石位置 | 該 4 連的中央格 |
 | 5 連直線 | **Colour Gem** | 玩家交換後到達該連線的寶石位置 | 該 5 連的中央格 |
-| T 形 5 連 | **Area Bomb** | T 形交會點（雙臂共用的那格） | 同左 |
-| L 形 5 連 | **Area Bomb** | L 形轉角點（雙臂共用的那格） | 同左 |
-| 5 連十字 / ≥6 其他形狀 | **Area Bomb** | 形狀幾何中心格 | 同左 |
+| T 形 5–6 連 | **Area Bomb** | T 形交會點（雙臂共用的那格） | 同左 |
+| L 形 5–6 連 | **Area Bomb** | L 形轉角點（雙臂共用的那格） | 同左 |
+| 5 連十字 / 6 格其他形狀 | **Area Bomb** | 形狀幾何中心格 | 同左 |
+| T / L / cross ≥7 格 | **Colour Gem** | 形狀幾何中心格 | 同左 |
 
 #### Overlap 優先序（tie-break）
 
@@ -224,9 +225,9 @@ Combo 觸發位置：兩顆 Special 的中點格為視效原點；清除範圍�
 | 3-match | 60 | 基準 |
 | 4-match (橫 / 縱) | 120 | 並生成 Line Bomb |
 | 5-straight | 200 | 並生成 Colour Gem |
-| T-match | 200 | 並生成 Area Bomb |
-| L-match | 200 | 並生成 Area Bomb |
-| 5-cross / ≥6 其他形狀 | 300 | 並生成 Area Bomb |
+| T-match / L-match（5–6 格） | 200 | 並生成 Area Bomb |
+| 5-cross / 6 格其他形狀 | 300 | 並生成 Area Bomb |
+| T / L / cross ≥7 格 | 400 | 並生成 Colour Gem |
 | Cascade step bonus | +50 / step | 每個 cascade sub-step 額外加分 |
 | Remaining moves bonus | 1000 / 剩餘手數 | 關卡完成時一次性加分 |
 

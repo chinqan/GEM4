@@ -8,7 +8,7 @@
 import type { Board } from '../rules/board';
 import type { LevelSpec } from '../level/level-spec';
 import type { RngStreams } from '../rules/rng';
-import type { CellPos, GemColour, SpecialGemType, MatchDescriptor, ComboType } from '../../types';
+import type { CellPos, GemColour, SpecialGemType, MatchDescriptor, ComboType, BlockerKind } from '../../types';
 import type { ObjectiveTracker } from '../level/objective';
 import { getCell } from '../rules/board';
 import { detectMatches } from '../rules/match-detect';
@@ -16,7 +16,7 @@ import { applyGravity, fillFromTop, collectDeliveryItems } from '../rules/cascad
 import { matchScore, specialActivationScore, comboScore, remainingMovesBonus, remainingTimeBonus } from '../rules/scoring';
 import { resolveCombo, comboKey } from '../rules/combo-matrix';
 import { activateColourGem, activateLineBomb, activateAreaBomb, processSpecialActivations } from '../rules/special-gems';
-import { CollectTracker, DropTracker, createTracker, calculateStars } from '../level/objective';
+import { CollectTracker, ClearTracker, DropTracker, createTracker, calculateStars } from '../level/objective';
 
 // ─── Result Types ───────────────────────────────────────────
 
@@ -53,6 +53,15 @@ export interface GravityResult {
   deliveryCollected: DeliveryCollected[];
 }
 
+/** Per-cell jelly blocker change recorded at game-logic time */
+export interface BlockerHit {
+  pos: CellPos;
+  /** Layer count BEFORE this hit */
+  fromLayer: number;
+  /** True if the jelly was fully removed (layers → 0) */
+  cleared: boolean;
+}
+
 /** A single cascade step (match → clear → gravity) */
 export interface CascadeStep {
   chain: number;
@@ -70,6 +79,8 @@ export interface CascadeStep {
   preClearSnapshot: BoardSnapshot;
   /** Board snapshot AFTER gravity + fill (for gravity drop animation) */
   boardSnapshot: BoardSnapshot;
+  /** Jelly blocker changes that occurred during this step (for per-step visual update) */
+  blockerHits: BlockerHit[];
 }
 
 /** Lightweight board snapshot for animation rendering */
@@ -86,7 +97,7 @@ export interface BoardSnapshotCell {
 }
 
 /** Swap type discriminator */
-export type SwapType = 'normal' | 'combo' | 'colour' | 'directBomb' | 'invalid';
+export type SwapType = 'normal' | 'combo' | 'colour' | 'directBomb' | 'invalid' | 'jellyBlocked';
 
 /** Result of a swap operation */
 export interface SwapResult {
@@ -108,6 +119,8 @@ export interface SwapResult {
     gravity: GravityResult;
     /** Board snapshot after gravity + fill (for correct animation rendering) */
     boardSnapshot: BoardSnapshot;
+    /** Jelly blocker changes from the initial activation blast */
+    blockerHits: BlockerHit[];
   };
   /** Cascade steps after the initial clear */
   cascadeSteps: CascadeStep[];
@@ -129,6 +142,8 @@ export interface ActivateResult {
   gravity: GravityResult;
   /** Board snapshot after gravity + fill (for correct animation rendering) */
   boardSnapshot: BoardSnapshot;
+  /** Jelly blocker changes from the initial activation blast */
+  blockerHits: BlockerHit[];
   cascadeSteps: CascadeStep[];
   totalScore: number;
   endCondition: EndCondition | null;
@@ -306,6 +321,47 @@ export class GameSessionController {
       }
     };
     walk(this.tracker);
+  }
+
+  private addClearedToTracker(blocker: BlockerKind, count: number): void {
+    const walk = (t: any) => {
+      if (t instanceof ClearTracker) t.addCleared(blocker, count);
+      if (t && typeof t.getTrackers === 'function') {
+        for (const sub of t.getTrackers()) walk(sub);
+      }
+    };
+    walk(this.tracker);
+  }
+
+  /**
+   * Process jelly blockers for cleared cells: reduce layers by 1, remove at 0.
+   * Notifies ClearTracker for each jelly fully cleared.
+   * Each position is processed at most once per call (deduped by Set).
+   */
+  private processBlockers(clearedCells: CellPos[]): BlockerHit[] {
+    const processed = new Set<string>();
+    const hits: BlockerHit[] = [];
+    let jellyCleared = 0;
+    for (const pos of clearedCells) {
+      const key = `${pos[0]},${pos[1]}`;
+      if (processed.has(key)) continue;
+      processed.add(key);
+      const cell = getCell(this.board, pos);
+      if (cell?.blocker?.kind === 'jelly') {
+        const fromLayer = cell.blocker.layers;
+        const newLayers = fromLayer - 1;
+        if (newLayers <= 0) {
+          cell.blocker = null;
+          jellyCleared++;
+          hits.push({ pos, fromLayer, cleared: true });
+        } else {
+          cell.blocker = { kind: 'jelly', layers: newLayers as 1 | 2 | 3 };
+          hits.push({ pos, fromLayer, cleared: false });
+        }
+      }
+    }
+    if (jellyCleared > 0) this.addClearedToTracker('jelly', jellyCleared);
+    return hits;
   }
 
   /** Test mode: randomly convert some newly-filled gems to specials (~4% chance per cell) */
@@ -600,7 +656,7 @@ export class GameSessionController {
 
       // Calculate score
       let stepScore = 0;
-      for (const m of matches) stepScore += matchScore(m.shape, chain, 0);
+      for (const m of matches) stepScore += matchScore(m.shape, chain, 0, m.cells.length);
       this._score += stepScore;
 
       // Snapshot colours before clearing
@@ -696,6 +752,11 @@ export class GameSessionController {
       const actualCleared = clearedCells.filter(([c, r]) => clearedSet.has(`${c},${r}`));
       const passiveActivations = this.handlePassiveActivations(actualCleared, chain, spawnPosSet, specialSnapshot);
 
+      // Blocker processing: reduce jelly layers for all cleared cells (match + specials + passives)
+      const stepBlockerHits: BlockerHit[] = [];
+      stepBlockerHits.push(...this.processBlockers(actualCleared));
+      for (const pe of passiveActivations) stepBlockerHits.push(...this.processBlockers(pe.clearedCells));
+
       // Gravity
       const gravity = this.runGravity();
 
@@ -713,6 +774,7 @@ export class GameSessionController {
         gravity,
         preClearSnapshot,
         boardSnapshot: this.snapshotBoard(),
+        blockerHits: stepBlockerHits,
       });
 
       matches = detectMatches(this.board);
@@ -744,7 +806,7 @@ export class GameSessionController {
       }
       const pool = [...present].sort();
       if (pool.length === 0) {
-        return { valid: false, type: special, pos: at, clearedCells: [], score: 0, passiveActivations: [], gravity: { drops: [], deliveryCollected: [] }, boardSnapshot: { width: this.board.width, height: this.board.height, cells: [] }, cascadeSteps: [], totalScore: 0, endCondition: null };
+        return { valid: false, type: special, pos: at, clearedCells: [], score: 0, passiveActivations: [], gravity: { drops: [], deliveryCollected: [] }, boardSnapshot: { width: this.board.width, height: this.board.height, cells: [] }, blockerHits: [], cascadeSteps: [], totalScore: 0, endCondition: null };
       }
       const target = pool[this.rngStreams.cascadeFill.int(0, pool.length)];
       activeResult = activateColourGem(this.board, at, target);
@@ -780,11 +842,14 @@ export class GameSessionController {
       if (cl) cl.gem = null;
     }
 
+    // Blocker processing: allCleared already merges direct blast + passive cells
+    const blockerHits = this.processBlockers(allCleared);
+
     // Gravity
     const gravity = this.runGravity();
     const activateSnapshot = this.snapshotBoard();
 
-    // Cascade
+    // Cascade (runCascadeLoop handles its own blocker processing per step)
     const cascadeSteps = this.runCascadeLoop(chain);
 
     // Build passive activation events
@@ -813,6 +878,7 @@ export class GameSessionController {
       passiveActivations: passiveEvents,
       gravity,
       boardSnapshot: activateSnapshot,
+      blockerHits,
       cascadeSteps,
       totalScore,
       endCondition,
@@ -832,6 +898,11 @@ export class GameSessionController {
     const toHasContent = cellTo.gem !== null || cellTo.deliveryItem !== null;
     if (!fromHasContent || !toHasContent) {
       return { valid: false, type: 'invalid', movesConsumed: false, cascadeSteps: [], totalScore: 0, endCondition: null };
+    }
+
+    // Jelly blockers are immovable — gems underneath cannot be swapped by the player
+    if (cellFrom.blocker?.kind === 'jelly' || cellTo.blocker?.kind === 'jelly') {
+      return { valid: false, type: 'jellyBlocked', movesConsumed: false, cascadeSteps: [], totalScore: 0, endCondition: null };
     }
 
     // Swap gems and delivery items
@@ -931,6 +1002,11 @@ export class GameSessionController {
     const comboExclude = new Set<string>([`${from[0]},${from[1]}`, `${to[0]},${to[1]}`]);
     const passiveEvents = this.handlePassiveActivations(comboClearedCells, chain, comboExclude, specialSnapshot);
 
+    // Blocker processing for combo blast + passives
+    const initBlockerHits: BlockerHit[] = [];
+    initBlockerHits.push(...this.processBlockers(comboClearedCells));
+    for (const pe of passiveEvents) initBlockerHits.push(...this.processBlockers(pe.clearedCells));
+
     // Gravity + cascade
     const comboGravity = this.runGravity();
     const comboSnapshot = this.snapshotBoard();
@@ -962,6 +1038,7 @@ export class GameSessionController {
         passiveActivations: passiveEvents,
         gravity: comboGravity,
         boardSnapshot: comboSnapshot,
+        blockerHits: initBlockerHits,
       },
       cascadeSteps,
       totalScore: this._score - scoreBeforeSwap,
@@ -1003,6 +1080,11 @@ export class GameSessionController {
     const colourExclude = new Set<string>([`${colourGemPos[0]},${colourGemPos[1]}`]);
     const passiveEvents = this.handlePassiveActivations(colourClearedCells, chain, colourExclude, specialSnapshot);
 
+    // Blocker processing for colour gem blast + passives
+    const initBlockerHits: BlockerHit[] = [];
+    initBlockerHits.push(...this.processBlockers(colourClearedCells));
+    for (const pe of passiveEvents) initBlockerHits.push(...this.processBlockers(pe.clearedCells));
+
     // Gravity + cascade
     const colourGravity = this.runGravity();
     const colourBoardSnapshot = this.snapshotBoard();
@@ -1032,6 +1114,7 @@ export class GameSessionController {
         passiveActivations: passiveEvents,
         gravity: colourGravity,
         boardSnapshot: colourBoardSnapshot,
+        blockerHits: initBlockerHits,
       },
       cascadeSteps,
       totalScore: this._score - scoreBeforeSwap,
@@ -1098,13 +1181,18 @@ export class GameSessionController {
     // Score: bomb activation + match score
     let actScore = specialActivationScore(activationResult.clearedCells.length, chain, false);
     for (const m of concurrentMatches) {
-      actScore += matchScore(m.shape, chain, 0);
+      actScore += matchScore(m.shape, chain, 0, m.cells.length);
     }
     this._score += actScore;
 
     // Passive activations
     const directExclude = new Set<string>([`${bombPos[0]},${bombPos[1]}`]);
     const passiveEvents = this.handlePassiveActivations(activatedCells, chain, directExclude, specialSnapshot);
+
+    // Blocker processing for bomb blast + passives
+    const initBlockerHits: BlockerHit[] = [];
+    initBlockerHits.push(...this.processBlockers(activatedCells));
+    for (const pe of passiveEvents) initBlockerHits.push(...this.processBlockers(pe.clearedCells));
 
     // Gravity + cascade
     const bombGravity = this.runGravity();
@@ -1136,6 +1224,7 @@ export class GameSessionController {
         passiveActivations: passiveEvents,
         gravity: bombGravity,
         boardSnapshot: bombSnapshot,
+        blockerHits: initBlockerHits,
       },
       cascadeSteps,
       totalScore: this._score - scoreBeforeSwap,
@@ -1189,7 +1278,7 @@ export class GameSessionController {
 
       // Score
       let stepScore = 0;
-      for (const m of matches) stepScore += matchScore(m.shape, chain, 0);
+      for (const m of matches) stepScore += matchScore(m.shape, chain, 0, m.cells.length);
       this._score += stepScore;
 
       // Colour snapshot
@@ -1277,6 +1366,11 @@ export class GameSessionController {
       const actualCleared = clearedCells.filter(([c, r]) => clearedSet.has(`${c},${r}`));
       const passiveActivations = this.handlePassiveActivations(actualCleared, chain, spawnPosSet, specialSnapshot);
 
+      // Blocker processing for this normal-swap step (match + specials + passives)
+      const stepBlockerHits: BlockerHit[] = [];
+      stepBlockerHits.push(...this.processBlockers(actualCleared));
+      for (const pe of passiveActivations) stepBlockerHits.push(...this.processBlockers(pe.clearedCells));
+
       // Gravity
       const gravity = this.runGravity();
 
@@ -1293,6 +1387,7 @@ export class GameSessionController {
         gravity,
         preClearSnapshot,
         boardSnapshot: this.snapshotBoard(),
+        blockerHits: stepBlockerHits,
       });
 
       matches = detectMatches(this.board);
