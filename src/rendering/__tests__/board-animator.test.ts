@@ -77,6 +77,11 @@ vi.mock('../particles', () => ({
     update: vi.fn(),
     clear: vi.fn(),
   })),
+  JellyParticleSystem: vi.fn().mockImplementation(() => ({
+    spawn: vi.fn(),
+    update: vi.fn(),
+    destroy: vi.fn(),
+  })),
 }));
 
 // ─── Mock animations ────────────────────────────────────────

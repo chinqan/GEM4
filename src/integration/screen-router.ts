@@ -77,7 +77,7 @@ export class ScreenRouter {
       endlessUnlocked: false,
       onPlay: () => this.config.transitionTo({ kind: 'worldMap', worldId: 1 }),
       onEndless: () => this.config.transitionTo({ kind: 'endless' }),
-      onTestMode: () => this.config.transitionTo({ kind: 'game', levelId: -1 }),
+      onTestMode: (levelId: number) => this.config.transitionTo({ kind: 'game', levelId }),
       onSettings: () => this.config.transitionTo({ kind: 'settings', returnTo: this.config.getCurrentState() } as any),
       onCredits: () => this.config.transitionTo({ kind: 'credits' }),
     });

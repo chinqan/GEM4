@@ -1,17 +1,23 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm *)",
-      "Bash(npx *)",
+      "Bash(npm run *)",
+      "Bash(npx vitest *)",
+      "Bash(npx tsc *)",
       "Bash(open *)",
       "Bash(curl *)",
       "Bash(graphify *)",
+      "Bash(awk *)",
       "Bash(pkill *)",
-      "Bash(lsof *)",
-      "Bash(git *)",
-      "Bash(python3 *)",
-      "Bash(xargs *)",
-      "Bash(awk *)"
+      "Bash(lsof -ti:3000,3001)",
+      "Bash(xargs kill -9)",
+      "Bash(claude --version)",
+      "Bash(sed *)",
+      "Bash(xargs ls -la)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Read(//Users/chinqan-mac/.claude/**)"
     ]
   }
 }

@@ -2,7 +2,7 @@ import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { Board } from '../game/rules/board';
 import type { CellPos } from '../types';
 import type { LayerRefs } from './app-layers';
-import type { BoardSnapshot } from '../game/runtime/game-session';
+import type { BoardSnapshot, BlockerHit } from '../game/runtime/game-session';
 import { GemSpriteFactory, computeShimmerAlpha } from './gem-sprites';
 import type { GemSprite } from './gem-sprites';
 import {
@@ -38,6 +38,7 @@ export class BoardRenderer {
   private readonly sprites: Map<string, GemSprite> = new Map();
   private readonly deliverySprites: Map<string, Container> = new Map();
   private readonly blockerSprites: Map<string, Container> = new Map();
+  private readonly blockerLayerCache: Map<string, number> = new Map();
   private readonly selectionRingGfx: Graphics;
   private readonly selectionGlowGfx: Graphics;
 
@@ -184,17 +185,29 @@ export class BoardRenderer {
         }
         activeBlockerKeys.add(key);
         let overlay = this.blockerSprites.get(key);
+
+        // For jelly, recreate the sprite when the layer count changes (each layer has its own PNG)
+        if (overlay && cell.blocker.kind === 'jelly') {
+          if (this.blockerLayerCache.get(key) !== cell.blocker.layers) {
+            this.layers.glowLayer.removeChild(overlay);
+            overlay.destroy({ children: true });
+            overlay = undefined;
+            this.blockerSprites.delete(key);
+            this.blockerLayerCache.delete(key);
+          }
+        }
+
         if (!overlay) {
-          overlay = this.createBlockerOverlay(cell.blocker.kind);
+          const layers = cell.blocker.kind === 'jelly' ? cell.blocker.layers : undefined;
+          overlay = this.createBlockerOverlay(cell.blocker.kind, layers);
           this.blockerSprites.set(key, overlay);
           this.layers.glowLayer.addChild(overlay);
+          if (cell.blocker.kind === 'jelly') {
+            this.blockerLayerCache.set(key, cell.blocker.layers);
+          }
         }
-        // jelly: alpha 隨剩餘層數淡化
-        if (cell.blocker.kind === 'jelly') {
-          overlay.alpha = 0.55 + 0.15 * cell.blocker.layers;
-        } else {
-          overlay.alpha = 0.85;
-        }
+
+        overlay.alpha = 0.85;
         overlay.position.set(
           col * CELL_SIZE + CELL_SIZE / 2,
           row * CELL_SIZE + CELL_SIZE / 2,
@@ -381,6 +394,70 @@ export class BoardRenderer {
   }
 
   /**
+   * 即時更新 jelly blocker overlay（不重建寶石 sprite）。
+   *
+   * 比對 blockerLayerCache 與當前 board 狀態，
+   * 重建層數已變化的 overlay，並回傳受影響位置供特效播放。
+   */
+  syncBlockers(board: Board): { reduced: Array<{ pos: CellPos; fromLayer: number }>; cleared: CellPos[] } {
+    const reduced: Array<{ pos: CellPos; fromLayer: number }> = [];
+    const cleared: CellPos[] = [];
+
+    for (const [key, cachedLayers] of this.blockerLayerCache) {
+      const [colStr, rowStr] = key.split(',');
+      const col = parseInt(colStr);
+      const row = parseInt(rowStr);
+      const cell = board.cells[col]?.[row];
+      if (!cell) continue;
+
+      const blocker = cell.blocker;
+      if (!blocker || blocker.kind !== 'jelly') {
+        // Jelly fully cleared
+        cleared.push([col, row]);
+        this.removeBlockerSprite(key);
+        this.blockerLayerCache.delete(key);
+      } else if (blocker.layers !== cachedLayers) {
+        // Layer reduced — record fromLayer (layer count before hit), swap overlay
+        reduced.push({ pos: [col, row], fromLayer: cachedLayers });
+        this.removeBlockerSprite(key);
+        const overlay = this.createBlockerOverlay('jelly', blocker.layers);
+        this.blockerSprites.set(key, overlay);
+        this.layers.glowLayer.addChild(overlay);
+        overlay.alpha = 0.85;
+        overlay.position.set(col * CELL_SIZE + CELL_SIZE / 2, row * CELL_SIZE + CELL_SIZE / 2);
+        this.blockerLayerCache.set(key, blocker.layers);
+      }
+    }
+
+    return { reduced, cleared };
+  }
+
+  /**
+   * 直接套用預先記錄的 jelly blocker 變化（不與 board 比對）。
+   * 由 afterClear 呼叫，確保 overlay 在正確的 cascade step 更新。
+   */
+  applyBlockerHits(hits: BlockerHit[]): void {
+    for (const { pos, fromLayer, cleared } of hits) {
+      const [col, row] = pos;
+      const key = cellKey(col, row);
+      if (!this.blockerLayerCache.has(key)) continue;
+      if (cleared) {
+        this.removeBlockerSprite(key);
+        this.blockerLayerCache.delete(key);
+      } else {
+        const newLayer = (fromLayer - 1) as 1 | 2 | 3;
+        this.removeBlockerSprite(key);
+        const overlay = this.createBlockerOverlay('jelly', newLayer);
+        this.blockerSprites.set(key, overlay);
+        this.layers.glowLayer.addChild(overlay);
+        overlay.alpha = 0.85;
+        overlay.position.set(col * CELL_SIZE + CELL_SIZE / 2, row * CELL_SIZE + CELL_SIZE / 2);
+        this.blockerLayerCache.set(key, newLayer);
+      }
+    }
+  }
+
+  /**
    * 取得所有 sprite 的迭代器。
    */
   getAllSprites(): IterableIterator<GemSprite> {
@@ -401,6 +478,12 @@ export class BoardRenderer {
       overlay.destroy({ children: true });
     }
     this.deliverySprites.clear();
+    for (const overlay of this.blockerSprites.values()) {
+      this.layers.glowLayer.removeChild(overlay);
+      overlay.destroy({ children: true });
+    }
+    this.blockerSprites.clear();
+    this.blockerLayerCache.clear();
     this.setSelection(null);
     this.shimmerTime = 0;
   }
@@ -445,16 +528,19 @@ export class BoardRenderer {
     }
   }
 
-  /** 建立 blocker overlay（依 kind 選 PNG） */
-  private createBlockerOverlay(kind: 'jelly' | 'lock' | 'generator' | 'unstable'): Container {
-    const path =
-      kind === 'jelly'
-        ? 'assets/blockers/jelly.png'
-        : kind === 'lock'
-          ? 'assets/blockers/lock.png'
-          : kind === 'unstable'
-            ? 'assets/blockers/unstable.png'
-            : 'assets/blockers/stone.png';
+  /** 建立 blocker overlay（依 kind 選 PNG；jelly 依層數選 layer1~3.png） */
+  private createBlockerOverlay(kind: 'jelly' | 'lock' | 'generator' | 'unstable', layers?: number): Container {
+    let path: string;
+    if (kind === 'jelly') {
+      const l = Math.max(1, Math.min(3, layers ?? 1));
+      path = `assets/items/layer${l}.png`;
+    } else if (kind === 'lock') {
+      path = 'assets/blockers/lock.png';
+    } else if (kind === 'unstable') {
+      path = 'assets/blockers/unstable.png';
+    } else {
+      path = 'assets/blockers/stone.png';
+    }
     const sprite = new Sprite(Texture.from(path));
     sprite.label = `blocker-${kind}`;
     sprite.anchor.set(0.5);

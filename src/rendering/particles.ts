@@ -631,3 +631,84 @@ export function emitSpecialSpawnRing(
     });
   }
 }
+
+// ─── Jelly 障礙粒子特效 ─────────────────────────────────────
+
+/** 單一 jelly 粒子狀態 */
+interface JellyBlob {
+  g: Graphics;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+}
+
+/**
+ * Jelly blocker 命中 / 消除時的果凍噴射效果。
+ *
+ * - hit（層數減少）：6 顆小綠色果凍球，輕快噴出
+ * - cleared（完全消除）：12 顆較大的果凍球，更強烈噴發
+ */
+export class JellyParticleSystem {
+  private readonly blobs: JellyBlob[] = [];
+  private readonly container: Container;
+
+  constructor(parentLayer: Container) {
+    this.container = new Container();
+    this.container.label = 'jelly-fx';
+    parentLayer.addChild(this.container);
+  }
+
+  spawn(x: number, y: number, cleared: boolean): void {
+    const count = cleared ? 12 : 6;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.7;
+      const speed = cleared
+        ? 90 + Math.random() * 85
+        : 55 + Math.random() * 55;
+      const r = cleared ? 3.5 + Math.random() * 3.5 : 2 + Math.random() * 2.5;
+      const life = cleared ? 380 + Math.random() * 120 : 250 + Math.random() * 100;
+      const col = Math.random() < 0.6 ? 0x44ffaa : 0xaaffdd;
+
+      const g = new Graphics();
+      // blob body
+      g.circle(0, 0, r).fill({ color: col, alpha: 0.88 });
+      // inner gloss highlight
+      g.circle(-r * 0.28, -r * 0.28, r * 0.38).fill({ color: 0xffffff, alpha: 0.45 });
+      this.container.addChild(g);
+      g.position.set(x, y);
+
+      this.blobs.push({
+        g,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - (cleared ? 25 : 8),
+        life,
+        maxLife: life,
+      });
+    }
+  }
+
+  update(dtMs: number): void {
+    const drag = Math.pow(0.96, dtMs / 16);
+    const dtSec = dtMs / 1000;
+    for (let i = this.blobs.length - 1; i >= 0; i--) {
+      const b = this.blobs[i];
+      b.vx *= drag;
+      b.vy += 220 * dtSec;
+      b.g.x += b.vx * dtSec;
+      b.g.y += b.vy * dtSec;
+      b.life -= dtMs;
+      const t = b.life / b.maxLife;
+      b.g.alpha = t < 0.35 ? t / 0.35 : 1;
+      if (b.life <= 0) {
+        this.container.removeChild(b.g);
+        b.g.destroy();
+        this.blobs.splice(i, 1);
+      }
+    }
+  }
+
+  destroy(): void {
+    this.container.destroy({ children: true });
+  }
+}

@@ -121,6 +121,8 @@ export interface SwapResult {
     boardSnapshot: BoardSnapshot;
     /** Jelly blocker changes from the initial activation blast */
     blockerHits: BlockerHit[];
+    /** Special gems spawned by concurrent matches during directBomb (pos + type) */
+    spawnInfos?: Array<{ pos: CellPos; type: SpecialGemType }>;
   };
   /** Cascade steps after the initial clear */
   cascadeSteps: CascadeStep[];
@@ -742,6 +744,7 @@ export class GameSessionController {
 
       // Clear all matched cells (excluding spawn positions)
       for (const [c, r] of clearedCells) {
+        if (spawnPosSet.has(`${c},${r}`)) continue;
         if (clearedSet.has(`${c},${r}`)) {
           const cl = getCell(this.board, [c, r]);
           if (cl) cl.gem = null;
@@ -749,7 +752,7 @@ export class GameSessionController {
       }
 
       // Passive activations
-      const actualCleared = clearedCells.filter(([c, r]) => clearedSet.has(`${c},${r}`));
+      const actualCleared = clearedCells.filter(([c, r]) => !spawnPosSet.has(`${c},${r}`) && clearedSet.has(`${c},${r}`));
       const passiveActivations = this.handlePassiveActivations(actualCleared, chain, spawnPosSet, specialSnapshot);
 
       // Blocker processing: reduce jelly layers for all cleared cells (match + specials + passives)
@@ -1162,11 +1165,31 @@ export class GameSessionController {
       const k = `${c},${r}`;
       if (!clearedSet.has(k)) { clearedSet.add(k); activatedCells.push([c, r]); }
     }
-    // Clear match cells that weren't already cleared by the bomb
+    // Concurrent match spawn positions: preserve cells that qualify for a new
+    // special gem. Skip any position already cleared by the bomb's own blast.
+    const spawnPosSet = new Set<string>();
+    const directSpawnInfos: Array<{ pos: CellPos; type: SpecialGemType }> = [];
+    for (const m of concurrentMatches) {
+      if (m.spawnsSpecial && m.spawnAt) {
+        const spKey = `${m.spawnAt[0]},${m.spawnAt[1]}`;
+        if (!clearedSet.has(spKey)) {
+          spawnPosSet.add(spKey);
+          directSpawnInfos.push({ pos: m.spawnAt, type: m.spawnsSpecial });
+          const sc = getCell(this.board, m.spawnAt);
+          if (sc?.gem) {
+            sc.gem.colour = null;
+            sc.gem.special = m.spawnsSpecial;
+          }
+        }
+      }
+    }
+
+    // Clear match cells that weren't already cleared by the bomb (skip spawn positions)
     for (const m of concurrentMatches) {
       this.addCollectToTracker(m.colour, m.cells.length);
       for (const [c, r] of m.cells) {
         const k = `${c},${r}`;
+        if (spawnPosSet.has(k)) continue;
         if (!clearedSet.has(k)) {
           clearedSet.add(k);
           activatedCells.push([c, r]);
@@ -1185,8 +1208,11 @@ export class GameSessionController {
     }
     this._score += actScore;
 
-    // Passive activations
-    const directExclude = new Set<string>([`${bombPos[0]},${bombPos[1]}`]);
+    // Prevent newly-spawned specials from being treated as passive activations
+    for (const spk of spawnPosSet) specialSnapshot.delete(spk);
+
+    // Passive activations — exclude bomb origin AND all spawn positions
+    const directExclude = new Set<string>([`${bombPos[0]},${bombPos[1]}`, ...spawnPosSet]);
     const passiveEvents = this.handlePassiveActivations(activatedCells, chain, directExclude, specialSnapshot);
 
     // Blocker processing for bomb blast + passives
@@ -1225,6 +1251,7 @@ export class GameSessionController {
         gravity: bombGravity,
         boardSnapshot: bombSnapshot,
         blockerHits: initBlockerHits,
+        spawnInfos: directSpawnInfos.length > 0 ? directSpawnInfos : undefined,
       },
       cascadeSteps,
       totalScore: this._score - scoreBeforeSwap,
@@ -1356,6 +1383,7 @@ export class GameSessionController {
 
       // Clear cells
       for (const [c, r] of clearedCells) {
+        if (spawnPosSet.has(`${c},${r}`)) continue;
         if (clearedSet.has(`${c},${r}`)) {
           const cl = getCell(this.board, [c, r]);
           if (cl) cl.gem = null;
@@ -1363,7 +1391,7 @@ export class GameSessionController {
       }
 
       // Passive activations
-      const actualCleared = clearedCells.filter(([c, r]) => clearedSet.has(`${c},${r}`));
+      const actualCleared = clearedCells.filter(([c, r]) => !spawnPosSet.has(`${c},${r}`) && clearedSet.has(`${c},${r}`));
       const passiveActivations = this.handlePassiveActivations(actualCleared, chain, spawnPosSet, specialSnapshot);
 
       // Blocker processing for this normal-swap step (match + specials + passives)

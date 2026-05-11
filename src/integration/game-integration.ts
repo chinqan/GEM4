@@ -238,8 +238,12 @@ export class GameIntegration {
 
       this.phase = 'ready';
 
-      // 8. Transition to menu (after user gesture on splash)
+      // 8. Transition to menu — or jump directly to a level via ?level=<id>
+      const _devLevel = new URLSearchParams(window.location.search).get('level');
       this.transitionTo({ kind: 'menu' });
+      if (_devLevel !== null) {
+        this.transitionTo({ kind: 'game', levelId: parseInt(_devLevel, 10) });
+      }
 
       this.phase = 'running';
     } catch (err) {

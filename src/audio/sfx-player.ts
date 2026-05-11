@@ -299,3 +299,18 @@ export function playToastHide(): void {
 export function playPageTransition(): void {
   playEvent('ui.page.transition');
 }
+
+/** 播放果凍格不能移動的阻擋音效 */
+export function playBlockerImmovable(): void {
+  playEvent('blocker.immovable');
+}
+
+/**
+ * 播放果凍格命中 / 消除音效（WAV 版，依命中前層數選擇事件）。
+ * @param fromLayer - 命中前的層數（3=l3、2=l2、1=clear）
+ */
+export function playJellyHitByLayer(fromLayer: 3 | 2 | 1): void {
+  if (fromLayer === 3) playEvent('jelly.hit.l3');
+  else if (fromLayer === 2) playEvent('jelly.hit.l2');
+  else playEvent('jelly.clear');
+}

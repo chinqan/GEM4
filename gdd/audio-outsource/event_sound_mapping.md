@@ -1,9 +1,9 @@
 # 音效外包挑選對照表
 
 > **專案**: Gem SFX  
-> **規格版本**: v1.1  
-> **匯出時間**: 2026-05-09T11:11:06.411Z  
-> **完成度**: 41/41 事件, 51/51 檔案
+> **規格版本**: v1.2  
+> **匯出時間**: 2026-05-11T04:28:02.838Z  
+> **完成度**: 45/45 事件, 56/56 檔案
 
 ---
 
@@ -58,6 +58,11 @@
 | ✅ | `ui.toast.show` | Toast 通知從邊緣滑入。輕巧的「叮」引起注意但不打擾，像... | 1 | 1 | ui_toast_show_01.wav |
 | ✅ | `ui.toast.hide` | Toast 通知滑出消失。比 show 更安靜，像信件被收起... | 1 | 1 | ui_toast_hide_01.wav |
 | ✅ | `ui.page.transition` | 主要畫面切換（地圖→關卡、關卡→結算）。有方向性的過場 wh... | 1 | 1 | ui_page_transition_01.wav |
+| | **_________** | | | | |
+| ✅ | `blocker.immovable` | 玩家嘗試拖動/交換果凍格中的寶石，操作被阻擋。需要帶有「黏稠... | 1 | 1 | blocker_immovable_01.wav |
+| ✅ | `jelly.hit.l3` | 果凍格被周遭消除波及，從第 3 層（最厚）降至第 2 層。厚... | 1 | 1 | jelly_hit_l3_01.wav |
+| ✅ | `jelly.hit.l2` | 果凍格從第 2 層降至第 1 層（薄層）。比 l3 版更高頻... | 1 | 1 | jelly_hit_l2_01.wav |
+| ✅ | `jelly.clear` | 果凍格完全清除（最後一層消失）。果凍破裂的明亮「啵！」，帶有... | 2 | 2 | jelly_clear_01.wav, jelly_clear_02.wav |
 
 ---
 
@@ -93,12 +98,12 @@
 | 26 | `special.activate.line.h` | #1 | special_activate_line_h_01.wav | Royal Kingdom download/electro_ball_ray_1.wav | 773ms |
 | 27 | `special.activate.line.v` | #1 | special_activate_line_v_01.wav | Royal Kingdom main/power_rush_icon_collect.wav | 1079ms |
 | 28 | `special.activate.colour` | #1 | special_activate_colour_01.wav | Royal Kingdom main/medallion_destroy_2.wav | 786ms |
-| 29 | `combo.bomb.bomb` | #1 | combo_bomb_bomb_01.wav | Royal Kingdom download/steam_bomb_explode.wav | 2117ms |
+| 29 | `combo.bomb.bomb` | #1 | combo_bomb_bomb_01.wav | Royal Kingdom download/attack_cannon_projectile_explode.wav | 3167ms |
 | 30 | `combo.line.line` | #1 | combo_line_line_01.wav | Royal Kingdom main/medallion_destroy_2.wav | 786ms |
-| 31 | `combo.bomb.line` | #1 | combo_bomb_line_01.wav | Royal Kingdom main/hidden_path_explode_mole_3x3.wav | 2830ms |
-| 32 | `combo.bomb.colour` | #1 | combo_bomb_colour_01.wav | Royal Kingdom download/super_electro_ball_electro_ball_combo.wav | 4878ms |
-| 33 | `combo.line.colour` | #1 | combo_line_colour_01.wav | Royal Kingdom download/electro_ball_electro_ball_combo.wav | 3918ms |
-| 34 | `combo.colour.colour` | #1 | combo_colour_colour_01.wav | Royal Kingdom download/super_electro_ball_electro_ball_combo.wav | 4878ms |
+| 31 | `combo.bomb.line` | #1 | combo_bomb_line_01.wav | Royal Kingdom download/steam_bomb_explode.wav | 2117ms |
+| 32 | `combo.bomb.colour` | #1 | combo_bomb_colour_01.wav | Royal Kingdom main/cube_blast_multi_line_6.wav | 2032ms |
+| 33 | `combo.line.colour` | #1 | combo_line_colour_01.wav | Royal Kingdom main/cube_blast_multi_line_6.wav | 2032ms |
+| 34 | `combo.colour.colour` | #1 | combo_colour_colour_01.wav | Royal Kingdom main/hidden_path_explode_mole_directional.wav | 2556ms |
 | 35 | `level.start` | #1 | level_start_01.wav | Royal Kingdom download/new_object_unlocked.wav | 2669ms |
 | 36 | `level.complete` | #1 | level_complete_01.wav | Royal Kingdom download/stinger_level_win_celebration.wav | 5516ms |
 | 37 | `level.fail` | #1 | level_fail_01.wav | Disney Solitaire Audio/level_rolling_carpet_undo.wav | 1819ms |
@@ -116,3 +121,8 @@
 | 49 | `ui.toast.show` | #1 | ui_toast_show_01.wav | Royal Kingdom download/lightball_ray_1.wav | 507ms |
 | 50 | `ui.toast.hide` | #1 | ui_toast_hide_01.wav | Royal Kingdom download/penguin_fall_2.wav | 922ms |
 | 51 | `ui.page.transition` | #1 | ui_page_transition_01.wav | Disney Solitaire Audio/album_transition_between_sets_page_flip.wav | 942ms |
+| 52 | `blocker.immovable` | #1 | blocker_immovable_01.wav | Royal Kingdom main/magic_wall_gemstone_throw_2.wav | 808ms |
+| 53 | `jelly.hit.l3` | #1 | jelly_hit_l3_01.wav | Royal Kingdom main/magic_wall_gemstone_throw_2.wav | 808ms |
+| 54 | `jelly.hit.l2` | #1 | jelly_hit_l2_01.wav | Royal Kingdom download/chain_break_1.wav | 776ms |
+| 55 | `jelly.clear` | #1 | jelly_clear_01.wav | Royal Kingdom main/chain_break_2.wav | 739ms |
+| 56 | `jelly.clear` | #2 | jelly_clear_02.wav | Royal Kingdom download/chain_break_1.wav | 776ms |

@@ -1,4 +1,4 @@
-import type { CellPos, GemColour, Objective, StarBasis, BlockerPlacement } from '../../types';
+import type { CellPos, GemColour, Objective, StarBasis, BlockerPlacement, SpecialGemType } from '../../types';
 
 // ─── 型別定義 ───────────────────────────────────────────────
 
@@ -13,6 +13,8 @@ export interface LevelSpec {
     deliveryCells?: CellPos[];
     /** 傳送道具初始位置（獨立物件，會隨重力掉落至 deliveryCells 完成收集） */
     deliveryItems?: CellPos[];
+    /** 覆蓋隨機填充後的特定格（測試/除錯用） */
+    fixedGems?: Array<{ at: CellPos; colour: GemColour | null; special?: SpecialGemType }>;
   };
   gems: {
     colours: GemColour[];

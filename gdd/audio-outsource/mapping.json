@@ -1,292 +1,320 @@
 {
   "projectName": "Gem SFX",
-  "exportDate": "2026-05-09T11:11:06.411Z",
-  "version": "v1.1",
+  "exportDate": "2026-05-11T04:28:02.838Z",
+  "version": "v1.2",
   "events": {
     "gem.pick": [
       {
-        "file": "gem_pick_01.wav",
+        "file": "audio/gem_pick_01.wav",
         "duration": 440
       },
       {
-        "file": "gem_pick_02.wav",
+        "file": "audio/gem_pick_02.wav",
         "duration": 326
       },
       {
-        "file": "gem_pick_03.wav",
+        "file": "audio/gem_pick_03.wav",
         "duration": 500
       }
     ],
     "gem.hover": [
       {
-        "file": "gem_hover_01.wav",
+        "file": "audio/gem_hover_01.wav",
         "duration": 106
       }
     ],
     "swap.valid": [
       {
-        "file": "swap_valid_01.wav",
+        "file": "audio/swap_valid_01.wav",
         "duration": 507
       },
       {
-        "file": "swap_valid_02.wav",
+        "file": "audio/swap_valid_02.wav",
         "duration": 1488
       }
     ],
     "swap.invalid": [
       {
-        "file": "swap_invalid_01.wav",
+        "file": "audio/swap_invalid_01.wav",
         "duration": 364
       }
     ],
     "match.base": [
       {
-        "file": "match_base_01.wav",
+        "file": "audio/match_base_01.wav",
         "duration": 541
       },
       {
-        "file": "match_base_02.wav",
+        "file": "audio/match_base_02.wav",
         "duration": 866
       },
       {
-        "file": "match_base_03.wav",
+        "file": "audio/match_base_03.wav",
         "duration": 214
       },
       {
-        "file": "match_base_04.wav",
+        "file": "audio/match_base_04.wav",
         "duration": 899
       },
       {
-        "file": "match_base_05.wav",
+        "file": "audio/match_base_05.wav",
         "duration": 419
       },
       {
-        "file": "match_base_06.wav",
+        "file": "audio/match_base_06.wav",
         "duration": 408
       }
     ],
     "match.special": [
       {
-        "file": "match_special_01.wav",
+        "file": "audio/match_special_01.wav",
         "duration": 866
       },
       {
-        "file": "match_special_02.wav",
+        "file": "audio/match_special_02.wav",
         "duration": 541
       }
     ],
     "cascade.loop": [
       {
-        "file": "cascade_loop_01.wav",
+        "file": "audio/cascade_loop_01.wav",
         "duration": 1520
       }
     ],
     "chain.tier1": [
       {
-        "file": "chain_tier1_01.wav",
+        "file": "audio/chain_tier1_01.wav",
         "duration": 890
       }
     ],
     "chain.tier2": [
       {
-        "file": "chain_tier2_01.wav",
+        "file": "audio/chain_tier2_01.wav",
         "duration": 1079
       }
     ],
     "chain.tier3": [
       {
-        "file": "chain_tier3_01.wav",
+        "file": "audio/chain_tier3_01.wav",
         "duration": 2343
       }
     ],
     "chain.wow": [
       {
-        "file": "chain_wow_01.wav",
+        "file": "audio/chain_wow_01.wav",
         "duration": 1659
       }
     ],
     "special.spawn.bomb": [
       {
-        "file": "special_spawn_bomb_01.wav",
+        "file": "audio/special_spawn_bomb_01.wav",
         "duration": 807
       }
     ],
     "special.spawn.line": [
       {
-        "file": "special_spawn_line_01.wav",
+        "file": "audio/special_spawn_line_01.wav",
         "duration": 1323
       }
     ],
     "special.spawn.colour": [
       {
-        "file": "special_spawn_colour_01.wav",
+        "file": "audio/special_spawn_colour_01.wav",
         "duration": 1305
       }
     ],
     "special.activate.bomb": [
       {
-        "file": "special_activate_bomb_01.wav",
+        "file": "audio/special_activate_bomb_01.wav",
         "duration": 1235
       },
       {
-        "file": "special_activate_bomb_02.wav",
+        "file": "audio/special_activate_bomb_02.wav",
         "duration": 765
       }
     ],
     "special.activate.line.h": [
       {
-        "file": "special_activate_line_h_01.wav",
+        "file": "audio/special_activate_line_h_01.wav",
         "duration": 773
       }
     ],
     "special.activate.line.v": [
       {
-        "file": "special_activate_line_v_01.wav",
+        "file": "audio/special_activate_line_v_01.wav",
         "duration": 1079
       }
     ],
     "special.activate.colour": [
       {
-        "file": "special_activate_colour_01.wav",
+        "file": "audio/special_activate_colour_01.wav",
         "duration": 786
       }
     ],
     "combo.bomb.bomb": [
       {
-        "file": "combo_bomb_bomb_01.wav",
-        "duration": 2117
+        "file": "audio/combo_bomb_bomb_01.wav",
+        "duration": 3167
       }
     ],
     "combo.line.line": [
       {
-        "file": "combo_line_line_01.wav",
+        "file": "audio/combo_line_line_01.wav",
         "duration": 786
       }
     ],
     "combo.bomb.line": [
       {
-        "file": "combo_bomb_line_01.wav",
-        "duration": 2830
+        "file": "audio/combo_bomb_line_01.wav",
+        "duration": 2117
       }
     ],
     "combo.bomb.colour": [
       {
-        "file": "combo_bomb_colour_01.wav",
-        "duration": 4878
+        "file": "audio/combo_bomb_colour_01.wav",
+        "duration": 2032
       }
     ],
     "combo.line.colour": [
       {
-        "file": "combo_line_colour_01.wav",
-        "duration": 3918
+        "file": "audio/combo_line_colour_01.wav",
+        "duration": 2032
       }
     ],
     "combo.colour.colour": [
       {
-        "file": "combo_colour_colour_01.wav",
-        "duration": 4878
+        "file": "audio/combo_colour_colour_01.wav",
+        "duration": 2556
       }
     ],
     "level.start": [
       {
-        "file": "level_start_01.wav",
+        "file": "audio/level_start_01.wav",
         "duration": 2669
       }
     ],
     "level.complete": [
       {
-        "file": "level_complete_01.wav",
+        "file": "audio/level_complete_01.wav",
         "duration": 5516
       }
     ],
     "level.fail": [
       {
-        "file": "level_fail_01.wav",
+        "file": "audio/level_fail_01.wav",
         "duration": 1819
       }
     ],
     "stars.grant1": [
       {
-        "file": "stars_grant1_01.wav",
+        "file": "audio/stars_grant1_01.wav",
         "duration": 1005
       }
     ],
     "stars.grant2": [
       {
-        "file": "stars_grant2_01.wav",
+        "file": "audio/stars_grant2_01.wav",
         "duration": 1416
       }
     ],
     "stars.grant3": [
       {
-        "file": "stars_grant3_01.wav",
+        "file": "audio/stars_grant3_01.wav",
         "duration": 2068
       }
     ],
     "world.complete": [
       {
-        "file": "world_complete_01.wav",
+        "file": "audio/world_complete_01.wav",
         "duration": 3125
       }
     ],
     "new.level.unlock": [
       {
-        "file": "new_level_unlock_01.wav",
+        "file": "audio/new_level_unlock_01.wav",
         "duration": 2132
       }
     ],
     "ui.reshuffle": [
       {
-        "file": "ui_reshuffle_01.wav",
+        "file": "audio/ui_reshuffle_01.wav",
         "duration": 653
       }
     ],
     "ui.click.soft": [
       {
-        "file": "ui_click_soft_01.wav",
+        "file": "audio/ui_click_soft_01.wav",
         "duration": 138
       }
     ],
     "ui.click.strong": [
       {
-        "file": "ui_click_strong_01.wav",
+        "file": "audio/ui_click_strong_01.wav",
         "duration": 131
       }
     ],
     "ui.hover": [
       {
-        "file": "ui_hover_01.wav",
+        "file": "audio/ui_hover_01.wav",
         "duration": 138
       }
     ],
     "ui.modal.open": [
       {
-        "file": "ui_modal_open_01.wav",
+        "file": "audio/ui_modal_open_01.wav",
         "duration": 2764
       }
     ],
     "ui.modal.close": [
       {
-        "file": "ui_modal_close_01.wav",
+        "file": "audio/ui_modal_close_01.wav",
         "duration": 138
       }
     ],
     "ui.toast.show": [
       {
-        "file": "ui_toast_show_01.wav",
+        "file": "audio/ui_toast_show_01.wav",
         "duration": 507
       }
     ],
     "ui.toast.hide": [
       {
-        "file": "ui_toast_hide_01.wav",
+        "file": "audio/ui_toast_hide_01.wav",
         "duration": 922
       }
     ],
     "ui.page.transition": [
       {
-        "file": "ui_page_transition_01.wav",
+        "file": "audio/ui_page_transition_01.wav",
         "duration": 942
+      }
+    ],
+    "blocker.immovable": [
+      {
+        "file": "audio/blocker_immovable_01.wav",
+        "duration": 808
+      }
+    ],
+    "jelly.hit.l3": [
+      {
+        "file": "audio/jelly_hit_l3_01.wav",
+        "duration": 808
+      }
+    ],
+    "jelly.hit.l2": [
+      {
+        "file": "audio/jelly_hit_l2_01.wav",
+        "duration": 776
+      }
+    ],
+    "jelly.clear": [
+      {
+        "file": "audio/jelly_clear_01.wav",
+        "duration": 739
+      },
+      {
+        "file": "audio/jelly_clear_02.wav",
+        "duration": 776
       }
     ]
   }

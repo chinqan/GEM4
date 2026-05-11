@@ -33,6 +33,9 @@ import {
   createMarkEffect,
   createBrewAnimation,
   createEnhancedBlastAnimation,
+  createSpecialSpawnShockwave,
+  createSpawnConvergeEffect,
+  SPAWN_CONVERGE_MS,
 } from './animations';
 import {
   CELL_SIZE,
@@ -355,6 +358,7 @@ export class BoardAnimator {
           colourByPos,
           1,
           result.initialActivation.blockerHits,
+          result.initialActivation.spawnInfos ?? [],
         );
 
         await this.afterClear(result.initialActivation.boardSnapshot, gravity, []);
@@ -468,6 +472,13 @@ export class BoardAnimator {
       this.showScorePopup(step.score, step.clearedCells.map(c => c.pos), step.chain);
       this.showComboChainText(step.chain, step.clearedCells.map(c => c.pos));
 
+      // Extract spawn infos: which positions get a new special gem and of what type
+      const spawnInfos = step.matches
+        .filter((m): m is typeof m & { spawnAt: CellPos; spawnsSpecial: SpecialGemType } =>
+          m.spawnAt !== undefined && m.spawnsSpecial !== undefined,
+        )
+        .map(m => ({ pos: m.spawnAt, type: m.spawnsSpecial }));
+
       await this.playRadiationTimeline(
         step.specialActivations.map(this.toRadiationEvent),
         step.passiveActivations.map(this.toRadiationEvent),
@@ -475,6 +486,7 @@ export class BoardAnimator {
         colourByPos,
         step.chain,
         step.blockerHits,
+        spawnInfos,
       );
 
       await this.afterClear(step.boardSnapshot, step.gravity, []);
@@ -515,6 +527,20 @@ export class BoardAnimator {
     return Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]));
   }
 
+  /** 建立單格 snapshot，用於在 timeline 中即時顯示新生成的特殊寶石 */
+  private makeSingleCellSnapshot(pos: CellPos, type: SpecialGemType) {
+    const [col, row] = pos;
+    const cells: any[][] = [];
+    for (let c = 0; c <= col; c++) {
+      cells[c] = [];
+      for (let r = 0; r <= row; r++) {
+        cells[c][r] = { gem: null, isEmpty: false, deliveryItem: false };
+      }
+    }
+    cells[col][row] = { gem: { colour: null, special: type }, isEmpty: false, deliveryItem: false };
+    return { width: col + 1, height: row + 1, cells };
+  }
+
   private async playRadiationTimeline(
     rootEvents: RadiationEvent[],
     passiveEvents: RadiationEvent[],
@@ -522,6 +548,7 @@ export class BoardAnimator {
     colourByPos: Map<string, GemColour | null>,
     chain: number,
     blockerHits: BlockerHit[] = [],
+    spawnInfos: Array<{ pos: CellPos; type: SpecialGemType }> = [],
   ): Promise<void> {
     const eventByPos = new Map<string, RadiationEvent>();
     for (const e of rootEvents) eventByPos.set(`${e.pos[0]},${e.pos[1]}`, e);
@@ -698,6 +725,34 @@ export class BoardAnimator {
       const candidateEnd = waveEnd + MATCH_CLEAR_DURATION_MS + TIMELINE_TAIL_GRACE_MS;
       if (candidateEnd > endTime) endTime = candidateEnd;
     };
+
+    // ── Spawn VFX: converge ring (during clear tail) + reveal + shockwave + SFX ──
+    for (const { pos, type } of spawnInfos) {
+      const [cx, cy] = this.cellToPixel(pos);
+
+      // Converge ring starts 280ms before clear completes → energy gathering cue
+      tasks.push({
+        time: Math.max(0, MATCH_CLEAR_DURATION_MS - SPAWN_CONVERGE_MS),
+        fn: () => {
+          void this.playAnims([createSpawnConvergeEffect(cx, cy, this.layers.boardLayer)]);
+        },
+      });
+
+      // At clear completion: reveal special gem sprite + shockwave + SFX
+      tasks.push({
+        time: MATCH_CLEAR_DURATION_MS,
+        fn: () => {
+          // Update only the spawn cell to show the special gem
+          const snap = this.makeSingleCellSnapshot(pos, type);
+          this.boardRenderer.updateCell(pos[0], pos[1], snap as any);
+          void this.playAnims([createSpecialSpawnShockwave(cx, cy, this.layers.boardLayer)]);
+          const sfxKey = type === 'colour' ? 'special.spawn.colour'
+                       : type === 'area'   ? 'special.spawn.bomb'
+                       :                     'special.spawn.line';
+          playEvent(sfxKey);
+        },
+      });
+    }
 
     // Roots fire with a small stagger so simultaneous in-match specials don't
     // perfectly overlap.

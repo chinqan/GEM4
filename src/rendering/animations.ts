@@ -347,6 +347,50 @@ export function createSpecialSpawnShockwave(
   };
 }
 
+// ─── 22.5b 特殊寶石生成：聚焦效果 ───────────────────────────
+// 從外圍向中心收縮的光環，在消除完成前 280ms 開始播放，
+// 給玩家「能量正在凝聚」的視覺預告，接著由 shockwave 向外擴散確認生成。
+
+const SPAWN_CONVERGE_MS = 280;
+
+export function createSpawnConvergeEffect(
+  x: number,
+  y: number,
+  fxLayer: Container,
+): Animation {
+  const ring = new Graphics();
+  ring.label = 'spawnConverge';
+  ring.position.set(x, y);
+  fxLayer.addChild(ring);
+
+  const maxRadius = CELL_SIZE * 1.5;
+
+  return {
+    elapsed: 0,
+    duration: SPAWN_CONVERGE_MS,
+
+    update(dtMs: number): boolean {
+      this.elapsed += dtMs;
+      const t = Math.min(this.elapsed / this.duration, 1);
+      const radius = maxRadius * (1 - smoothstep(t));
+      const alpha = 0.85 * (1 - t * 0.35);
+
+      ring.clear();
+      ring.circle(0, 0, radius);
+      ring.stroke({ color: 0xffe082, width: 3, alpha });
+
+      return this.elapsed >= this.duration;
+    },
+
+    complete(): void {
+      fxLayer.removeChild(ring);
+      ring.destroy();
+    },
+  };
+}
+
+export { SPAWN_CONVERGE_MS };
+
 // ─── 22.6 特殊寶石啟動效果 ─────────────────────────────────
 
 /**

@@ -57,7 +57,12 @@ export type SfxEvent =
   | 'ui.modal.close'
   | 'ui.toast.show'
   | 'ui.toast.hide'
-  | 'ui.page.transition';
+  | 'ui.page.transition'
+  // 障礙物 — 果凍格
+  | 'blocker.immovable'
+  | 'jelly.hit.l3'
+  | 'jelly.hit.l2'
+  | 'jelly.clear';
 
 /** 單一 SFX 條目的定義 */
 export interface SfxEntry {
@@ -297,6 +302,28 @@ export const DEFAULT_SFX_CATALOG: SfxCatalogDef = {
   'ui.page.transition': {
     src: [sfxSrc('ui_page_transition_01.wav')],
     voiceCap: 1,
+  },
+
+  // ── 障礙物 — 果凍格（WAV 待交付，目前由 jelly-sfx.ts 合成音頂替）──
+  'blocker.immovable': {
+    src: [sfxSrc('blocker_immovable_01.wav')],
+    voiceCap: 2,
+    baseVolume: 0.7,
+  },
+  'jelly.hit.l3': {
+    src: [sfxSrc('jelly_hit_l3_01.wav')],
+    voiceCap: 4,
+  },
+  'jelly.hit.l2': {
+    src: [sfxSrc('jelly_hit_l2_01.wav')],
+    voiceCap: 4,
+  },
+  'jelly.clear': {
+    src: [
+      sfxSrc('jelly_clear_01.wav'),
+      sfxSrc('jelly_clear_02.wav'),
+    ],
+    voiceCap: 4,
   },
 };
 

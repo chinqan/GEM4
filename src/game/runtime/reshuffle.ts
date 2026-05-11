@@ -276,6 +276,7 @@ export function initBoard(spec: LevelSpec, rng: Mulberry32): Board {
     // 6. 檢查至少 1 組有效交換
     const validSwaps = findValidSwaps(board);
     if (validSwaps.length > 0) {
+      applyFixedGems(board, spec.board.fixedGems);
       return board;
     }
 
@@ -302,7 +303,23 @@ export function initBoard(spec: LevelSpec, rng: Mulberry32): Board {
     placeBLockers(fallback, spec.blockers);
   }
   fillBoardNoMatches(fallback, colours, weights, rng);
+  applyFixedGems(fallback, spec.board.fixedGems);
   return fallback;
+}
+
+function applyFixedGems(
+  board: Board,
+  fixedGems: LevelSpec['board']['fixedGems'],
+): void {
+  if (!fixedGems) return;
+  for (const fg of fixedGems) {
+    const cell = getCell(board, fg.at);
+    if (!cell) continue;
+    if (!cell.gem) cell.gem = { colour: null, special: null, locked: false, unstable: null };
+    const gem = cell.gem;
+    gem.colour = fg.colour ?? null;
+    gem.special = fg.special ?? null;
+  }
 }
 
 // ─── 輔助：填充棋盤（無 3 連） ─────────────────────────────

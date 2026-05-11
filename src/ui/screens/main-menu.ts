@@ -4,6 +4,7 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { BG, TEXT_COLOURS, FONT_SIZES, SPACING } from '../theme';
 import { createButton, type UIButton } from '../factory';
+import { createTestModeSelect } from './test-mode-select';
 
 // ─── 型別 ──────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ export interface CreateMainMenuOptions {
   endlessUnlocked?: boolean;
   onPlay?: () => void;
   onEndless?: () => void;
-  onTestMode?: () => void;
+  onTestMode?: (levelId: number) => void;
   onSettings?: () => void;
   onCredits?: () => void;
 }
@@ -109,7 +110,20 @@ export function createMainMenuScreen(options: CreateMainMenuOptions): MainMenuSc
     variant: 'secondary',
     size: 'md',
     width: btnWidth,
-    onClick: onTestMode,
+    onClick: () => {
+      const overlay = createTestModeSelect({
+        width,
+        height,
+        onConfirm: (levelId) => {
+          container.removeChild(overlay);
+          onTestMode?.(levelId);
+        },
+        onCancel: () => {
+          container.removeChild(overlay);
+        },
+      });
+      container.addChild(overlay);
+    },
   });
   testModeButton.position.set(width / 2 - btnWidth / 2, startY + 56 + 44 + btnGap * 2);
   container.addChild(testModeButton);
