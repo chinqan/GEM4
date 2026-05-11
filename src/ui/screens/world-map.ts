@@ -1,7 +1,7 @@
 // ─── 31.3 世界地圖 ──────────────────────────────────────────
 // 關卡節點、星數、鎖定狀態、世界切換。
 
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, Sprite, Text, TextStyle, Texture } from 'pixi.js';
 import { BG, TEXT_COLOURS, FONT_SIZES, SPACING, STAR_COLOURS, WORLD_ACCENTS, RADIUS } from '../theme';
 import { createButton, createStarDisplay, type UIButton, type UIStarDisplay } from '../factory';
 
@@ -241,17 +241,18 @@ function createLevelNode(
   numText.position.set(size / 2, size / 2);
   node.addChild(numText);
 
-  // 鎖定 icon
-  if (data.state === 'locked') {
-    const lockStyle = new TextStyle({
-      fontFamily: 'Inter, sans-serif',
-      fontSize: 10,
-      fill: TEXT_COLOURS.muted,
-    });
-    const lockText = new Text({ text: '🔒', style: lockStyle });
-    lockText.anchor.set(0.5, 0);
-    lockText.position.set(size / 2, size + 2);
-    node.addChild(lockText);
+  // 鎖定/解鎖鑰匙圖示：銀=鎖、金=已解鎖未玩
+  if (data.state === 'locked' || data.state === 'unlocked') {
+    const keyPath =
+      data.state === 'locked' ? 'assets/ui/key-silver.png' : 'assets/ui/key-gold.png';
+    const key = new Sprite(Texture.from(keyPath));
+    key.anchor.set(0.5, 0);
+    const keyTarget = 18;
+    const kw = key.texture.width || 64;
+    const kh = key.texture.height || 64;
+    key.scale.set(keyTarget / Math.max(kw, kh));
+    key.position.set(size / 2, size + 2);
+    node.addChild(key);
   }
 
   // 星星（完成時）

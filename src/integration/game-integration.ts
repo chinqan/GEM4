@@ -424,6 +424,9 @@ export class GameIntegration {
     viewportManager.start(board.width, board.height, CELL_SIZE);
     this.activeViewportManager = viewportManager;
 
+    // World background sprite (fills canvas, behind board)
+    await this.applyWorldBackground(appRefs, spec.worldId);
+
     // Draw grid background
     await this.drawGridBackground(appRefs, board, CELL_SIZE);
 
@@ -656,20 +659,64 @@ export class GameIntegration {
     }
   }
 
+  /**
+   * Apply a world background sprite (full-canvas, cover-fit) into the
+   * background layer. Falls back silently when no asset exists for the world.
+   */
+  private async applyWorldBackground(
+    appRefs: AppRefs,
+    worldId: number,
+  ): Promise<void> {
+    // World-3 → 火山；其他（含測試模式 worldId=-1/0/undefined）→ 草原
+    const path =
+      worldId === 3
+        ? 'assets/worlds/world-3-bg.png'
+        : 'assets/worlds/world-1-bg.png';
+
+    const { Sprite, Assets } = await import('pixi.js');
+    try {
+      const tex = await Assets.load(path);
+      const bg = appRefs.layers.background;
+      bg.removeChildren();
+      const sprite = new Sprite(tex);
+      sprite.label = 'world-bg';
+      sprite.anchor.set(0.5);
+      const canvas = appRefs.app.canvas as HTMLCanvasElement;
+      const cw = canvas.width;
+      const ch = canvas.height;
+      sprite.position.set(cw / 2, ch / 2);
+      // cover-fit: scale to fully cover canvas, preserving aspect ratio
+      const scale = Math.max(cw / tex.width, ch / tex.height);
+      sprite.scale.set(scale);
+      bg.addChild(sprite);
+    } catch {
+      // texture failed to load — leave background empty
+    }
+  }
+
   /** Draw a grid background for the board */
   private async drawGridBackground(
     appRefs: AppRefs,
     board: import('../game/rules/board').Board,
     cellSize: number,
   ): Promise<void> {
-    const { Graphics } = await import('pixi.js');
+    const { Graphics, Sprite, Texture } = await import('pixi.js');
     const grid = new Graphics();
     grid.label = 'grid-bg';
 
     for (let col = 0; col < board.width; col++) {
       for (let row = 0; row < board.height; row++) {
         const cell = board.cells[col][row];
-        if (cell.isEmpty) continue;
+        if (cell.isEmpty) {
+          // 永久空格 → 貼上木板擋牆
+          const plank = new Sprite(Texture.from('assets/items/wood-plank.png'));
+          plank.label = 'gate-plank';
+          plank.position.set(col * cellSize, row * cellSize);
+          plank.width = cellSize;
+          plank.height = cellSize;
+          appRefs.layers.cellLayer.addChild(plank);
+          continue;
+        }
         const x = col * cellSize;
         const y = row * cellSize;
         const isEven = (col + row) % 2 === 0;

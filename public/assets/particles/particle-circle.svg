@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-  <radialGradient id="pg" cx="50%" cy="50%" r="50%">
-    <stop offset="0%" stop-color="white" stop-opacity="1"/>
-    <stop offset="100%" stop-color="white" stop-opacity="0"/>
-  </radialGradient>
-  <circle cx="8" cy="8" r="8" fill="url(#pg)"/>
-</svg>

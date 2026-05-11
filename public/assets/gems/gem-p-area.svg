@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <circle cx="32" cy="32" r="24" fill="#aa44ff"/>
-  <circle cx="28" cy="28" r="13.200000000000001" fill="#aa44ff" opacity="0.5" filter="url(#glow)"/>
-  <polygon points="32,10 38,26 54,26 41,36 46,52 32,42 18,52 23,36 10,26 26,26" fill="white" opacity="0.7" stroke="white" stroke-width="1"/>
-  <defs><filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-</svg>

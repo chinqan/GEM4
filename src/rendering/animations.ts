@@ -145,6 +145,7 @@ export function createSwapAnimation(config: SwapAnimConfig): Animation {
 
     update(dtMs: number): boolean {
       this.elapsed += dtMs;
+      if (!spriteA.position || !spriteB.position) return true;
       const t = smoothstep(Math.min(this.elapsed / this.duration, 1));
 
       spriteA.position.set(lerp(startAx, endAx, t), lerp(startAy, endAy, t));
@@ -154,6 +155,7 @@ export function createSwapAnimation(config: SwapAnimConfig): Animation {
     },
 
     complete(): void {
+      if (!spriteA.position || !spriteB.position) return;
       spriteA.position.set(endAx, endAy);
       spriteB.position.set(endBx, endBy);
     },
@@ -268,6 +270,7 @@ export function createCascadeDropAnimation(config: CascadeDropConfig): Animation
 
     update(dtMs: number): boolean {
       this.elapsed += dtMs;
+      if (!sprite.position) return true;
 
       // 延遲階段：保持在起始位置不動
       if (this.elapsed <= delayMs) {
@@ -294,6 +297,7 @@ export function createCascadeDropAnimation(config: CascadeDropConfig): Animation
     },
 
     complete(): void {
+      if (!sprite.position) return;
       sprite.position.set(startX, endY);
     },
   };

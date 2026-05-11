@@ -1,7 +1,7 @@
 // ─── 31.7 關卡完成畫面 ──────────────────────────────────────
 // 星星動畫、分數明細、下一關/重玩/返回。
 
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, Sprite, Text, TextStyle, Texture } from 'pixi.js';
 import { BG, TEXT_COLOURS, FONT_SIZES, SPACING, RADIUS } from '../theme';
 import { createButton, createStarDisplay, type UIButton, type UIStarDisplay } from '../factory';
 import type { LevelResult } from '../../types';
@@ -70,6 +70,22 @@ export function createLevelCompleteScreen(options: CreateLevelCompleteOptions): 
   panel.fill({ color: BG.panel });
   container.addChild(panel);
 
+  // ── 裝飾邊框（frame.png） ──────────────────────────────
+  const frame = new Sprite(Texture.from('assets/ui/frame.png'));
+  frame.anchor.set(0.5);
+  frame.position.set(panelX + panelW / 2, panelY + panelH / 2);
+  // 9-slice would be ideal; for now scale-fit with margin so border ornament
+  // sits flush around the panel.
+  const frameMargin = 24;
+  const fw = frame.texture.width || 256;
+  const fh = frame.texture.height || 256;
+  frame.scale.set(
+    (panelW + frameMargin * 2) / fw,
+    (panelH + frameMargin * 2) / fh,
+  );
+  frame.alpha = 0.9;
+  container.addChild(frame);
+
   // ── 標題 ──────────────────────────────────────────────
   const worldStyle = new TextStyle({
     fontFamily: 'Inter, "Noto Sans CJK TC", sans-serif',
@@ -97,6 +113,17 @@ export function createLevelCompleteScreen(options: CreateLevelCompleteOptions): 
   const starDisplay = createStarDisplay({ starSize: 28, gap: 16, initialStars: 0 });
   starDisplay.position.set(width / 2 - 58, panelY + 96);
   container.addChild(starDisplay);
+
+  // ── 寶箱獎勵（金=3星、銀=1-2星、0星不顯示） ───────────
+  const chest = new Sprite(Texture.from('assets/ui/chest-silver.png'));
+  chest.anchor.set(0.5);
+  const chestTarget = 64;
+  const cw = chest.texture.width || 256;
+  const ch = chest.texture.height || 256;
+  chest.scale.set(chestTarget / Math.max(cw, ch));
+  chest.position.set(panelX + panelW - 56, panelY + 110);
+  chest.visible = false;
+  container.addChild(chest);
 
   // ── 分數明細 ──────────────────────────────────────────
   const detailStyle = new TextStyle({
@@ -220,6 +247,17 @@ export function createLevelCompleteScreen(options: CreateLevelCompleteOptions): 
     worldText.text = `WORLD ${wId}`;
     levelText.text = `Level ${String(r.levelId).padStart(2, '0')}`;
     starDisplay.setStars(r.stars);
+
+    // 寶箱：3 星金 / 1-2 星銀 / 0 星不顯示
+    if (r.stars >= 3) {
+      chest.texture = Texture.from('assets/ui/chest-gold.png');
+      chest.visible = true;
+    } else if (r.stars >= 1) {
+      chest.texture = Texture.from('assets/ui/chest-silver.png');
+      chest.visible = true;
+    } else {
+      chest.visible = false;
+    }
 
     // Play star grant sounds with staggered timing
     if (r.stars >= 1) {

@@ -1,7 +1,7 @@
 // ─── 31.5 遊戲 HUD ─────────────────────────────────────────
 // 分數、手數/時間、目標進度、暫停按鈕。
 
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, Sprite, Text, TextStyle, Texture } from 'pixi.js';
 import { BG, TEXT_COLOURS, FONT_SIZES, SPACING, RADIUS } from '../theme';
 import {
   createButton,
@@ -243,6 +243,21 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
     chipY + budgetChipH / 2,
   );
   container.addChild(budgetText);
+
+  // 計時關卡：左側貼上時鐘圖示
+  if (mode === 'time') {
+    const clock = new Sprite(Texture.from('assets/ui/clock.png'));
+    clock.anchor.set(0.5);
+    const clockTarget = 22;
+    const cw = clock.texture.width || 64;
+    const ch = clock.texture.height || 64;
+    clock.scale.set(clockTarget / Math.max(cw, ch));
+    clock.position.set(
+      width - budgetChipW - margin - 16,
+      chipY + budgetChipH / 2,
+    );
+    container.addChild(clock);
+  }
 
   // ── 連鎖計數（中央浮動） ─────────────────────────────
   const chainStyle = new TextStyle({

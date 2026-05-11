@@ -212,11 +212,11 @@ registerLevel({
   objective: {
     type: 'multi',
     objectives: [
-      { type: 'score', target: 18000 },
+      { type: 'score', target: 10000 },
       { type: 'drop', target: { count: 3 } },
     ],
   },
-  stars: { one: 18000, two: 28800, three: 45000, basis: 'score' },
+  stars: { one: 10000, two: 15000, three: 18000, basis: 'score' },
 });
 
 // L17 — 盤面變化

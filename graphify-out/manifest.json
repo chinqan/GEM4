@@ -20,8 +20,8 @@
     "hash": "fd1a0632914b2a1e6e2d3836d5518e64"
   },
   "/Users/chinqan/GEM4/src/index.ts": {
-    "mtime": 1778259490.9517279,
-    "hash": "f3504064be7fca2e49fcfe33b8ab937a"
+    "mtime": 1778340693.4213276,
+    "hash": "ef38b1d3103e7dff9d2e88e4dd15d880"
   },
   "/Users/chinqan/GEM4/src/ui/factory.ts": {
     "mtime": 1778318298.3421333,
@@ -44,12 +44,12 @@
     "hash": "5991cc21820801c9b7eb78f6107dc745"
   },
   "/Users/chinqan/GEM4/src/ui/screens/level-complete.ts": {
-    "mtime": 1778318241.2069778,
-    "hash": "7015a15fadd9700f00a931624f79b66d"
+    "mtime": 1778386723.3151166,
+    "hash": "f2e25b19619b091daa51b3fde2ef1145"
   },
   "/Users/chinqan/GEM4/src/ui/screens/world-map.ts": {
-    "mtime": 1776900786.5302045,
-    "hash": "dd27b6fc9478e50c9573421f1ede882e"
+    "mtime": 1778386734.8630514,
+    "hash": "5ee2d8d828bd40f00b7d428d88f86d9b"
   },
   "/Users/chinqan/GEM4/src/ui/screens/main-menu.ts": {
     "mtime": 1778314457.3817291,
@@ -60,8 +60,8 @@
     "hash": "f0e1dbfe02bcb079d3c5def029625af5"
   },
   "/Users/chinqan/GEM4/src/ui/screens/game-hud.ts": {
-    "mtime": 1778255171.2438881,
-    "hash": "73c2eb4ede2a264aa5b9995fbd5a299b"
+    "mtime": 1778386728.565289,
+    "hash": "3e7118c50853d52990b1a47d4c43c12b"
   },
   "/Users/chinqan/GEM4/src/ui/screens/level-fail.ts": {
     "mtime": 1776900907.034323,
@@ -116,8 +116,8 @@
     "hash": "9a7eba98e764b42cf75a3afdc0bcb5b9"
   },
   "/Users/chinqan/GEM4/src/integration/game-integration.ts": {
-    "mtime": 1778329859.1055598,
-    "hash": "769e996d905f8f30c15b1b1b6286c40b"
+    "mtime": 1778386751.089202,
+    "hash": "e72cd25b1a8caf3ad0580953e9554fd1"
   },
   "/Users/chinqan/GEM4/src/game/runtime/endless.ts": {
     "mtime": 1776901379.392903,
@@ -180,8 +180,8 @@
     "hash": "d3eef55b8cb10043f8b01d96bc3c259d"
   },
   "/Users/chinqan/GEM4/src/game/level/levels/world-1.ts": {
-    "mtime": 1777609272.5660217,
-    "hash": "dab04c57f4333bf4897ea0c8922e9900"
+    "mtime": 1778385590.919335,
+    "hash": "a6a3be44d3157f1e7406280b9a0d99c6"
   },
   "/Users/chinqan/GEM4/src/game/level/levels/world-4.ts": {
     "mtime": 1777609272.56674,
@@ -227,10 +227,6 @@
     "mtime": 1776878534.2531192,
     "hash": "dfafc1479d5609044d604f4d533062a6"
   },
-  "/Users/chinqan/GEM4/src/audio/synth-sfx.ts": {
-    "mtime": 1778177179.9246943,
-    "hash": "a6dd5117eca4c8112719a2922f12991c"
-  },
   "/Users/chinqan/GEM4/src/audio/buses.ts": {
     "mtime": 1776900163.6962452,
     "hash": "e12db3f353841975c5fec2a50fe20afa"
@@ -240,16 +236,16 @@
     "hash": "50a264134bd8d0816feade025380412e"
   },
   "/Users/chinqan/GEM4/src/audio/sfx-player.ts": {
-    "mtime": 1778318176.6816292,
-    "hash": "43f5d3a4a2f6fb5051164048a0917711"
+    "mtime": 1778338710.8590555,
+    "hash": "75c7b015cc183ef4da36cf8acb2ae8c4"
   },
   "/Users/chinqan/GEM4/src/audio/adaptive-music.ts": {
     "mtime": 1776900237.021851,
     "hash": "2d46700622c63ebd9dc229a8113fcab6"
   },
   "/Users/chinqan/GEM4/src/audio/audio-system.ts": {
-    "mtime": 1778318184.2200646,
-    "hash": "b7f5326b08711d1753e7b4262b3f87b7"
+    "mtime": 1778338580.0097735,
+    "hash": "83201e3ff11b2abaeea8967fde5b88a6"
   },
   "/Users/chinqan/GEM4/src/rendering/board-renderer.ts": {
     "mtime": 1778172731.4788759,
@@ -284,12 +280,12 @@
     "hash": "b3e3c2ac080c9f74c0ff9fb4c2d499b8"
   },
   "/Users/chinqan/GEM4/src/rendering/animations.ts": {
-    "mtime": 1778335102.596124,
-    "hash": "1081a1d5c7d5ab824215a247d21a3ab3"
+    "mtime": 1778342324.7788637,
+    "hash": "99c3096018036125ceeec3ed664288ba"
   },
   "/Users/chinqan/GEM4/src/rendering/gem-sprites.ts": {
-    "mtime": 1778255171.2422101,
-    "hash": "330c44ea1e54537a003e184b2d3cff9c"
+    "mtime": 1778386708.4525208,
+    "hash": "1cb06d27fec68b5fcd98fcbf6813add6"
   },
   "/Users/chinqan/GEM4/src/telemetry/events.ts": {
     "mtime": 1776901996.5584416,
@@ -324,8 +320,8 @@
     "hash": "89b522c8029bae5a2b4b34061246ac23"
   },
   "/Users/chinqan/GEM4/src/debug/tweakpane.ts": {
-    "mtime": 1776902095.4581203,
-    "hash": "785637a7c86abf77621670b5f412050b"
+    "mtime": 1778385694.2448144,
+    "hash": "655a7c9880b794e585cb411b376031be"
   },
   "/Users/chinqan/GEM4/index.html": {
     "mtime": 1776871979.1792402,

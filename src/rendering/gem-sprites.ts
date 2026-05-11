@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import type { GemColour, SpecialGemType } from '../types';
 import {
   GEM_COLOURS,
@@ -11,12 +11,71 @@ import {
   SHIMMER_ALPHA_MAX,
 } from './design-tokens';
 
+// PNG paths (preloaded by LoadController core bundle). Using direct paths
+// because LoadController currently fetches by URL and does not register
+// PixiJS Assets aliases — Texture.from(url) hits the browser cache.
+const GEM_TEX_PATHS: Record<GemColour, string> = {
+  R: 'assets/gems/r-base.png',
+  O: 'assets/gems/o-base.png',
+  Y: 'assets/gems/y-base.png',
+  G: 'assets/gems/g-base.png',
+  B: 'assets/gems/b-base.png',
+  P: 'assets/gems/p-base.png',
+  W: 'assets/gems/w-base.png',
+};
+const COLOUR_GEM_TEX_PATH = 'assets/gems/rainbow.png';
+const BOMB_TEX_PATH = 'assets/gems/bomb.png';
+const LINE_H_TEX_PATH = 'assets/gems/h-line.png';
+const LINE_V_TEX_PATH = 'assets/gems/v-line.png';
+
+/** Preload all gem/special PNG textures so Texture.from() resolves synchronously. */
+export async function preloadGemTextures(): Promise<void> {
+  const paths = [
+    ...Object.values(GEM_TEX_PATHS),
+    COLOUR_GEM_TEX_PATH,
+    BOMB_TEX_PATH,
+    LINE_H_TEX_PATH,
+    LINE_V_TEX_PATH,
+    'assets/items/water-drop.png',
+    'assets/items/wood-plank.png',
+    'assets/blockers/jelly.png',
+    'assets/blockers/lock.png',
+    'assets/blockers/unstable.png',
+    'assets/blockers/stone.png',
+  ];
+  await Promise.all(paths.map((p) => Assets.load(p).catch(() => null)));
+}
+
+function buildGemSprite(path: string): Sprite {
+  const tex = Texture.from(path);
+  const sprite = new Sprite(tex);
+  sprite.anchor.set(0.5);
+  const target = GEM_RADIUS * 2 * 1.15;
+  const fit = (w: number, h: number) =>
+    sprite.scale.set(target / Math.max(w, h));
+
+  if (tex.width > 1) {
+    fit(tex.width, tex.height);
+  } else {
+    // Texture not yet loaded; assume 256, rescale on the source's update event.
+    fit(256, 256);
+    const onUpdate = () => {
+      if (tex.width > 1) {
+        fit(tex.width, tex.height);
+        tex.source.off('update', onUpdate);
+      }
+    };
+    tex.source.on('update', onUpdate);
+  }
+  return sprite;
+}
+
 // ─── 型別 ──────────────────────────────────────────────────
 
 /** 寶石 sprite 容器，附帶元資料供 BoardRenderer 使用 */
 export interface GemSprite extends Container {
-  /** 寶石主體 Graphics */
-  gemBody: Graphics;
+  /** 寶石主體（Sprite for textured gems, Graphics fallback otherwise） */
+  gemBody: Container;
   /** 特殊寶石覆蓋層（null = 普通寶石） */
   specialOverlay: Graphics | null;
   /** shimmer 高光 Graphics（High preset 用） */
@@ -55,28 +114,17 @@ export class GemSpriteFactory {
     const container = new Container() as GemSprite;
     container.label = `gem-${col}-${row}`;
 
-    // 任何有 special 的寶石都使用獨立道具風格（深色圓底 + emoji）
-    const isSpecial = special !== null;
-
-    // 繪製主體
-    const body = isSpecial
-      ? this.drawSpecialItemBody()
-      : this.drawBody(colour);
+    // Body: textured Sprite for normal gems and bomb/rainbow specials,
+    // Graphics fallback for line specials (no PNG available).
+    const body = this.createBody(colour, special);
     container.addChild(body);
     container.gemBody = body;
 
-    // 特殊寶石用 emoji 圖示
-    if (isSpecial) {
-      const emoji = this.makeSpecialEmoji(special!);
-      container.addChild(emoji);
-    }
+    // gem3 supplies dedicated textures for every special — no emoji needed.
     container.specialOverlay = null;
 
-    // shimmer 高光（預設隱藏，由 BoardRenderer 控制）
-    const shimmer = this.drawShimmerHighlight(colour);
-    shimmer.alpha = 0;
-    container.addChild(shimmer);
-    container.shimmerHighlight = shimmer;
+    // gem3 textures already have baked-in highlights — skip the shimmer overlay.
+    container.shimmerHighlight = null;
 
     // 定位到格子中心
     container.col = col;
@@ -90,6 +138,25 @@ export class GemSpriteFactory {
     container.pivot.set(0, 0);
 
     return container;
+  }
+
+  /**
+   * 依寶石類型回傳合適的主體 Container。
+   * - 普通寶石 → 對應顏色 PNG
+   * - area special → bomb.png
+   * - colour special → 3.png（七彩）
+   * - line specials → Graphics 圓底（emoji 疊在上面）
+   */
+  private createBody(
+    colour: GemColour | null,
+    special: SpecialGemType | null,
+  ): Container {
+    if (special === 'area') return buildGemSprite(BOMB_TEX_PATH);
+    if (special === 'colour') return buildGemSprite(COLOUR_GEM_TEX_PATH);
+    if (special === 'lineH') return buildGemSprite(LINE_H_TEX_PATH);
+    if (special === 'lineV') return buildGemSprite(LINE_V_TEX_PATH);
+    if (colour) return buildGemSprite(GEM_TEX_PATHS[colour]);
+    return this.drawBody(colour);
   }
 
   /** 獨立特殊道具的底盤(深色圓 + 金邊) */

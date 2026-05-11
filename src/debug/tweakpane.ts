@@ -83,6 +83,15 @@ export async function createDebugPanel(): Promise<DebugPanel | null> {
     const mod = await import('tweakpane');
     const PaneClass = mod.Pane;
     pane = new PaneClass({ title: 'Gem Debug', expanded: true });
+    // 釘到右下角（蓋掉 tweakpane 預設的 top-right）
+    const el = pane.element as HTMLElement | undefined;
+    if (el) {
+      el.style.position = 'fixed';
+      el.style.right = '8px';
+      el.style.bottom = '8px';
+      el.style.top = 'auto';
+      el.style.left = 'auto';
+    }
   } catch {
     console.warn('[Debug] Tweakpane not available');
     return null;

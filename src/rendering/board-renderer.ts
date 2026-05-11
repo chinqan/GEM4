@@ -1,4 +1,4 @@
-import { Graphics } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { Board } from '../game/rules/board';
 import type { CellPos } from '../types';
 import type { LayerRefs } from './app-layers';
@@ -36,7 +36,8 @@ export interface SelectionState {
 export class BoardRenderer {
   private readonly factory = new GemSpriteFactory();
   private readonly sprites: Map<string, GemSprite> = new Map();
-  private readonly deliverySprites: Map<string, Graphics> = new Map();
+  private readonly deliverySprites: Map<string, Container> = new Map();
+  private readonly blockerSprites: Map<string, Container> = new Map();
   private readonly selectionRingGfx: Graphics;
   private readonly selectionGlowGfx: Graphics;
 
@@ -168,6 +169,43 @@ export class BoardRenderer {
         this.layers.gemLayer.removeChild(overlay);
         overlay.destroy({ children: true });
         this.deliverySprites.delete(key);
+      }
+    }
+
+    // ─── 同步 blocker overlay ─────────────────────────────
+    const activeBlockerKeys = new Set<string>();
+    for (let col = 0; col < board.width; col++) {
+      for (let row = 0; row < board.height; row++) {
+        const cell = board.cells[col][row];
+        const key = cellKey(col, row);
+        if (!cell.blocker) {
+          this.removeBlockerSprite(key);
+          continue;
+        }
+        activeBlockerKeys.add(key);
+        let overlay = this.blockerSprites.get(key);
+        if (!overlay) {
+          overlay = this.createBlockerOverlay(cell.blocker.kind);
+          this.blockerSprites.set(key, overlay);
+          this.layers.glowLayer.addChild(overlay);
+        }
+        // jelly: alpha 隨剩餘層數淡化
+        if (cell.blocker.kind === 'jelly') {
+          overlay.alpha = 0.55 + 0.15 * cell.blocker.layers;
+        } else {
+          overlay.alpha = 0.85;
+        }
+        overlay.position.set(
+          col * CELL_SIZE + CELL_SIZE / 2,
+          row * CELL_SIZE + CELL_SIZE / 2,
+        );
+      }
+    }
+    for (const [key, overlay] of this.blockerSprites) {
+      if (!activeBlockerKeys.has(key)) {
+        this.layers.glowLayer.removeChild(overlay);
+        overlay.destroy({ children: true });
+        this.blockerSprites.delete(key);
       }
     }
   }
@@ -338,7 +376,7 @@ export class BoardRenderer {
   /**
    * 取得指定格子的 delivery overlay（供動畫系統使用）。
    */
-  getDeliverySprite(col: number, row: number): Graphics | undefined {
+  getDeliverySprite(col: number, row: number): Container | undefined {
     return this.deliverySprites.get(cellKey(col, row));
   }
 
@@ -398,29 +436,67 @@ export class BoardRenderer {
     }
   }
 
-  /** 建立傳送道具 overlay（金色菱形 + 向下箭頭） */
-  private createDeliveryOverlay(): Graphics {
-    const g = new Graphics();
-    g.label = 'deliveryItem';
-    const s = CELL_SIZE * 0.3;
+  private removeBlockerSprite(key: string): void {
+    const overlay = this.blockerSprites.get(key);
+    if (overlay) {
+      this.layers.glowLayer.removeChild(overlay);
+      overlay.destroy({ children: true });
+      this.blockerSprites.delete(key);
+    }
+  }
 
-    // 金色菱形
-    g.moveTo(0, -s);
-    g.lineTo(s, 0);
-    g.lineTo(0, s);
-    g.lineTo(-s, 0);
-    g.closePath();
-    g.fill({ color: 0xf6c453, alpha: 0.95 });
-    g.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+  /** 建立 blocker overlay（依 kind 選 PNG） */
+  private createBlockerOverlay(kind: 'jelly' | 'lock' | 'generator' | 'unstable'): Container {
+    const path =
+      kind === 'jelly'
+        ? 'assets/blockers/jelly.png'
+        : kind === 'lock'
+          ? 'assets/blockers/lock.png'
+          : kind === 'unstable'
+            ? 'assets/blockers/unstable.png'
+            : 'assets/blockers/stone.png';
+    const sprite = new Sprite(Texture.from(path));
+    sprite.label = `blocker-${kind}`;
+    sprite.anchor.set(0.5);
+    const target = CELL_SIZE * 0.9;
+    const fit = (w: number, h: number) =>
+      sprite.scale.set(target / Math.max(w, h));
+    if (sprite.texture.width > 1) {
+      fit(sprite.texture.width, sprite.texture.height);
+    } else {
+      fit(256, 256);
+      const onUpdate = () => {
+        if (sprite.texture.width > 1) {
+          fit(sprite.texture.width, sprite.texture.height);
+          sprite.texture.source.off('update', onUpdate);
+        }
+      };
+      sprite.texture.source.on('update', onUpdate);
+    }
+    return sprite;
+  }
 
-    // 小向下箭頭
-    const a = s * 0.35;
-    g.moveTo(-a, s * 0.15);
-    g.lineTo(0, s * 0.55);
-    g.lineTo(a, s * 0.15);
-    g.stroke({ color: 0xffffff, width: 1.5, alpha: 0.9 });
-
-    return g;
+  /** 建立傳送道具 overlay（水滴貼圖） */
+  private createDeliveryOverlay(): Container {
+    const sprite = new Sprite(Texture.from('assets/items/water-drop.png'));
+    sprite.label = 'deliveryItem';
+    sprite.anchor.set(0.5);
+    const target = CELL_SIZE * 0.7;
+    const fit = (w: number, h: number) =>
+      sprite.scale.set(target / Math.max(w, h));
+    if (sprite.texture.width > 1) {
+      fit(sprite.texture.width, sprite.texture.height);
+    } else {
+      fit(256, 256);
+      const onUpdate = () => {
+        if (sprite.texture.width > 1) {
+          fit(sprite.texture.width, sprite.texture.height);
+          sprite.texture.source.off('update', onUpdate);
+        }
+      };
+      sprite.texture.source.on('update', onUpdate);
+    }
+    return sprite;
   }
 
   /** 更新 sprite 位置 */

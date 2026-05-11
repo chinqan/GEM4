@@ -3,6 +3,7 @@
 
 import { createGame } from './integration/game-integration';
 import { playStone, preloadStoneSfx } from './audio/sfx-player';
+import { preloadGemTextures } from './rendering/gem-sprites';
 
 function createSfxTestPanel(): void {
   const panel = document.createElement('div');
@@ -41,6 +42,7 @@ function createSfxTestPanel(): void {
 async function main(): Promise<void> {
   try {
     console.log('Gem v1 — 啟動中...');
+    await preloadGemTextures();
     const game = await createGame(document.body);
     console.log(`Gem v1 — 啟動完成 (phase: ${game.getPhase()})`);
 
