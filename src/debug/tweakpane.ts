@@ -68,15 +68,6 @@ function createDefaultMetrics(): DebugMetrics {
  * Returns null if Tweakpane is not available or devtools are disabled.
  */
 export async function createDebugPanel(): Promise<DebugPanel | null> {
-  // Guard: only in dev mode
-  try {
-    const declaredDevtools =
-      typeof __ENABLE_DEVTOOLS__ !== 'undefined' ? __ENABLE_DEVTOOLS__ : 'false';
-    if (declaredDevtools !== 'true') return null;
-  } catch {
-    return null;
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let pane: any;
   try {

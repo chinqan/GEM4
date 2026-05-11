@@ -45,6 +45,7 @@ export interface AccessibilitySettings {
 export interface GameplaySettings {
   hintDelayMs: number;
   autoActivateSpecial: boolean;
+  showDebugPanel: boolean;
 }
 
 /** 設定 */
@@ -103,6 +104,7 @@ export function defaultSaveState(): SaveState {
       gameplay: {
         hintDelayMs: 5000,
         autoActivateSpecial: false,
+        showDebugPanel: false,
       },
       language: 'zh-TW',
     },

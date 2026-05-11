@@ -58,6 +58,7 @@ export async function bootstrapApp(config: AppConfig = {}): Promise<AppRefs> {
     backgroundColor,
     antialias,
     resolution,
+    roundPixels: true,
     autoDensity: true,
     resizeTo: container,
   });

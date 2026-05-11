@@ -117,7 +117,7 @@ const SCORE_POPUP_TAIL_MS = 80;
 const TIMELINE_TAIL_GRACE_MS = 80;
 
 // Area bomb charge-up duration (ms): red zone highlight before explosion.
-const AREA_BOMB_CHARGE_MS = 350;
+const AREA_BOMB_CHARGE_MS = 100;
 
 // A normalised activation event used by the radiation scheduler. Matches
 // SpecialActivationEvent shape but allows 'combo' for the swap initial path.

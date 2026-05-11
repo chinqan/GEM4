@@ -20,7 +20,8 @@
         "which *",
         "/opt/anaconda3/bin/python *",
         "find *",
-        "/Users/chinqan/opt/anaconda3/bin/python *"
+        "/Users/chinqan/opt/anaconda3/bin/python *",
+        "file *"
     ],
     "files.watcherExclude": {
         "**/node_modules/**": true,

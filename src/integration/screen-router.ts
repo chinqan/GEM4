@@ -122,6 +122,7 @@ export class ScreenRouter {
       worldName: worldNames[worldId] ?? `World ${worldId}`,
       levels,
       onBack: () => this.config.transitionTo({ kind: 'menu' }),
+      onSettings: () => this.config.transitionTo({ kind: 'settings', returnTo: this.config.getCurrentState() } as any),
       onLevelTap: (levelId) => this.config.transitionTo({ kind: 'levelSelect', worldId, levelId }),
       onPrevWorld: worldId > 1 ? () => this.config.transitionTo({ kind: 'worldMap', worldId: worldId - 1 }) : undefined,
       onNextWorld: worldId < 4 ? () => this.config.transitionTo({ kind: 'worldMap', worldId: worldId + 1 }) : undefined,
@@ -233,15 +234,54 @@ export class ScreenRouter {
   }
 
   async showSettings(): Promise<void> {
-    const { createCreditsScreen } = await import('../ui/screens/credits');
-    const { width, height } = this.config.getScreenSize();
+    const { SettingsForm } = await import('../ui-dom/settings');
+    const { SaveManager } = await import('../state/save-state');
     const settingsState = this.config.getCurrentState() as import('../state/app-state').SettingsState;
-    const screen = createCreditsScreen({
-      width,
-      height,
-      onClose: () => this.config.transitionTo(settingsState.returnTo),
+
+    const sm = new SaveManager();
+    const save = sm.load();
+    const settings = save.settings;
+
+    // Get current keybinds
+    let keybinds: import('../input/keybinds').KeybindMap;
+    try {
+      const { defaultKeybinds } = await import('../input/keybinds');
+      keybinds = defaultKeybinds();
+    } catch {
+      keybinds = {} as any;
+    }
+
+    const form = new SettingsForm(settings, keybinds, false, {
+      onAudioChange: (audio) => {
+        save.settings.audio = audio;
+        sm.save(save, true);
+      },
+      onGraphicsPresetChange: (preset) => {
+        save.settings.graphicsPreset = preset;
+        sm.save(save, true);
+      },
+      onReduceMotionChange: () => {
+        sm.save(save, true);
+      },
+      onAccessibilityChange: (accessibility) => {
+        save.settings.accessibility = accessibility;
+        sm.save(save, true);
+      },
+      onGameplayChange: (gameplay) => {
+        save.settings.gameplay = gameplay;
+        sm.save(save, true);
+      },
+      onLanguageChange: (language) => {
+        save.settings.language = language;
+        sm.save(save, true);
+      },
+      onClose: () => {
+        // hide() already removed the DOM; just transition back
+        this.config.transitionTo(settingsState.returnTo);
+      },
     });
-    this.setScreen(screen);
+
+    form.show();
   }
 
   async showCredits(): Promise<void> {

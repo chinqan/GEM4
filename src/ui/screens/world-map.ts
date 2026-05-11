@@ -110,11 +110,12 @@ export function createWorldMapScreen(options: CreateWorldMapOptions): WorldMapSc
   const settingsBtn = createButton({
     text: '⚙',
     variant: 'ghost',
-    size: 'sm',
-    width: 40,
+    size: 'md',
+    width: 48,
+    fontSize: 28,
     onClick: onSettings,
   });
-  settingsBtn.position.set(width - 40 - SPACING.base, headerY);
+  settingsBtn.position.set(width - 48 - SPACING.base, headerY);
   container.addChild(settingsBtn);
 
   // ── 關卡節點區域 ──────────────────────────────────────

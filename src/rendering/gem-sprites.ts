@@ -52,7 +52,8 @@ function buildGemSprite(path: string): Sprite {
   const tex = Texture.from(path);
   const sprite = new Sprite(tex);
   sprite.anchor.set(0.5);
-  const target = GEM_RADIUS * 2 * 1.15;
+  // Use slightly smaller target to avoid upscaling low-res PNGs on HiDPI
+  const target = GEM_RADIUS * 2;
   const fit = (w: number, h: number) =>
     sprite.scale.set(target / Math.max(w, h));
 

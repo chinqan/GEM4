@@ -222,9 +222,11 @@ export class GameIntegration {
         this.updateSplashProgress(loaded / total);
       });
 
-      // 4. Initialize debug tools (dev only)
-      if (this.config.enableDevtools) {
+      // 4. Initialize debug tools (controlled by settings)
+      try {
         await this.initDebugTools();
+      } catch {
+        // Non-critical — game continues without debug tools
       }
 
       // 5. Load state machine
@@ -287,6 +289,12 @@ export class GameIntegration {
   /** Get current lifecycle phase */
   getPhase(): LifecyclePhase {
     return this.phase;
+  }
+
+  /** Show or hide the debug panel at runtime */
+  setDebugVisible(visible: boolean): void {
+    this.subsystems.debugPanel?.setVisible(visible);
+    this.subsystems.statsPanel?.setVisible?.(visible);
   }
 
   /**
@@ -780,11 +788,21 @@ export class GameIntegration {
   // ─── Debug Tools ────────────────────────────────────────
 
   private async initDebugTools(): Promise<void> {
+    // Read showDebugPanel from saved settings
+    let showDebug = false;
+    try {
+      const { SaveManager } = await import('../state/save-state');
+      const sm = new SaveManager();
+      const save = sm.load();
+      showDebug = save.settings.gameplay.showDebugPanel ?? false;
+    } catch { /* use default */ }
+
     try {
       const { createDebugPanel } = await import('../debug/tweakpane');
       const panel = await createDebugPanel();
       if (panel) {
         this.subsystems.debugPanel = panel;
+        panel.setVisible(showDebug);
         this.cleanupFns.push(() => panel.destroy());
       }
     } catch {
@@ -796,6 +814,7 @@ export class GameIntegration {
       const statsPanel = await createStatsPanel();
       if (statsPanel) {
         this.subsystems.statsPanel = statsPanel;
+        if (!showDebug) statsPanel.setVisible?.(false);
         this.cleanupFns.push(() => statsPanel.destroy());
       }
     } catch {

@@ -271,11 +271,11 @@ export class SettingsForm {
     import('../../audio/sfx-player').then(({ playModalClose }) => playModalClose());
 
     if (this.root) {
-      document.body.removeChild(this.root);
+      this.root.remove();
       this.root = null;
     }
     if (this.styleEl) {
-      document.head.removeChild(this.styleEl);
+      this.styleEl.remove();
       this.styleEl = null;
     }
     this.callbacks.onClose?.();
@@ -437,6 +437,17 @@ export class SettingsForm {
       this.createCheckboxRow('Auto-activate Special Gems', this.settings.gameplay.autoActivateSpecial, (v) => {
         this.settings.gameplay.autoActivateSpecial = v;
         this.callbacks.onGameplayChange?.(this.settings.gameplay);
+      }),
+    );
+
+    // Show Debug Panel
+    section.appendChild(
+      this.createCheckboxRow('Show Debug Panel', this.settings.gameplay.showDebugPanel, (v) => {
+        this.settings.gameplay.showDebugPanel = v;
+        this.callbacks.onGameplayChange?.(this.settings.gameplay);
+        // Toggle debug panel visibility at runtime
+        const gem = (window as any).__gem;
+        if (gem?.setDebugVisible) gem.setDebugVisible(v);
       }),
     );
 

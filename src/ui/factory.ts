@@ -102,7 +102,6 @@ export function createButton(options: CreateButtonOptions): UIButton {
     bg.alpha = 0.85;
     bg.position.y = -2;
     label.position.y = btnHeight / 2 - 2;
-    import('../audio/sfx-player').then(({ playUiHover }) => playUiHover());
   });
 
   container.on('pointerout', () => {

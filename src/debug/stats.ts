@@ -27,15 +27,6 @@ export interface StatsPanel {
  * @returns StatsPanel or null if devtools are disabled
  */
 export async function createStatsPanel(): Promise<StatsPanel | null> {
-  // Guard: only in dev mode
-  try {
-    const declaredDevtools =
-      typeof __ENABLE_DEVTOOLS__ !== 'undefined' ? __ENABLE_DEVTOOLS__ : 'false';
-    if (declaredDevtools !== 'true') return null;
-  } catch {
-    return null;
-  }
-
   let StatsModule: any;
   try {
     StatsModule = await import('stats.js');
