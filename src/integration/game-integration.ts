@@ -505,7 +505,7 @@ export class GameIntegration {
     const { width, height } = this.getScreenSize();
     const locale = getTranslator().locale;
     const levelName = spec.name?.[locale] ?? spec.name?.['zh-TW'] ?? spec.name?.en ?? '';
-    const hud = createGameHUD({
+    let hud = createGameHUD({
       width,
       height,
       mode: spec.constraints.timeBudget ? 'time' : 'moves',
@@ -514,6 +514,7 @@ export class GameIntegration {
       levelId: spec.id,
       levelName,
       onPause: () => this.transitionTo({ kind: 'pause', previous: this.currentState } as any),
+      onSettings: () => this.screenRouter!.showSettings(),
       onReset: () => this.transitionTo({ kind: 'game', levelId }),
     });
     const movesDisplay = session.movesRemaining === Infinity ? 99 : session.movesRemaining;
@@ -526,6 +527,69 @@ export class GameIntegration {
     this.screenRouter!.clearScreen();
     this.activeHud = hud;
     this.subsystems.app?.layers.uiLayer.addChild(hud);
+
+    // --- Resize handler: rebuild HUD and refit background on window resize ---
+    const rebuildHudOnResize = (): void => {
+      if (!this.activeHud || !this.subsystems.app) return;
+      const { width: newW, height: newH } = this.getScreenSize();
+
+      // Destroy old HUD
+      this.activeHud.destroy({ children: true });
+
+      // Rebuild HUD with new dimensions
+      const newHud = createGameHUD({
+        width: newW,
+        height: newH,
+        mode: spec.constraints.timeBudget ? 'time' : 'moves',
+        objective: spec.objective,
+        worldId: spec.worldId,
+        levelId: spec.id,
+        levelName,
+        onPause: () => this.transitionTo({ kind: 'pause', previous: this.currentState } as any),
+        onSettings: () => this.screenRouter!.showSettings(),
+        onReset: () => this.transitionTo({ kind: 'game', levelId }),
+      });
+      this.updateHud(newHud, session, spec);
+      this.activeHud = newHud;
+      this.subsystems.app.layers.uiLayer.addChild(newHud);
+
+      // Also update the hud reference used by the game loop render callback
+      hud = newHud;
+
+      // Refit world background and recalculate board viewport with fresh canvas size
+      this.refitWorldBackground();
+      this.activeViewportManager?.recalculate();
+    };
+
+    let resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedResize = (): void => {
+      if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer);
+      resizeDebounceTimer = setTimeout(rebuildHudOnResize, 100);
+    };
+
+    let hudResizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      hudResizeObserver = new ResizeObserver(debouncedResize);
+      const parent = canvas.parentElement;
+      if (parent) {
+        hudResizeObserver.observe(parent);
+      }
+    } else {
+      window.addEventListener('resize', debouncedResize);
+    }
+
+    this.sessionCleanupFns.push(() => {
+      if (hudResizeObserver) {
+        hudResizeObserver.disconnect();
+        hudResizeObserver = null;
+      } else {
+        window.removeEventListener('resize', debouncedResize);
+      }
+      if (resizeDebounceTimer) {
+        clearTimeout(resizeDebounceTimer);
+        resizeDebounceTimer = null;
+      }
+    });
 
     // --- Wire level.resolved event ---
     const { SaveManager } = await import('../state/save-state');
@@ -704,6 +768,26 @@ export class GameIntegration {
     } catch {
       // texture failed to load — leave background empty
     }
+  }
+
+  /**
+   * Refit the world background sprite to the current canvas size.
+   * Called on resize to ensure the background always covers the full canvas.
+   */
+  private refitWorldBackground(): void {
+    const appRefs = this.subsystems.app;
+    if (!appRefs) return;
+
+    const bg = appRefs.layers.background;
+    const sprite = bg.children.find((c) => c.label === 'world-bg') as import('pixi.js').Sprite | undefined;
+    if (!sprite || !sprite.texture) return;
+
+    const canvas = appRefs.app.canvas as HTMLCanvasElement;
+    const cw = canvas.width;
+    const ch = canvas.height;
+    sprite.position.set(cw / 2, ch / 2);
+    const scale = Math.max(cw / sprite.texture.width, ch / sprite.texture.height);
+    sprite.scale.set(scale);
   }
 
   /** Draw a grid background for the board */

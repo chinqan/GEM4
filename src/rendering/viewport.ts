@@ -14,22 +14,34 @@ export interface ViewportInfo {
 
 // ─── 常數 ──────────────────────────────────────────────────
 
-/** 最低支援解析度 */
-export const MIN_CANVAS_WIDTH = 1200;
-export const MIN_CANVAS_HEIGHT = 800;
+/** 最低支援解析度（桌面） */
+export const MIN_CANVAS_WIDTH = 320;
+export const MIN_CANVAS_HEIGHT = 480;
 
-/** 留白係數，為 HUD 等元素保留空間 */
-const PADDING_FACTOR = 0.78;
+/** 手機斷點寬度（px） */
+export const MOBILE_BREAKPOINT = 600;
 
-/** 頂部 HUD 保留高度（px） */
-const HUD_TOP_RESERVE = 72;
+/** 留白係數：棋盤佔可用空間的比例（越大棋盤越大） */
+const PADDING_FACTOR = 0.96;
+
+/** 手機留白係數 */
+const MOBILE_PADDING_FACTOR = 0.96;
+
+/** 頂部 HUD 保留高度（px）— 桌面（兩列面板 96px + 間距） */
+const HUD_TOP_RESERVE = 100;
+
+/** 頂部 HUD 保留高度（px）— 手機 */
+const HUD_TOP_RESERVE_MOBILE = 100;
 
 // ─── calculateViewport ────────────────────────────────────
 
 /**
  * 計算 letterbox 縮放，確保棋盤在畫布中完整可見並置中。
  *
- * 使用 0.85 係數留白，為 HUD 元素保留空間。
+ * 自適應邏輯：
+ * - 手機（寬度 < MOBILE_BREAKPOINT）：使用較大留白係數，HUD 保留空間較多
+ * - 桌面：使用標準留白係數
+ *
  * 棋盤以等比例縮放，水平與垂直方向皆置中。
  *
  * @param canvasWidth  畫布寬度（px）
@@ -46,20 +58,25 @@ export function calculateViewport(
   boardHeight: number,
   cellSize: number,
 ): ViewportInfo {
-  // 使用最低解析度下限，確保小視窗也能正常顯示
+  const isMobile = canvasWidth < MOBILE_BREAKPOINT;
+
   const effectiveCanvasW = Math.max(canvasWidth, MIN_CANVAS_WIDTH);
   const effectiveCanvasH = Math.max(canvasHeight, MIN_CANVAS_HEIGHT);
 
   const boardPixelW = boardWidth * cellSize;
   const boardPixelH = boardHeight * cellSize;
 
+  const paddingFactor = isMobile ? MOBILE_PADDING_FACTOR : PADDING_FACTOR;
+  const hudReserve = isMobile ? HUD_TOP_RESERVE_MOBILE : HUD_TOP_RESERVE;
+
+  // 手機上以可用高度（扣除 HUD）計算縮放，避免棋盤被 HUD 遮擋
+  const availableHeight = effectiveCanvasH - hudReserve;
   const scale =
-    Math.min(effectiveCanvasW / boardPixelW, effectiveCanvasH / boardPixelH) * PADDING_FACTOR;
+    Math.min(effectiveCanvasW / boardPixelW, availableHeight / boardPixelH) * paddingFactor;
 
   // 水平置中，垂直方向為頂部 HUD 留出空間後置中
   const offsetX = (canvasWidth - boardPixelW * scale) / 2;
-  const availableHeight = canvasHeight - HUD_TOP_RESERVE;
-  const offsetY = HUD_TOP_RESERVE + (availableHeight - boardPixelH * scale) / 2;
+  const offsetY = hudReserve + (canvasHeight - hudReserve - boardPixelH * scale) / 2;
 
   return { scale, offsetX, offsetY };
 }

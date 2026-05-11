@@ -44,9 +44,31 @@ export interface ScreenRouterConfig {
 export class ScreenRouter {
   private activeScreen: Container | null = null;
   private readonly config: ScreenRouterConfig;
+  private rebuildFn: (() => Promise<void>) | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private boundWindowResize: (() => void) | null = null;
 
   constructor(config: ScreenRouterConfig) {
     this.config = config;
+    this.setupResizeObserver();
+  }
+
+  private setupResizeObserver(): void {
+    const debouncedRebuild = (): void => {
+      if (this.resizeDebounceTimer) clearTimeout(this.resizeDebounceTimer);
+      this.resizeDebounceTimer = setTimeout(() => {
+        if (this.activeScreen && this.rebuildFn) void this.rebuildFn();
+      }, 150);
+    };
+
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(debouncedRebuild);
+      this.resizeObserver.observe(document.body);
+    } else {
+      this.boundWindowResize = debouncedRebuild;
+      window.addEventListener('resize', debouncedRebuild);
+    }
   }
 
   // ─── Public API ─────────────────────────────────────────
@@ -66,6 +88,7 @@ export class ScreenRouter {
       void import('../audio/sfx-player').then(({ preloadAllMapped }) => preloadAllMapped());
       this.config.transitionTo({ kind: 'menu' });
     });
+    this.rebuildFn = () => this.showSplash();
   }
 
   async showMenu(): Promise<void> {
@@ -82,6 +105,7 @@ export class ScreenRouter {
       onCredits: () => this.config.transitionTo({ kind: 'credits' }),
     });
     this.setScreen(menu);
+    this.rebuildFn = () => this.showMenu();
   }
 
   async showWorldMap(worldId: number): Promise<void> {
@@ -129,6 +153,7 @@ export class ScreenRouter {
     });
     worldMap.setWorldNavigation(worldId > 1, worldId < 4);
     this.setScreen(worldMap);
+    this.rebuildFn = () => this.showWorldMap(worldId);
   }
 
   async showLevelSelect(worldId: number, levelId: number): Promise<void> {
@@ -161,6 +186,7 @@ export class ScreenRouter {
       onCancel: () => this.config.transitionTo({ kind: 'worldMap', worldId }),
     });
     this.setScreen(card);
+    this.rebuildFn = () => this.showLevelSelect(worldId, levelId);
   }
 
   async showPause(): Promise<void> {
@@ -183,6 +209,7 @@ export class ScreenRouter {
       onQuit: () => this.config.transitionTo({ kind: 'menu' }),
     });
     this.setScreen(overlay);
+    this.rebuildFn = () => this.showPause();
   }
 
   async showLevelComplete(result?: LevelResult): Promise<void> {
@@ -202,6 +229,7 @@ export class ScreenRouter {
       onMap: () => this.config.transitionTo({ kind: 'worldMap', worldId: wId }),
     });
     this.setScreen(screen);
+    this.rebuildFn = () => this.showLevelComplete(result);
   }
 
   async showLevelFail(result?: LevelResult): Promise<void> {
@@ -218,6 +246,7 @@ export class ScreenRouter {
       onMap: () => this.config.transitionTo({ kind: 'worldMap', worldId: wId }),
     });
     this.setScreen(screen);
+    this.rebuildFn = () => this.showLevelFail(result);
   }
 
   async showEndlessEnd(result?: EndlessResult): Promise<void> {
@@ -231,6 +260,7 @@ export class ScreenRouter {
       onMap: () => this.config.transitionTo({ kind: 'menu' }),
     });
     this.setScreen(screen);
+    this.rebuildFn = () => this.showEndlessEnd(result);
   }
 
   async showSettings(): Promise<void> {
@@ -293,6 +323,7 @@ export class ScreenRouter {
       onClose: () => this.config.transitionTo({ kind: 'menu' }),
     });
     this.setScreen(screen);
+    this.rebuildFn = () => this.showCredits();
   }
 
   // Audio settings panel removed — outsourced audio is now directly integrated
@@ -320,6 +351,19 @@ export class ScreenRouter {
 
   destroy(): void {
     this.clearScreen();
+    this.rebuildFn = null;
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    if (this.boundWindowResize) {
+      window.removeEventListener('resize', this.boundWindowResize);
+      this.boundWindowResize = null;
+    }
+    if (this.resizeDebounceTimer) {
+      clearTimeout(this.resizeDebounceTimer);
+      this.resizeDebounceTimer = null;
+    }
   }
 
   // ─── Private ────────────────────────────────────────────

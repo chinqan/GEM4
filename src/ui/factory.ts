@@ -453,7 +453,7 @@ export function createObjectiveChip(options: CreateObjectiveChipOptions = {}): U
   const container = new Container() as UIObjectiveChip;
   container.label = 'objective-chip';
 
-  const chipHeight = labelStr ? 40 : 32;
+  const chipHeight = labelStr ? 44 : 34;
   const chipPadding = SPACING.md;
 
   // 背景
@@ -472,7 +472,7 @@ export function createObjectiveChip(options: CreateObjectiveChipOptions = {}): U
   // 標籤文字（目標類型描述）
   const labelText = labelStr ? new Text({
     text: labelStr,
-    style: makeTextStyle(FONT_SIZES.caption, TEXT_COLOURS.muted),
+    style: makeTextStyle(FONT_SIZES.caption, TEXT_COLOURS.secondary),
   }) : null;
   if (labelText) {
     labelText.anchor.set(0, 1);
