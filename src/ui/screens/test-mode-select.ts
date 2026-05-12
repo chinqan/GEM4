@@ -130,6 +130,8 @@ export function createTestModeSelect(options: {
     fontFamily: 'Inter, "Noto Sans CJK TC", sans-serif',
     fontSize: 12,
     fill: TEXT_COLOURS.muted,
+    wordWrap: true,
+    wordWrapWidth: PANEL_W - PAD * 2 - 40 - 8,
   });
 
   for (let i = 0; i < TEST_SCENARIOS.length; i++) {
@@ -170,7 +172,7 @@ export function createTestModeSelect(options: {
 
   // ── 底部按鈕 ─────────────────────────────────────────────
 
-  const btnY = TITLE_H + ITEMS_TOTAL_H + (TEST_SCENARIOS.length - 1) * ITEM_GAP + PAD;
+  const btnY = TITLE_H + ITEMS_TOTAL_H + PAD;
   const btnW = Math.floor((PANEL_W - PAD * 2 - SPACING.base) / 2);
 
   const cancelBtn = createButton({

@@ -23,6 +23,7 @@ import type { ScreenRouter } from './screen-router';
 import type { GameSessionController } from '../game/runtime/game-session';
 import type { BoardAnimator } from '../rendering/board-animator';
 import type { BoardInteraction } from '../input/board-interaction';
+import { calculateStars } from '../game/level/objective';
 
 // ─── Objective Text Formatting ──────────────────────────────
 
@@ -334,6 +335,17 @@ export class GameIntegration {
     // Update debug panel
     this.subsystems.debugPanel?.updateMetrics({ appState: to.kind });
 
+    // Tear down game session when leaving game/pause for a non-game screen
+    const leavingGame = from.kind === 'game' || from.kind === 'pause' || from.kind === 'endless';
+    const enteringNonGame = to.kind !== 'game' && to.kind !== 'pause' && to.kind !== 'endless'
+      && to.kind !== 'levelComplete' && to.kind !== 'levelFail' && to.kind !== 'endlessEnd'
+      && to.kind !== 'settings';
+    if (leavingGame && enteringNonGame) {
+      this.teardownGameSession();
+      // Clear world background to free VRAM
+      this.subsystems.app?.layers.background.removeChildren();
+    }
+
     // Route to appropriate handler
     switch (to.kind) {
       case 'splash':
@@ -451,6 +463,15 @@ export class GameIntegration {
     });
     this.activeBoardAnimator = animator;
 
+    // Real-time score update: refresh HUD score as each cascade step scores
+    let animatedScore = 0;
+    animator.onScoreUpdate = (delta: number) => {
+      animatedScore += delta;
+      if (this.activeHud) {
+        this.activeHud.setScore(animatedScore);
+      }
+    };
+
     // --- Preload all SFX (ensures combo/special sounds are ready on first trigger) ---
     import('../audio/sfx-player').then(({ preloadAllMapped }) => preloadAllMapped());
 
@@ -497,6 +518,7 @@ export class GameIntegration {
       onSwap: async (from, to) => {
         hintTimer.reset();
         animator.clearHintFlash();
+        animatedScore = session.score;
         const result = session.executeSwap(from, to);
         await animator.animateSwap(result, from, to, board);
         boardRenderer.sync(board);
@@ -515,6 +537,7 @@ export class GameIntegration {
       onActivate: async (at) => {
         hintTimer.reset();
         animator.clearHintFlash();
+        animatedScore = session.score;
         const result = session.executeActivation(at);
         if (result) {
           await animator.animateActivation(result, board);
@@ -707,6 +730,16 @@ export class GameIntegration {
     } else {
       hud.setObjective(state.objectiveProgress);
     }
+    // Update star display based on current progress
+    if (_spec.stars) {
+      const currentStars = calculateStars(
+        _spec.stars,
+        session.score,
+        session.movesRemaining === Infinity ? 0 : session.movesRemaining,
+        session.timeRemaining === Infinity ? 0 : session.timeRemaining,
+      );
+      hud.setStars(currentStars);
+    }
   }
 
   /** Emit level.resolved event from EndCondition */
@@ -880,6 +913,12 @@ export class GameIntegration {
       this.subsystems.debugPanel?.updateMetrics({ intensity: e.value });
     });
     this.cleanupFns.push(unsubIntensity);
+
+    // Chain escalation → debug panel
+    const unsubChain = this.eventBus.on('chain.escalated', (e) => {
+      this.subsystems.debugPanel?.updateMetrics({ chainCount: e.to });
+    });
+    this.cleanupFns.push(unsubChain);
   }
 
   // ─── Edge Case Handlers ─────────────────────────────────
@@ -927,6 +966,59 @@ export class GameIntegration {
         this.subsystems.debugPanel = panel;
         panel.setVisible(showDebug);
         this.cleanupFns.push(() => panel.destroy());
+
+        // Per-frame debug metrics update via PixiJS ticker
+        const app = this.subsystems.app?.app;
+        if (app) {
+          const ticker = app.ticker;
+          const particleLayer = this.subsystems.app!.layers.particleLayer;
+          const boardLayer = this.subsystems.app!.layers.boardLayer;
+          const stage = app.stage;
+
+          const updateDebugMetrics = () => {
+            // FPS from PixiJS ticker
+            const fps = Math.round(ticker.FPS);
+
+            // Particle count: visible children in particleLayer + boardLayer's merge-fx/jelly-fx containers
+            let particleCount = 0;
+            for (const child of particleLayer.children) {
+              if (child.visible) particleCount++;
+            }
+            for (const child of boardLayer.children) {
+              if (child.label === 'merge-fx' || child.label === 'jelly-fx') {
+                for (const p of (child as any).children ?? []) {
+                  if (p.visible) particleCount++;
+                }
+              }
+            }
+
+            // Draw calls approximation: count visible leaf nodes in stage
+            let drawCalls = 0;
+            const countVisible = (container: any) => {
+              for (const child of container.children ?? []) {
+                if (!child.visible) continue;
+                if (child.children && child.children.length > 0) {
+                  countVisible(child);
+                } else {
+                  drawCalls++;
+                }
+              }
+            };
+            countVisible(stage);
+
+            // Game state metrics from active session
+            const session = this.activeSession;
+            const score = session?.score ?? 0;
+            const movesRemaining = session
+              ? (session.movesRemaining === Infinity ? 99 : session.movesRemaining)
+              : 0;
+
+            panel.updateMetrics({ fps, drawCalls, particleCount, score, movesRemaining });
+          };
+
+          ticker.add(updateDebugMetrics);
+          this.cleanupFns.push(() => ticker.remove(updateDebugMetrics));
+        }
       }
     } catch {
       // Non-critical

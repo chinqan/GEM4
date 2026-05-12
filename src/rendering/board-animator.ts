@@ -149,6 +149,9 @@ export class BoardAnimator {
   private hintFlashGfx: Graphics[] = [];
   private hintFlashTime = 0;
 
+  /** Optional callback invoked whenever score increments during animation. */
+  onScoreUpdate: ((cumulativeScore: number) => void) | null = null;
+
   constructor(config: BoardAnimatorConfig) {
     this.boardRenderer = config.boardRenderer;
     this.layers = config.layers;
@@ -1618,6 +1621,9 @@ export class BoardAnimator {
       fontSize: chain >= 2 ? 28 : 22,
     });
     this.layers.boardLayer.addChild(popup.container);
+
+    // Notify listener for real-time HUD score update
+    this.onScoreUpdate?.(score);
   }
 
   // ─── Private: Flavor Text ──────────────────────────────

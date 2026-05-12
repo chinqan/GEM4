@@ -1,119 +1,116 @@
 # Graph Report - .  (2026-05-12)
 
 ## Corpus Check
-- 13 files · ~0 words
+- 98 files · ~50,000 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1334 nodes · 3157 edges · 112 communities (62 shown, 50 thin omitted)
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 220 edges (avg confidence: 0.81)
+- 1360 nodes · 3256 edges · 109 communities (59 shown, 50 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 232 edges (avg confidence: 0.81)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_Core Game Rules & Session|Core Game Rules & Session]]
-- [[_COMMUNITY_Game Integration & Level System|Game Integration & Level System]]
-- [[_COMMUNITY_App Bootstrap & Localization|App Bootstrap & Localization]]
-- [[_COMMUNITY_Application Entry & Load|Application Entry & Load]]
-- [[_COMMUNITY_Level Objectives & Progress|Level Objectives & Progress]]
-- [[_COMMUNITY_Board Rendering|Board Rendering]]
-- [[_COMMUNITY_Particle Effects|Particle Effects]]
-- [[_COMMUNITY_Audio Design Patterns|Audio Design Patterns]]
-- [[_COMMUNITY_State Management & Save|State Management & Save]]
-- [[_COMMUNITY_SFX Playback Interface|SFX Playback Interface]]
-- [[_COMMUNITY_SFX Player Engine|SFX Player Engine]]
+- [[_COMMUNITY_Game Rules & Session|Game Rules & Session]]
+- [[_COMMUNITY_SFX Player & Catalog|SFX Player & Catalog]]
+- [[_COMMUNITY_Level Spec & Screen Router|Level Spec & Screen Router]]
+- [[_COMMUNITY_Debug & Legacy Audio|Debug & Legacy Audio]]
+- [[_COMMUNITY_App Bootstrap & i18n|App Bootstrap & i18n]]
+- [[_COMMUNITY_Code Index & Resize|Code Index & Resize]]
+- [[_COMMUNITY_Special Gems & Board Ops|Special Gems & Board Ops]]
+- [[_COMMUNITY_Accessibility & Rendering|Accessibility & Rendering]]
+- [[_COMMUNITY_Objective Tracking|Objective Tracking]]
+- [[_COMMUNITY_Particle Systems|Particle Systems]]
+- [[_COMMUNITY_Audio Design (GDD)|Audio Design (GDD)]]
 - [[_COMMUNITY_Audio System Core|Audio System Core]]
-- [[_COMMUNITY_Telemetry & Analytics|Telemetry & Analytics]]
-- [[_COMMUNITY_Game Design Document|Game Design Document]]
-- [[_COMMUNITY_Keyboard Input Bindings|Keyboard Input Bindings]]
-- [[_COMMUNITY_SFX & Animation Bridge|SFX & Animation Bridge]]
-- [[_COMMUNITY_Match Detection Logic|Match Detection Logic]]
-- [[_COMMUNITY_Endless Mode Runner|Endless Mode Runner]]
-- [[_COMMUNITY_Audio Bus Routing|Audio Bus Routing]]
-- [[_COMMUNITY_Visual Filters & Effects|Visual Filters & Effects]]
-- [[_COMMUNITY_Settings UI Form|Settings UI Form]]
-- [[_COMMUNITY_Board Animation Controller|Board Animation Controller]]
-- [[_COMMUNITY_Game Loop & Rules Engine|Game Loop & Rules Engine]]
-- [[_COMMUNITY_Event Bus & Pools|Event Bus & Pools]]
-- [[_COMMUNITY_Asset Load Controller|Asset Load Controller]]
-- [[_COMMUNITY_Board Pointer Input|Board Pointer Input]]
-- [[_COMMUNITY_Adaptive Music System|Adaptive Music System]]
-- [[_COMMUNITY_Debug Stats & Clock|Debug Stats & Clock]]
-- [[_COMMUNITY_Module Interface Layer|Module Interface Layer]]
-- [[_COMMUNITY_SFX Catalog & Variants|SFX Catalog & Variants]]
-- [[_COMMUNITY_Synth SFX Engine|Synth SFX Engine]]
-- [[_COMMUNITY_State Machine Integration|State Machine Integration]]
-- [[_COMMUNITY_Board & Gem Model|Board & Gem Model]]
-- [[_COMMUNITY_Board Interaction Layer|Board Interaction Layer]]
-- [[_COMMUNITY_Animation Factory|Animation Factory]]
-- [[_COMMUNITY_Viewport Manager|Viewport Manager]]
-- [[_COMMUNITY_UI Widget Factory|UI Widget Factory]]
-- [[_COMMUNITY_Integration Entry Points|Integration Entry Points]]
-- [[_COMMUNITY_Input System Core|Input System Core]]
-- [[_COMMUNITY_Hint Timer System|Hint Timer System]]
-- [[_COMMUNITY_Jelly Blocker Overlay|Jelly Blocker Overlay]]
-- [[_COMMUNITY_Accessibility Config|Accessibility Config]]
-- [[_COMMUNITY_Game Entry & Preload|Game Entry & Preload]]
-- [[_COMMUNITY_Build Budget Validation|Build Budget Validation]]
-- [[_COMMUNITY_Special Gem Overlays|Special Gem Overlays]]
-- [[_COMMUNITY_Animation Manager|Animation Manager]]
-- [[_COMMUNITY_Subsystem Wiring Hub|Subsystem Wiring Hub]]
-- [[_COMMUNITY_Art Style & Design Tokens|Art Style & Design Tokens]]
-- [[_COMMUNITY_Performance Validation|Performance Validation]]
-- [[_COMMUNITY_Production Readiness Check|Production Readiness Check]]
-- [[_COMMUNITY_Game Loop Core|Game Loop Core]]
-- [[_COMMUNITY_GDD Design Pillars|GDD Design Pillars]]
-- [[_COMMUNITY_Staged Blast Algorithm|Staged Blast Algorithm]]
-- [[_COMMUNITY_Atlas Pack Tools|Atlas Pack Tools]]
-- [[_COMMUNITY_Subsystem 54|Subsystem 54]]
-- [[_COMMUNITY_Subsystem 55|Subsystem 55]]
-- [[_COMMUNITY_Subsystem 56|Subsystem 56]]
-- [[_COMMUNITY_Subsystem 57|Subsystem 57]]
-- [[_COMMUNITY_Subsystem 58|Subsystem 58]]
-- [[_COMMUNITY_Subsystem 59|Subsystem 59]]
-- [[_COMMUNITY_Subsystem 60|Subsystem 60]]
-- [[_COMMUNITY_Subsystem 61|Subsystem 61]]
-- [[_COMMUNITY_Subsystem 62|Subsystem 62]]
-- [[_COMMUNITY_Subsystem 63|Subsystem 63]]
-- [[_COMMUNITY_Subsystem 64|Subsystem 64]]
-- [[_COMMUNITY_Subsystem 65|Subsystem 65]]
-- [[_COMMUNITY_Subsystem 66|Subsystem 66]]
-- [[_COMMUNITY_Subsystem 67|Subsystem 67]]
-- [[_COMMUNITY_Subsystem 68|Subsystem 68]]
-- [[_COMMUNITY_Subsystem 72|Subsystem 72]]
-- [[_COMMUNITY_Subsystem 73|Subsystem 73]]
-- [[_COMMUNITY_Subsystem 74|Subsystem 74]]
-- [[_COMMUNITY_Subsystem 75|Subsystem 75]]
-- [[_COMMUNITY_Subsystem 76|Subsystem 76]]
-- [[_COMMUNITY_Subsystem 77|Subsystem 77]]
-- [[_COMMUNITY_Subsystem 78|Subsystem 78]]
-- [[_COMMUNITY_Subsystem 80|Subsystem 80]]
-- [[_COMMUNITY_Subsystem 81|Subsystem 81]]
-- [[_COMMUNITY_Subsystem 82|Subsystem 82]]
-- [[_COMMUNITY_Subsystem 83|Subsystem 83]]
-- [[_COMMUNITY_Subsystem 87|Subsystem 87]]
-- [[_COMMUNITY_Subsystem 89|Subsystem 89]]
-- [[_COMMUNITY_Subsystem 90|Subsystem 90]]
-- [[_COMMUNITY_Subsystem 92|Subsystem 92]]
-- [[_COMMUNITY_Subsystem 93|Subsystem 93]]
-- [[_COMMUNITY_Subsystem 94|Subsystem 94]]
-- [[_COMMUNITY_Subsystem 104|Subsystem 104]]
-- [[_COMMUNITY_Subsystem 105|Subsystem 105]]
-- [[_COMMUNITY_Subsystem 106|Subsystem 106]]
-- [[_COMMUNITY_Subsystem 107|Subsystem 107]]
-- [[_COMMUNITY_Subsystem 108|Subsystem 108]]
-- [[_COMMUNITY_Subsystem 109|Subsystem 109]]
-- [[_COMMUNITY_Subsystem 110|Subsystem 110]]
-- [[_COMMUNITY_Subsystem 111|Subsystem 111]]
+- [[_COMMUNITY_Telemetry|Telemetry]]
+- [[_COMMUNITY_GDD Overview & Requirements|GDD Overview & Requirements]]
+- [[_COMMUNITY_Input & Keybinds|Input & Keybinds]]
+- [[_COMMUNITY_Community 15|Community 15]]
+- [[_COMMUNITY_Community 16|Community 16]]
+- [[_COMMUNITY_Community 17|Community 17]]
+- [[_COMMUNITY_Community 18|Community 18]]
+- [[_COMMUNITY_Community 19|Community 19]]
+- [[_COMMUNITY_Community 20|Community 20]]
+- [[_COMMUNITY_Community 21|Community 21]]
+- [[_COMMUNITY_Community 22|Community 22]]
+- [[_COMMUNITY_Community 23|Community 23]]
+- [[_COMMUNITY_Community 24|Community 24]]
+- [[_COMMUNITY_Community 25|Community 25]]
+- [[_COMMUNITY_Community 26|Community 26]]
+- [[_COMMUNITY_Community 27|Community 27]]
+- [[_COMMUNITY_Community 28|Community 28]]
+- [[_COMMUNITY_Community 29|Community 29]]
+- [[_COMMUNITY_Community 30|Community 30]]
+- [[_COMMUNITY_Community 31|Community 31]]
+- [[_COMMUNITY_Community 32|Community 32]]
+- [[_COMMUNITY_Community 33|Community 33]]
+- [[_COMMUNITY_Community 34|Community 34]]
+- [[_COMMUNITY_Community 35|Community 35]]
+- [[_COMMUNITY_Community 36|Community 36]]
+- [[_COMMUNITY_Community 37|Community 37]]
+- [[_COMMUNITY_Community 38|Community 38]]
+- [[_COMMUNITY_Community 39|Community 39]]
+- [[_COMMUNITY_Community 40|Community 40]]
+- [[_COMMUNITY_Community 41|Community 41]]
+- [[_COMMUNITY_Community 42|Community 42]]
+- [[_COMMUNITY_Community 43|Community 43]]
+- [[_COMMUNITY_Community 44|Community 44]]
+- [[_COMMUNITY_Community 45|Community 45]]
+- [[_COMMUNITY_Community 46|Community 46]]
+- [[_COMMUNITY_Community 47|Community 47]]
+- [[_COMMUNITY_Community 48|Community 48]]
+- [[_COMMUNITY_Community 49|Community 49]]
+- [[_COMMUNITY_Community 50|Community 50]]
+- [[_COMMUNITY_Community 51|Community 51]]
+- [[_COMMUNITY_Community 52|Community 52]]
+- [[_COMMUNITY_Community 53|Community 53]]
+- [[_COMMUNITY_Community 54|Community 54]]
+- [[_COMMUNITY_Community 55|Community 55]]
+- [[_COMMUNITY_Community 56|Community 56]]
+- [[_COMMUNITY_Community 57|Community 57]]
+- [[_COMMUNITY_Community 58|Community 58]]
+- [[_COMMUNITY_Community 59|Community 59]]
+- [[_COMMUNITY_Community 60|Community 60]]
+- [[_COMMUNITY_Community 61|Community 61]]
+- [[_COMMUNITY_Community 62|Community 62]]
+- [[_COMMUNITY_Community 63|Community 63]]
+- [[_COMMUNITY_Community 64|Community 64]]
+- [[_COMMUNITY_Community 65|Community 65]]
+- [[_COMMUNITY_Community 69|Community 69]]
+- [[_COMMUNITY_Community 70|Community 70]]
+- [[_COMMUNITY_Community 71|Community 71]]
+- [[_COMMUNITY_Community 72|Community 72]]
+- [[_COMMUNITY_Community 73|Community 73]]
+- [[_COMMUNITY_Community 74|Community 74]]
+- [[_COMMUNITY_Community 75|Community 75]]
+- [[_COMMUNITY_Community 77|Community 77]]
+- [[_COMMUNITY_Community 78|Community 78]]
+- [[_COMMUNITY_Community 79|Community 79]]
+- [[_COMMUNITY_Community 80|Community 80]]
+- [[_COMMUNITY_Community 84|Community 84]]
+- [[_COMMUNITY_Community 86|Community 86]]
+- [[_COMMUNITY_Community 87|Community 87]]
+- [[_COMMUNITY_Community 89|Community 89]]
+- [[_COMMUNITY_Community 90|Community 90]]
+- [[_COMMUNITY_Community 91|Community 91]]
+- [[_COMMUNITY_Community 100|Community 100]]
+- [[_COMMUNITY_Community 101|Community 101]]
+- [[_COMMUNITY_Community 102|Community 102]]
+- [[_COMMUNITY_Community 103|Community 103]]
+- [[_COMMUNITY_Community 104|Community 104]]
+- [[_COMMUNITY_Community 105|Community 105]]
+- [[_COMMUNITY_Community 106|Community 106]]
+- [[_COMMUNITY_Community 107|Community 107]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `getCell()` - 63 edges
-2. `GameSessionController` - 40 edges
+1. `getCell()` - 65 edges
+2. `GameSessionController` - 41 edges
 3. `playEvent()` - 36 edges
-4. `detectMatches()` - 34 edges
-5. `createButton()` - 31 edges
-6. `createGem()` - 29 edges
-7. `BoardRenderer` - 29 edges
-8. `BoardAnimator` - 29 edges
+4. `detectMatches()` - 35 edges
+5. `BoardAnimator` - 34 edges
+6. `createButton()` - 33 edges
+7. `createGem()` - 31 edges
+8. `BoardRenderer` - 29 edges
 9. `音效委外製作規格書 (Audio Outsourcing Specification)` - 29 edges
 10. `Mulberry32` - 28 edges
 
@@ -122,215 +119,206 @@
   src/game/runtime/game-session.ts → gdd/01_game_overview.md
 - `GameSessionController.runCascadeLoop` --rationale_for--> `Intra-Level Phase Flow`  [INFERRED]
   src/game/runtime/game-session.ts → gdd/06_game_flow.md
-- `BoardAnimator.playColourGemStagedTimeline` --rationale_for--> `Special Gems Specification`  [INFERRED]
-  src/rendering/board-animator.ts → gdd/01_game_overview.md
 - `ScreenRouter` --rationale_for--> `AppState State Machine`  [INFERRED]
   src/integration/screen-router.ts → gdd/06_game_flow.md
 - `GameIntegration.transitionTo` --rationale_for--> `AppState State Machine`  [INFERRED]
   src/integration/game-integration.ts → gdd/06_game_flow.md
+- `GameSessionController.checkEndCondition` --rationale_for--> `Cascade End-Condition Timing Intent`  [INFERRED]
+  src/game/runtime/game-session.ts → gdd/06_game_flow.md
 
 ## Hyperedges (group relationships)
-- **Cascade Resolution Pipeline** — game_session_executeswap, game_session_runcascadeloop, match_detect_detectmatches, board_animator_animatecascadesteps [INFERRED 0.95]
-- **Game Session to HUD Sync Flow** — game_session_gamesessioncontroller, game_integration_updatehud, game_hud_gamehud [INFERRED 0.90]
-- **Screen Navigation Flow** — game_integration_transitionto, game_integration_onstatechanged, screen_router_screenrouter [EXTRACTED 1.00]
+- **Quality Assurance Pipeline** — gdd09_testing, gdd09_release_gates, gdd09_headless_sim, gdd09_test_coverage [EXTRACTED 1.00]
+- **Presentation Layer Design** — gdd04_art_style, gdd05_ui_ux, gdd07_audio, gdd05_design_tokens [INFERRED 0.80]
+- **Progressive SFX Escalation System: match.base variants + chain tiers + combo scale gradient form a unified audio escalation arc** — match_base_scale_progression, chain_tier_events, combo_scale_gradient, audio_design_principles [INFERRED 0.85]
+- **Stinger+Ducking System: chain.tier3, chain.wow, combo.*, level.complete, world.complete all trigger BGM -6dB ducking together** — audio_ducking_stinger, chain_tier_events, combo_events, progression_events [EXTRACTED 1.00]
+- **Jelly 3-tier audio arc: blocker.immovable + jelly.hit.l3 + jelly.hit.l2 + jelly.clear form a pitch-progressive feedback loop for obstacle removal** — jelly_blocker_events, jelly_pitch_progression, sfx_trigger_flow [EXTRACTED 1.00]
+- **Complete Game Lifecycle** — game_flow_state_machine, game_flow_intra_level, game_flow_fail_retry, game_flow_onboarding [INFERRED 0.85]
 
-## Communities (112 total, 50 thin omitted)
+## Communities (109 total, 50 thin omitted)
 
-### Community 0 - "Core Game Rules & Session"
+### Community 0 - "Game Rules & Session"
 Cohesion: 0.06
-Nodes (72): breakLock(), createBlockerByKind(), isLocked(), processBlockersOnClear(), processJellyOnClear(), tickGenerators(), tickUnstables(), calculateStars() (+64 more)
+Nodes (76): breakLock(), createBlockerByKind(), isLocked(), processBlockersOnClear(), processJellyOnClear(), tickGenerators(), tickUnstables(), calculateStars() (+68 more)
 
-### Community 1 - "Game Integration & Level System"
+### Community 1 - "SFX Player & Catalog"
+Cohesion: 0.05
+Nodes (72): getConfig(), getCtx(), getOrCreateHowl(), loadBuffer(), playBlockerImmovable(), playBuffer(), playCascade(), playCombo() (+64 more)
+
+### Community 2 - "Level Spec & Screen Router"
 Cohesion: 0.07
 Nodes (26): ScreenRouter, getAllLevelIds(), getLevelsByWorld(), loadLevel(), registerLevel(), createCreditsScreen(), createGameHUD(), createLevelCompleteScreen() (+18 more)
 
-### Community 2 - "App Bootstrap & Localization"
+### Community 3 - "Debug & Legacy Audio"
+Cohesion: 0.06
+Nodes (16): playStone(), preloadStoneSfx(), ClockScaleController, createStatsPanel(), createDebugPanel(), createDefaultMetrics(), createGame(), formatObjectiveText() (+8 more)
+
+### Community 4 - "App Bootstrap & i18n"
 Cohesion: 0.07
 Nodes (14): detectBrowserLocale(), getTranslator(), initTranslator(), t(), Translator, GameIntegration, createLayerHierarchy(), bootstrapApp() (+6 more)
 
-### Community 3 - "Application Entry & Load"
+### Community 5 - "Code Index & Resize"
 Cohesion: 0.05
 Nodes (58): bootstrapApp() — Pixi init + WebGPU detect, detectBackend() helper, setupResizeHandler (ResizeObserver), main() entry point, createSfxTestPanel (debug DOM panel), LoadController class, fetchWithRetry exponential backoff, runSplashPreload() (+50 more)
 
-### Community 4 - "Level Objectives & Progress"
+### Community 6 - "Special Gems & Board Ops"
+Cohesion: 0.15
+Nodes (15): getCell(), activateAreaBomb(), activateColourGem(), activateLineBomb(), areaBombTargets(), clearCell(), clearPositions(), findPassiveActivations() (+7 more)
+
+### Community 7 - "Accessibility & Rendering"
+Cohesion: 0.11
+Nodes (25): createAccessibilityConfig(), getColourPalette(), getContrastConfig(), getGemColour(), getMotionConfig(), onPrefersReducedMotionChange(), checkStorageStatus(), clearSessionState() (+17 more)
+
+### Community 8 - "Objective Tracking"
 Cohesion: 0.06
 Nodes (6): ClearTracker, CollectTracker, createTracker(), DropTracker, MultiTracker, ScoreTracker
 
-### Community 5 - "Board Rendering"
-Cohesion: 0.11
-Nodes (5): BoardRenderer, cellKey(), buildGemSprite(), computeShimmerAlpha(), GemSpriteFactory
-
-### Community 6 - "Particle Effects"
+### Community 9 - "Particle Systems"
 Cohesion: 0.11
 Nodes (7): emitChainGlow(), emitSpecialSpawnRing(), getRingTex(), JellyParticleSystem, MergeParticleSystem, Particle, ParticlePool
 
-### Community 7 - "Audio Design Patterns"
+### Community 10 - "Audio Design (GDD)"
 Cohesion: 0.11
 Nodes (40): Audio Delivery Phases (Phase 1: board+match+chain; Phase 2: special+combo; Phase 3: progression+UI), Audio Design Principles (mystical/warm tone, progressive escalation, non-fatigue, frequency separation), Audio Ducking: Stingers trigger BGM -6dB ducking (chain.tier3, chain.wow, combo.*, level.complete, world.complete), Chain Audio Progression Design, Combo Scale Hierarchy Design, Audio Delivery Phases (51 files), Frequency Band Design Principle, LUFS Loudness Standard (+32 more)
 
-### Community 8 - "State Management & Save"
-Cohesion: 0.14
-Nodes (19): checkStorageStatus(), clearSessionState(), EdgeCaseManager, getSaveTimestamp(), loadSessionState(), safeGetItem(), safeSetItem(), saveSessionState() (+11 more)
-
-### Community 9 - "SFX Playback Interface"
-Cohesion: 0.12
-Nodes (8): playCombo(), playInvalid(), playJellyHitByLayer(), playMatchSfx(), playSwap(), playSwap(), createScorePopup(), BoardAnimator
-
-### Community 10 - "SFX Player Engine"
-Cohesion: 0.16
-Nodes (28): getConfig(), getCtx(), getOrCreateHowl(), loadBuffer(), playBlockerImmovable(), playBuffer(), playCascade(), playEvent() (+20 more)
-
-### Community 12 - "Telemetry & Analytics"
+### Community 12 - "Telemetry"
 Cohesion: 0.11
 Nodes (4): getTelemetry(), resetTelemetry(), TelemetryRecorder, TutorialStepTracker
 
-### Community 13 - "Game Design Document"
+### Community 13 - "GDD Overview & Requirements"
 Cohesion: 0.08
 Nodes (27): Consolidated Requirements 2026-05-08, Core Gameplay Loop, Design Pillars, Game Overview (GDD 01), Scoring Economy, Blocker System Design, Scene & Level Design (GDD 02), Objective Types (+19 more)
 
-### Community 14 - "Keyboard Input Bindings"
-Cohesion: 0.12
-Nodes (3): defaultKeybinds(), eventToKeyCode(), KeybindManager
-
-### Community 15 - "SFX & Animation Bridge"
-Cohesion: 0.25
-Nodes (19): playLevelComplete(), playLevelFail(), playSpecialByKind(), createBlastZoneOverlay(), createBrewAnimation(), createCascadeDropAnimation(), createChainSaturationPulse(), createEnhancedBlastAnimation() (+11 more)
-
-### Community 16 - "Match Detection Logic"
-Cohesion: 0.34
-Nodes (18): classifyGroup(), classifyMergedShape(), classifySingleRun(), determineSpawnAt(), determineSpecial(), findSharedCells(), getCenterCell(), getIntersectionCell() (+10 more)
-
-### Community 17 - "Endless Mode Runner"
+### Community 15 - "Community 15"
 Cohesion: 0.16
 Nodes (8): calculateDifficulty(), checkEndlessEndCondition(), createEndlessEndScreenData(), EndlessRunner, getDifficultyParams(), getLeaderboardRank(), updateEndlessBestRecords(), updateLeaderboard()
 
-### Community 19 - "Visual Filters & Effects"
+### Community 17 - "Community 17"
 Cohesion: 0.16
 Nodes (6): applyBloom(), applyGlowBlur(), createShockwaveEffect(), FilterManager, removeBloom(), removeGlowBlur()
 
-### Community 21 - "Board Animation Controller"
-Cohesion: 0.14
-Nodes (20): BoardAnimator.animateActivation, BoardAnimator.animateCascadeSteps, BoardAnimator.animateSwap, BoardAnimator.playColourGemStagedTimeline, BoardAnimator.playRadiationTimeline, BoardAnimator.runTimeline, GameIntegration.startLevel, ActivateResult (+12 more)
-
-### Community 23 - "Event Bus & Pools"
+### Community 19 - "Community 19"
 Cohesion: 0.16
 Nodes (5): createCascadeStepPool(), createIntensityPool(), createMatchLandedPool(), EventBusImpl, EventPool
 
-### Community 27 - "Debug Stats & Clock"
-Cohesion: 0.18
-Nodes (4): ClockScaleController, createStatsPanel(), createDebugPanel(), createDefaultMetrics()
-
-### Community 28 - "Module Interface Layer"
+### Community 24 - "Community 24"
 Cohesion: 0.17
 Nodes (9): cloneBoard, detectMatches, RawRun, scanHorizontal, scanVertical, findValidSwaps, createRngStreams, Mulberry32 (+1 more)
 
-### Community 30 - "Synth SFX Engine"
-Cohesion: 0.3
-Nodes (13): ensure(), getNoiseBuffer(), loadAllBuffers(), play(), playCascade(), playCombo(), playInvalid(), playLevelComplete() (+5 more)
+### Community 26 - "Community 26"
+Cohesion: 0.18
+Nodes (14): BoardAnimator.animateActivation, createBoard, createGem, getCell, createGame, GameIntegration, GameIntegration.startLevel, GameIntegration.updateHud (+6 more)
 
-### Community 31 - "State Machine Integration"
+### Community 27 - "Community 27"
 Cohesion: 0.22
 Nodes (14): GameIntegration.initialize, GameIntegration.onStateChanged, GameIntegration.transitionTo, AppState State Machine, ScreenRouter, ScreenRouter.setScreen, ScreenRouter.showLevelComplete, ScreenRouter.showLevelFail (+6 more)
 
-### Community 32 - "Board & Gem Model"
-Cohesion: 0.14
-Nodes (14): Board, Cell, createBoard, createGem, Gem, getCell, createGame, GameIntegration (+6 more)
-
-### Community 34 - "Animation Factory"
+### Community 29 - "Community 29"
 Cohesion: 0.15
 Nodes (13): Animation, AnimationManager, createBlastZoneOverlay, createBrewAnimation, createCascadeDropAnimation, createEnhancedBlastAnimation, createGemConvergeAnimation, createMarkEffect (+5 more)
 
-### Community 36 - "UI Widget Factory"
+### Community 32 - "Community 32"
+Cohesion: 0.24
+Nodes (3): mapPointerSource(), mapPointerType(), CommandQueue
+
+### Community 33 - "Community 33"
 Cohesion: 0.22
 Nodes (11): createButton, createObjectiveChip, createStarDisplay, objectiveToDisplayInfo, UIButton, UIObjectiveChip, UIStarDisplay, createGameHUD (+3 more)
 
-### Community 38 - "Input System Core"
-Cohesion: 0.22
-Nodes (3): InputSystem, mapPointerSource(), mapPointerType()
+### Community 35 - "Community 35"
+Cohesion: 0.31
+Nodes (9): GameSessionController.checkEndCondition, EndCondition, GameSessionController.executeSwap, Anti-Frustration Stance, 5 Design Pillars, GDD 01: Game Overview, Scoring Economy & Rule Ledger, Special Combos Matrix (+1 more)
 
-### Community 41 - "Accessibility Config"
-Cohesion: 0.44
-Nodes (7): createAccessibilityConfig(), detectPrefersReducedMotion(), getColourPalette(), getContrastConfig(), getGemColour(), getMotionConfig(), onPrefersReducedMotionChange()
-
-### Community 42 - "Game Entry & Preload"
-Cohesion: 0.56
-Nodes (6): playStone(), preloadStoneSfx(), createGame(), preloadGemTextures(), createSfxTestPanel(), main()
-
-### Community 43 - "Build Budget Validation"
+### Community 36 - "Community 36"
 Cohesion: 0.57
 Nodes (6): collectFiles(), estimateGzipSize(), formatBytes(), getFileSize(), getTotalSize(), main()
 
-### Community 44 - "Special Gem Overlays"
+### Community 37 - "Community 37"
 Cohesion: 0.57
 Nodes (6): createSpecialOverlayGraphics(), drawAreaOverlay(), drawColourOverlay(), drawLineHOverlay(), drawLineVOverlay(), getSpecialIndicatorColour()
 
-### Community 46 - "Subsystem Wiring Hub"
+### Community 38 - "Community 38"
 Cohesion: 0.39
 Nodes (8): Animations, Board Animator, Board Interaction, Board Renderer, Game Integration, Game Session Controller, Staged Blast Timeline, Validate Production Build
 
-### Community 47 - "Art Style & Design Tokens"
+### Community 39 - "Community 39"
 Cohesion: 0.29
-Nodes (7): Art Style & Narrative (GDD 04), Gem Archetypes (7 Colors), Accessibility Requirements, Component Library, Design Tokens System, UI/UX Design (GDD 05), Internationalization (i18n)
+Nodes (8): BoardAnimator.animateSwap, BoardAnimator.playColourGemStagedTimeline, BoardAnimator.playRadiationTimeline, BoardAnimator.runTimeline, SwapResult, Special Gems Specification, determineSpecial, mergeRuns
 
-### Community 48 - "Performance Validation"
+### Community 40 - "Community 40"
 Cohesion: 0.67
 Nodes (5): main(), printBudgets(), validateDrawCalls(), validateFps(), validateMemoryDrift()
 
-### Community 49 - "Production Readiness Check"
+### Community 42 - "Community 42"
+Cohesion: 0.29
+Nodes (7): Art Style & Narrative (GDD 04), Gem Archetypes (7 Colors), Accessibility Requirements, Component Library, Design Tokens System, UI/UX Design (GDD 05), Internationalization (i18n)
+
+### Community 44 - "Community 44"
 Cohesion: 0.6
 Nodes (4): check(), collectFiles(), formatBytes(), main()
 
-### Community 51 - "GDD Design Pillars"
-Cohesion: 0.4
-Nodes (6): Anti-Frustration Stance, 5 Design Pillars, GDD 01: Game Overview, Special Gems Specification, determineSpecial, mergeRuns
-
-### Community 53 - "Atlas Pack Tools"
+### Community 45 - "Community 45"
 Cohesion: 0.8
 Nodes (3): buildManifest(), listFiles(), main()
 
-### Community 54 - "Subsystem 54"
+### Community 46 - "Community 46"
+Cohesion: 0.8
+Nodes (3): getCtx(), playBlockerImmovable(), playJellyHit()
+
+### Community 47 - "Community 47"
+Cohesion: 0.4
+Nodes (5): BoardAnimator.animateCascadeSteps, BoardSnapshot, CascadeStep, GameSessionController.runCascadeLoop, Intra-Level Phase Flow
+
+### Community 49 - "Community 49"
 Cohesion: 0.5
 Nodes (3): CommandQueue, GameEventBus, RulesEngine
 
-### Community 55 - "Subsystem 55"
+### Community 50 - "Community 50"
 Cohesion: 0.67
 Nodes (4): Gem (Match-3 PixiJS game), game subsystem (pure logic), rendering subsystem (PixiJS), state subsystem (EventBus + AppState)
 
-### Community 56 - "Subsystem 56"
-Cohesion: 0.83
-Nodes (3): getCtx(), playBlockerImmovable(), playJellyHit()
-
-### Community 57 - "Subsystem 57"
+### Community 51 - "Community 51"
 Cohesion: 0.5
 Nodes (4): Cascade End-Condition Timing, Chain Multiplier Formula, Move-Counting Rules, Scoring Economy & Rule Ledger
 
-### Community 59 - "Subsystem 59"
+### Community 52 - "Community 52"
+Cohesion: 0.5
+Nodes (4): Board, Cell, Gem, GameSessionController.runGravity
+
+### Community 53 - "Community 53"
+Cohesion: 0.5
+Nodes (4): Edge Cases (Tab/Offline/Storage), Macro Flow (Screen Navigation), Onboarding Flow (First 3 Minutes), Game Flow State Machine
+
+### Community 54 - "Community 54"
+Cohesion: 0.5
+Nodes (4): Event Bus Telemetry Hooks, Fail / Retry Flow, Intensity Calculation, Intra-Level Flow (Phase Sequence)
+
+### Community 55 - "Community 55"
 Cohesion: 0.67
 Nodes (3): Atlas Packing System, Build Pipeline, Performance Budget System
 
-### Community 61 - "Subsystem 61"
+### Community 58 - "Community 58"
 Cohesion: 0.67
 Nodes (3): Core Gameplay Loop, Special Combos Matrix, Special Gems Spec
 
 ## Knowledge Gaps
-- **113 isolated node(s):** `Performance Budget System`, `Atlas Packing System`, `setupResizeHandler (ResizeObserver)`, `createSfxTestPanel (debug DOM panel)`, `KeyAction` (+108 more)
+- **118 isolated node(s):** `Performance Budget System`, `Atlas Packing System`, `setupResizeHandler (ResizeObserver)`, `createSfxTestPanel (debug DOM panel)`, `KeyAction` (+113 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **50 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `GameSessionController` connect `Core Game Rules & Session` to `Game Integration & Level System`, `Level Objectives & Progress`, `Integration Entry Points`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
-- **Why does `KeybindManager` connect `Keyboard Input Bindings` to `Core Game Rules & Session`, `Integration Entry Points`, `Input System Core`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
-- **Why does `ScreenRouter` connect `Game Integration & Level System` to `State Management & Save`, `Integration Entry Points`?**
-  _High betweenness centrality (0.027) - this node is a cross-community bridge._
-- **Are the 31 inferred relationships involving `getCell()` (e.g. with `.executeActivation()` and `.snapshotColoursAt()`) actually correct?**
-  _`getCell()` has 31 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 9 inferred relationships involving `detectMatches()` (e.g. with `scoreSwap()` and `.runCascadeLoop()`) actually correct?**
-  _`detectMatches()` has 9 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 9 inferred relationships involving `createButton()` (e.g. with `getButtonColours()` and `createLevelSelectCard()`) actually correct?**
-  _`createButton()` has 9 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `GameSessionController` connect `Special Gems & Board Ops` to `Game Rules & Session`, `Objective Tracking`, `Debug & Legacy Audio`, `Community 31`?**
+  _High betweenness centrality (0.046) - this node is a cross-community bridge._
+- **Why does `KeybindManager` connect `Input & Keybinds` to `Community 32`, `Community 31`?**
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `BoardRenderer` connect `Debug & Legacy Audio` to `SFX Player & Catalog`, `Community 31`?**
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Are the 32 inferred relationships involving `getCell()` (e.g. with `.executeActivation()` and `.snapshotColoursAt()`) actually correct?**
+  _`getCell()` has 32 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 10 inferred relationships involving `detectMatches()` (e.g. with `scoreSwap()` and `.runCascadeLoop()`) actually correct?**
+  _`detectMatches()` has 10 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Performance Budget System`, `Atlas Packing System`, `setupResizeHandler (ResizeObserver)` to the rest of the system?**
-  _113 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _118 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Game Rules & Session` be split into smaller, more focused modules?**
+  _Cohesion score 0.06 - nodes in this community are weakly interconnected._

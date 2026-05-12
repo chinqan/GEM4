@@ -78,7 +78,7 @@ export class ScreenRouter {
     const splash = createSplashScreen({ width, height });
     splash.setLoadProgress(1);
     splash.showTapPrompt(true);
-    this.setScreen(splash);
+    this.setScreen(splash, true);
 
     splash.eventMode = 'static';
     splash.on('pointertap', () => {
@@ -103,7 +103,7 @@ export class ScreenRouter {
       onSettings: () => this.config.transitionTo({ kind: 'settings', returnTo: this.config.getCurrentState() } as any),
       onCredits: () => this.config.transitionTo({ kind: 'credits' }),
     });
-    this.setScreen(menu);
+    this.setScreen(menu, true);
     this.rebuildFn = () => this.showMenu();
   }
 
@@ -367,11 +367,12 @@ export class ScreenRouter {
 
   // ─── Private ────────────────────────────────────────────
 
-  private setScreen(screen: Container): void {
+  private setScreen(screen: Container, silent = false): void {
     this.clearScreen();
     this.activeScreen = screen;
     this.config.getUiLayer().addChild(screen);
-    // Play page transition sound
-    import('../audio/sfx-player').then(({ playPageTransition }) => playPageTransition());
+    if (!silent) {
+      import('../audio/sfx-player').then(({ playPageTransition }) => playPageTransition());
+    }
   }
 }
