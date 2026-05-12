@@ -26,7 +26,7 @@ import {
 } from '../rules/scoring';
 import { resolveCombo } from '../rules/combo-matrix';
 import { processBlockersOnClear } from '../../game/level/blocker';
-import { findValidSwaps } from './reshuffle';
+import { findValidSwaps, reshuffle } from './reshuffle';
 import type { LevelSpec } from '../level/level-spec';
 import type { ObjectiveTracker } from '../level/objective';
 import { createTracker, calculateStars, ScoreTracker, CollectTracker } from '../level/objective';
@@ -572,6 +572,7 @@ export class RulesEngine {
   // ─── 重洗 ─────────────────────────────────────────────
 
   private processReshuffle(): void {
+    reshuffle(this.board, this.cascadeRng, this.colours);
     this.eventBus.emit({ kind: 'reshuffle.triggered', reason: 'manual' });
   }
 

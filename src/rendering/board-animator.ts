@@ -6,6 +6,7 @@
 // This module decouples animation orchestration from game logic,
 // making both independently testable.
 
+import { Graphics } from 'pixi.js';
 import type { Container } from 'pixi.js';
 import type { CellPos, GemColour, SpecialGemType } from '../types';
 import type { Board } from '../game/rules/board';
@@ -22,6 +23,7 @@ import type {
   GravityResult,
   BlockerHit,
 } from '../game/runtime/game-session';
+import type { ReshuffleMove } from '../game/runtime/reshuffle';
 import type { SpecialActivationKind } from './design-tokens';
 
 import {
@@ -147,6 +149,9 @@ export class BoardAnimator {
   private readonly layers: LayerRefs;
   private readonly mergeFx: MergeParticleSystem;
   private readonly jellyFx: JellyParticleSystem;
+
+  private hintFlashGfx: Graphics[] = [];
+  private hintFlashTime = 0;
 
   constructor(config: BoardAnimatorConfig) {
     this.boardRenderer = config.boardRenderer;
@@ -426,11 +431,109 @@ export class BoardAnimator {
   update(dtMs: number): void {
     this.mergeFx.update(dtMs);
     this.jellyFx.update(dtMs);
+
+    if (this.hintFlashGfx.length > 0) {
+      this.hintFlashTime += dtMs;
+      // 900ms per cycle, alpha oscillates 0.04 → 0.22
+      const alpha = 0.04 + 0.18 * (0.5 + 0.5 * Math.sin(this.hintFlashTime / 900 * Math.PI * 2));
+      for (const gfx of this.hintFlashGfx) gfx.alpha = alpha;
+    }
+  }
+
+  // ─── Public: Hint Flash ───────────────────────────────────
+
+  showHintFlash(cells: CellPos[]): void {
+    this.clearHintFlash();
+    for (const [col, row] of cells) {
+      const gfx = new Graphics();
+      gfx.rect(0, 0, CELL_SIZE, CELL_SIZE).fill({ color: 0xffffff });
+      gfx.position.set(col * CELL_SIZE, row * CELL_SIZE);
+      gfx.alpha = 0.04;
+      this.layers.cellLayer.addChild(gfx);
+      this.hintFlashGfx.push(gfx);
+    }
+    this.hintFlashTime = 0;
+  }
+
+  clearHintFlash(): void {
+    for (const gfx of this.hintFlashGfx) gfx.destroy();
+    this.hintFlashGfx = [];
+    this.hintFlashTime = 0;
+  }
+
+  // ─── Public: Reshuffle Animation ─────────────────────────
+
+  /**
+   * 重洗動畫（滑動版）：每顆寶石從舊位置滑動到新位置，完成後呼叫 syncFn。
+   * moves 來自 session.checkAndReshuffle()；若為空陣列，退回淡出淡入。
+   */
+  async animateReshuffleSlide(moves: ReshuffleMove[], syncFn: () => void): Promise<void> {
+    if (moves.length === 0) {
+      await this.animateReshuffle(syncFn);
+      return;
+    }
+
+    const SLIDE_MS = 400;
+    const slideAnims: Animation[] = [];
+
+    for (const { from, to } of moves) {
+      const spr = this.boardRenderer.getSprite(from[0], from[1]);
+      if (!spr) continue;
+
+      const startX = (spr as any).position.x as number;
+      const startY = (spr as any).position.y as number;
+      const endX = to[0] * CELL_SIZE + CELL_SIZE / 2;
+      const endY = to[1] * CELL_SIZE + CELL_SIZE / 2;
+
+      slideAnims.push({
+        elapsed: 0,
+        duration: SLIDE_MS,
+        update(dt: number): boolean {
+          this.elapsed += dt;
+          const t = Math.min(this.elapsed / SLIDE_MS, 1);
+          const ease = 1 - (1 - t) * (1 - t); // ease-out quad
+          (spr as any).position.set(startX + (endX - startX) * ease, startY + (endY - startY) * ease);
+          return this.elapsed >= SLIDE_MS;
+        },
+        complete() {
+          (spr as any).position.set(endX, endY);
+        },
+      });
+    }
+
+    await this.playAnims(slideAnims);
+    syncFn();
+  }
+
+  private async animateReshuffle(doReshuffle: () => void): Promise<void> {
+    await this.fadeLayer(1, 0.2, 220);
+    doReshuffle();
+    await this.fadeLayer(0.2, 1, 280);
+  }
+
+  private fadeLayer(fromAlpha: number, toAlpha: number, durationMs: number): Promise<void> {
+    const layer = this.layers.boardLayer;
+    layer.alpha = fromAlpha;
+
+    const anim: import('./animations').Animation = {
+      elapsed: 0,
+      duration: durationMs,
+      update(dt: number): boolean {
+        this.elapsed += dt;
+        const t = Math.min(this.elapsed / durationMs, 1);
+        layer.alpha = fromAlpha + (toAlpha - fromAlpha) * t;
+        return this.elapsed >= durationMs;
+      },
+      complete() { layer.alpha = toAlpha; },
+    };
+
+    return this.playAnims([anim]);
   }
 
   // ─── Public: Cleanup ──────────────────────────────────────
 
   destroy(): void {
+    this.clearHintFlash();
     this.mergeFx.destroy();
     this.jellyFx.destroy();
   }

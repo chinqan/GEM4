@@ -17,6 +17,8 @@ import { matchScore, specialActivationScore, comboScore, remainingMovesBonus, re
 import { resolveCombo, comboKey } from '../rules/combo-matrix';
 import { activateColourGem, activateLineBomb, activateAreaBomb, processSpecialActivations } from '../rules/special-gems';
 import { CollectTracker, ClearTracker, DropTracker, createTracker, calculateStars } from '../level/objective';
+import { findValidSwaps, reshuffle } from './reshuffle';
+import type { ReshuffleMove } from './reshuffle';
 
 // ─── Result Types ───────────────────────────────────────────
 
@@ -283,6 +285,17 @@ export class GameSessionController {
     } finally {
       this._isProcessing = false;
     }
+  }
+
+  // ─── Reshuffle ──────────────────────────────────────────
+
+  /**
+   * cascade 結束後呼叫：若棋盤無有效交換則自動重洗。
+   * 回傳 true 表示確實執行了重洗，呼叫端應接著播放動畫並 sync renderer。
+   */
+  checkAndReshuffle(): ReshuffleMove[] | null {
+    if (findValidSwaps(this.board).length > 0) return null;
+    return reshuffle(this.board, this.rngStreams.boardInit, this.colours);
   }
 
   // ─── Time Tick ──────────────────────────────────────────

@@ -208,8 +208,8 @@ export interface EndlessResult {
 
 若玩家閒置 > `hintDelayMs`（設定，預設 5000），系統：
 
-1. 先跑 solver 尋找可行 swap
-2. 若有：將該 swap 的兩顆寶石顯示輕微脈動提示
+1. 先跑 solver 尋找可行 swap，並評分（優先選能產生特殊寶石的交換）
+2. 若有：模擬該 swap 後偵測消除範圍，將整個消除區塊（含交換的兩顆寶石）的底版顯示白色輕微呼吸閃爍（alpha 0.04→0.22，週期 900ms）；玩家執行 swap 或 activate 後立即清除
 3. 若無：顯示「重洗中」並自動 reshuffle 棋盤（保留計分、手數）
 
 ### 3.5 Intensity 計算
@@ -276,7 +276,7 @@ urgencyKick = 1 if movesRemaining / initialMoves < 0.3 else 0
         ▼
 [Game L1] ── 盤面預置的 4-match 機會很明顯
         │
-        ├─ 若玩家 15 秒內沒動：播放「暗示」動畫，輕微脈動指向可行 swap
+        ├─ 若玩家 5 秒內沒動：底版白色呼吸閃爍提示可行消除區塊（見 §3.4）
         ├─ 若玩家做了 swap：正常 flow
         ▼
 [L1 complete]

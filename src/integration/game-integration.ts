@@ -471,8 +471,32 @@ export class GameIntegration {
     });
     this.activeBoardInteraction = interaction;
 
+    // --- Wire HintTimer ---
+    const { HintTimer } = await import('../game/runtime/hint');
+    let hintDelayMs = 5000;
+    try {
+      const { SaveManager: SM } = await import('../state/save-state');
+      hintDelayMs = new SM().load().settings.gameplay.hintDelayMs;
+    } catch { /* use default */ }
+    const onNoHint = async (): Promise<void> => {
+      const moves = session.checkAndReshuffle();
+      if (moves) {
+        await animator.animateReshuffleSlide(moves, () => boardRenderer.sync(board));
+        this.eventBus.emit({ kind: 'reshuffle.triggered', reason: 'noMoves' });
+      }
+    };
+    const hintTimer = new HintTimer(() => board, this.eventBus, hintDelayMs, () => { void onNoHint(); });
+
+    const unsubHint = this.eventBus.on('hint.shown', (e) => {
+      animator.showHintFlash(e.cells);
+    });
+    this.sessionCleanupFns.push(unsubHint);
+    this.sessionCleanupFns.push(() => animator.clearHintFlash());
+
     interaction.attach({
       onSwap: async (from, to) => {
+        hintTimer.reset();
+        animator.clearHintFlash();
         const result = session.executeSwap(from, to);
         await animator.animateSwap(result, from, to, board);
         boardRenderer.sync(board);
@@ -480,9 +504,17 @@ export class GameIntegration {
 
         if (result.endCondition) {
           this.emitLevelResolved(result.endCondition, 0);
+          return;
+        }
+        const movesAfterSwap = session.checkAndReshuffle();
+        if (movesAfterSwap) {
+          await animator.animateReshuffleSlide(movesAfterSwap, () => boardRenderer.sync(board));
+          this.eventBus.emit({ kind: 'reshuffle.triggered', reason: 'noMoves' });
         }
       },
       onActivate: async (at) => {
+        hintTimer.reset();
+        animator.clearHintFlash();
         const result = session.executeActivation(at);
         if (result) {
           await animator.animateActivation(result, board);
@@ -491,6 +523,12 @@ export class GameIntegration {
 
           if (result.endCondition) {
             this.emitLevelResolved(result.endCondition, 0);
+            return;
+          }
+          const movesAfterActivate = session.checkAndReshuffle();
+          if (movesAfterActivate) {
+            await animator.animateReshuffleSlide(movesAfterActivate, () => boardRenderer.sync(board));
+            this.eventBus.emit({ kind: 'reshuffle.triggered', reason: 'noMoves' });
           }
         }
       },
@@ -644,7 +682,8 @@ export class GameIntegration {
       {
         render: (_alpha: number) => {
           boardRenderer.update(16.67);
-          animator.update(16);
+          animator.update(16.67);
+          hintTimer.update(16.67);
           if (spec.constraints.timeBudget && session.timeRemaining !== Infinity) {
             hud.setTime(session.timeRemaining);
           }

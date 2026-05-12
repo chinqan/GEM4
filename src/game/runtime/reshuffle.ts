@@ -363,68 +363,79 @@ function fillBoardNoMatches(
   }
 }
 
-// ─── 13.3 reshuffle（基礎實作） ─────────────────────────────
+// ─── 13.3 reshuffle ─────────────────────────────────────────
+
+/** 描述單顆寶石從舊位置挪移到新位置（供動畫層使用） */
+export interface ReshuffleMove {
+  from: CellPos;
+  to: CellPos;
+}
 
 /**
- * 重洗棋盤：保留特殊寶石與 blocker，只重新排列普通寶石。
+ * 重洗棋盤：保留特殊寶石與 blocker，將普通寶石以位置置換方式重新排列。
  *
  * 保證重洗後：
  * 1. 無預存消除
  * 2. 至少 1 組有效交換
  *
+ * 回傳每顆移動寶石的 from→to 位移清單（動畫用）。
+ * 若安全閥路徑觸發（所有重試失敗），回傳空陣列。
+ *
  * @param board 當前棋盤（會被原地修改）
  * @param rng   boardInit RNG 串流
- * @param colours 可用顏色池
+ * @param colours 可用顏色池（安全閥路徑使用）
  */
 export function reshuffle(
   board: Board,
   rng: Mulberry32,
   colours: readonly GemColour[],
-): void {
-  for (let attempt = 0; attempt < MAX_RESHUFFLE_RETRIES; attempt++) {
-    // 1. 收集所有可重洗的格子位置與其顏色
-    const reshufflePositions: CellPos[] = [];
-    const reshuffleColours: GemColour[] = [];
+): ReshuffleMove[] {
+  // 快照：記錄原始位置與寶石物件（重試時固定以此為來源）
+  const origPositions: CellPos[] = [];
+  const origGems: ReturnType<typeof createGem>[] = [];
 
-    for (let col = 0; col < board.width; col++) {
-      for (let row = 0; row < board.height; row++) {
-        const cell = board.cells[col][row];
-        if (cell.isEmpty || !cell.gem) continue;
-        // 保留特殊寶石和 locked 寶石
-        if (cell.gem.special !== null || cell.gem.locked) continue;
-        // 有 deliveryItem 的格子不參與重洗（不應有 gem，但防禦性跳過）
-        if (cell.deliveryItem) continue;
-
-        reshufflePositions.push([col, row]);
-        reshuffleColours.push(cell.gem.colour!);
-      }
+  for (let col = 0; col < board.width; col++) {
+    for (let row = 0; row < board.height; row++) {
+      const cell = board.cells[col][row];
+      if (cell.isEmpty || !cell.gem) continue;
+      if (cell.gem.special !== null || cell.gem.locked) continue;
+      if (cell.deliveryItem) continue;
+      origPositions.push([col, row]);
+      origGems.push(cell.gem);
     }
-
-    // 2. Fisher-Yates 洗牌顏色（保留 deliveryItem 在原位）
-    for (let i = reshuffleColours.length - 1; i > 0; i--) {
-      const j = rng.int(0, i + 1);
-      const temp = reshuffleColours[i];
-      reshuffleColours[i] = reshuffleColours[j];
-      reshuffleColours[j] = temp;
-    }
-
-    // 3. 重新放置
-    for (let i = 0; i < reshufflePositions.length; i++) {
-      const [col, row] = reshufflePositions[i];
-      board.cells[col][row].gem = createGem(reshuffleColours[i]);
-    }
-
-    // 4. 檢查無預存消除
-    const matches = detectMatches(board);
-    if (matches.length > 0) continue;
-
-    // 5. 檢查至少 1 組有效交換
-    const validSwaps = findValidSwaps(board);
-    if (validSwaps.length > 0) return;
   }
 
-  // 安全閥：若所有重試都失敗，用 fillBoardNoMatches 重新填充
-  // 清除所有可重洗的寶石
+  for (let attempt = 0; attempt < MAX_RESHUFFLE_RETRIES; attempt++) {
+    // 1. Fisher-Yates 洗牌索引陣列（對原始快照做置換）
+    const perm = origPositions.map((_, i) => i);
+    for (let i = perm.length - 1; i > 0; i--) {
+      const j = rng.int(0, i + 1);
+      const tmp = perm[i]; perm[i] = perm[j]; perm[j] = tmp;
+    }
+
+    // 2. 將原始寶石物件依置換放回棋盤
+    for (let i = 0; i < origPositions.length; i++) {
+      const [col, row] = origPositions[i];
+      board.cells[col][row].gem = origGems[perm[i]];
+    }
+
+    // 3. 檢查無預存消除
+    if (detectMatches(board).length > 0) continue;
+
+    // 4. 檢查至少 1 組有效交換
+    if (findValidSwaps(board).length > 0) {
+      // 建立位移清單（排除固定不動的格子）
+      const moves: ReshuffleMove[] = [];
+      for (let i = 0; i < origPositions.length; i++) {
+        if (perm[i] !== i) {
+          moves.push({ from: origPositions[perm[i]], to: origPositions[i] });
+        }
+      }
+      return moves;
+    }
+  }
+
+  // 安全閥：所有重試失敗 → 清除後用 fillBoardNoMatches 重填，回傳空陣列
   for (let col = 0; col < board.width; col++) {
     for (let row = 0; row < board.height; row++) {
       const cell = board.cells[col][row];
@@ -434,4 +445,5 @@ export function reshuffle(
     }
   }
   fillBoardNoMatches(board, colours, undefined, rng);
+  return [];
 }

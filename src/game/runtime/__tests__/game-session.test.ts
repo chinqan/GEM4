@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { GameSessionController } from '../game-session';
 import { createBoard, createGem, getCell } from '../../rules/board';
 import { createRngStreams } from '../../rules/rng';
-import { initBoard } from '../reshuffle';
+import { initBoard, findValidSwaps } from '../reshuffle';
 import type { LevelSpec } from '../../level/level-spec';
 import type { CellPos } from '../../../types';
+import type { GemColour } from '../../../types';
 
 // ─── Test Helpers ───────────────────────────────────────────
 
@@ -192,6 +193,49 @@ describe('GameSessionController', () => {
         expect(typeof endCondition.stars).toBe('number');
       }
       expect(session.settled).toBe(true);
+    });
+  });
+
+  describe('checkAndReshuffle', () => {
+    // 數學上保證無解的棋盤：(col + row) % 5 循環五色
+    // 對任何相鄰交換，交換後的相鄰格 mod-5 餘數均不同，不可能形成 3-in-a-row。
+    // 使用五色以確保 reshuffle() 的置換嘗試有足夠成功率（約 5%/次）。
+    function makeDeadlockedSession(): GameSessionController {
+      const colours: GemColour[] = ['R', 'G', 'B', 'Y', 'P'];
+      const spec = makeSpec({ gems: { colours } });
+      const rngStreams = createRngStreams(1n);
+      const board = createBoard(8, 8);
+      for (let c = 0; c < 8; c++) {
+        for (let r = 0; r < 8; r++) {
+          board.cells[c][r].gem = createGem(colours[(c + r) % 5]);
+        }
+      }
+      return new GameSessionController({ spec, seed: 1n, rngStreams, board });
+    }
+
+    it('returns null when board has valid swaps', () => {
+      const session = makeSession();
+      expect(session.checkAndReshuffle()).toBeNull();
+    });
+
+    it('returns move array and reshuffles when board is deadlocked', () => {
+      const session = makeDeadlockedSession();
+      // 確認起始狀態確實無解
+      const boardRef = (session as any).board;
+      expect(findValidSwaps(boardRef)).toHaveLength(0);
+
+      const moves = session.checkAndReshuffle();
+
+      expect(moves).not.toBeNull();
+      expect(Array.isArray(moves)).toBe(true);
+      expect(findValidSwaps(boardRef).length).toBeGreaterThan(0);
+    });
+
+    it('returns null on second call after reshuffle', () => {
+      const session = makeDeadlockedSession();
+      session.checkAndReshuffle();
+      // After reshuffle board should have valid swaps → second call returns null
+      expect(session.checkAndReshuffle()).toBeNull();
     });
   });
 });

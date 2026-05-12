@@ -105,6 +105,34 @@ export function findHint(board: Board): [CellPos, CellPos] | null {
   return bestSwap;
 }
 
+/**
+ * 回傳暗示高亮需要涵蓋的所有格子：
+ * 模擬交換後偵測會被消除的格子，加上交換的兩個來源格。
+ */
+function getSwapHighlightCells(board: Board, from: CellPos, to: CellPos): CellPos[] {
+  const sim = cloneBoard(board);
+  const [fc, fr] = from;
+  const [tc, tr] = to;
+  const tempGem = sim.cells[fc][fr].gem;
+  sim.cells[fc][fr].gem = sim.cells[tc][tr].gem;
+  sim.cells[tc][tr].gem = tempGem;
+
+  const matches = detectMatches(sim, { swapPos: to });
+  const seen = new Set<string>();
+  const cells: CellPos[] = [];
+
+  const add = (pos: CellPos): void => {
+    const key = `${pos[0]},${pos[1]}`;
+    if (!seen.has(key)) { seen.add(key); cells.push(pos); }
+  };
+
+  add(from);
+  add(to);
+  for (const match of matches) {
+    for (const cell of match.cells) add(cell);
+  }
+  return cells;
+}
 
 // ─── 暗示計時器 ────────────────────────────────────────────
 
@@ -129,14 +157,16 @@ export class HintTimer {
   private hintShown = false;
 
   /**
-   * @param getBoard  取得當前棋盤狀態的 getter
-   * @param eventBus  事件匯流排（emit hint.shown）
+   * @param getBoard    取得當前棋盤狀態的 getter
+   * @param eventBus    事件匯流排（emit hint.shown）
    * @param hintDelayMs 閒置多久後觸發暗示（毫秒），0 表示停用
+   * @param onNoHint    找不到有效交換時呼叫（棋盤無解）；呼叫端應執行 reshuffle
    */
   constructor(
     private readonly getBoard: () => Board,
     private readonly eventBus: HintEventBus,
     private readonly hintDelayMs: number,
+    private readonly onNoHint?: () => void,
   ) {}
 
   /**
@@ -208,11 +238,16 @@ export class HintTimer {
       const [from, to] = hint;
       this.eventBus.emit({
         kind: 'hint.shown',
-        cells: [from, to],
+        cells: getSwapHighlightCells(board, from, to),
       });
+    } else {
+      // 棋盤無解：通知呼叫端執行 reshuffle，並重置計時器讓重洗後可再次提示
+      this.onNoHint?.();
+      this.reset();
+      return;
     }
 
-    // 無論是否找到暗示，都標記為已顯示，避免重複觸發
+    // 找到暗示才標記為已顯示，避免重複觸發
     this.hintShown = true;
   }
 }

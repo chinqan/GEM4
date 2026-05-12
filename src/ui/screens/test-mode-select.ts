@@ -30,6 +30,11 @@ const TEST_SCENARIOS: TestScenario[] = [
     label: '炸彈＋生成測試',
     description: '拖右欄 LineH 往下 → 驗證 LineV 是否生成',
   },
+  {
+    levelId: -4,
+    label: '無解重洗測試',
+    description: '開局即無解；移動或 5 秒閒置後觸發自動重洗動畫',
+  },
 ];
 
 // ─── 常數 ────────────────────────────────────────────────────
