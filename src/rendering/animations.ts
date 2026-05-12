@@ -8,6 +8,7 @@ import {
   INVALID_SHAKE_DURATION_MS,
   INVALID_SHAKE_AMPLITUDE,
   MATCH_CLEAR_DURATION_MS,
+  GEM_CONVERGE_DURATION_MS,
   CASCADE_DROP_MS_PER_ROW,
   SPECIAL_SPAWN_SHOCKWAVE_MS,
   SPECIAL_ACTIVATION_MS,
@@ -347,9 +348,76 @@ export function createSpecialSpawnShockwave(
   };
 }
 
-// ─── 22.5b 特殊寶石生成：聚焦效果 ───────────────────────────
-// 從外圍向中心收縮的光環，在消除完成前 280ms 開始播放，
-// 給玩家「能量正在凝聚」的視覺預告，接著由 shockwave 向外擴散確認生成。
+// ─── 22.5b 特殊寶石生成：聚合移動動畫 ──────────────────────
+// 消除成員寶石飛向定位點後消失，定位點原地縮小，
+// 全員抵達（MATCH_CLEAR_DURATION_MS）後由 shockwave 確認生成。
+
+/**
+ * 建立寶石聚合移動動畫，用於特殊寶石生成時。
+ *
+ * 動畫分兩階段：
+ * 1. 移動相（75%）：以 ease-in 加速飛向目標像素位置，
+ *    同時縮小至 70%，越遠越快（相同總時長 → 自然達到）。
+ * 2. 消失相（25%）：在目標位置縮小並淡出。
+ *
+ * 定位點寶石傳入 startX === targetX、startY === targetY，
+ * 移動距離為零，僅執行原地縮小消失。
+ */
+export function createGemConvergeAnimation(
+  sprite: Container,
+  startX: number,
+  startY: number,
+  targetX: number,
+  targetY: number,
+): Animation {
+  const duration = GEM_CONVERGE_DURATION_MS;
+  const MOVE_FRACTION = 0.75;
+  const originalScaleX = sprite.scale.x;
+  const originalScaleY = sprite.scale.y;
+  const originalAlpha = sprite.alpha;
+
+  return {
+    elapsed: 0,
+    duration,
+
+    update(dtMs: number): boolean {
+      this.elapsed += dtMs;
+      if (!sprite.position) return true;
+      const progress = Math.min(this.elapsed / this.duration, 1);
+
+      if (progress < MOVE_FRACTION) {
+        const t = progress / MOVE_FRACTION;
+        const eased = t * t; // ease-in: 越遠速度越快感知
+        sprite.position.set(
+          lerp(startX, targetX, eased),
+          lerp(startY, targetY, eased),
+        );
+        const scale = lerp(1, 0.7, eased);
+        sprite.scale.set(originalScaleX * scale, originalScaleY * scale);
+        sprite.alpha = originalAlpha;
+      } else {
+        sprite.position.set(targetX, targetY);
+        const t = (progress - MOVE_FRACTION) / (1 - MOVE_FRACTION);
+        const vanish = smoothstep(t);
+        const s = 0.7 * (1 - vanish);
+        sprite.scale.set(originalScaleX * s, originalScaleY * s);
+        sprite.alpha = originalAlpha * (1 - vanish);
+      }
+
+      return this.elapsed >= this.duration;
+    },
+
+    complete(): void {
+      if (!sprite.scale) return;
+      sprite.scale.set(0, 0);
+      sprite.alpha = 0;
+      sprite.visible = false;
+    },
+  };
+}
+
+// ─── 22.5c 特殊寶石生成：光環聚焦效果（保留用於輔助 VFX）────
+// 從外圍向中心收縮的光環，可疊加在寶石聚合動畫上作為補強。
 
 const SPAWN_CONVERGE_MS = 280;
 

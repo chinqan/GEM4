@@ -27,11 +27,11 @@ const PADDING_FACTOR = 0.96;
 /** 手機留白係數 */
 const MOBILE_PADDING_FACTOR = 0.96;
 
-/** 頂部 HUD 保留高度（px）— 桌面（兩列面板 96px + 間距） */
-const HUD_TOP_RESERVE = 100;
+/** 頂部 HUD 保留高度（px）— 桌面（兩列面板 120px + 間距） */
+const HUD_TOP_RESERVE = 124;
 
 /** 頂部 HUD 保留高度（px）— 手機 */
-const HUD_TOP_RESERVE_MOBILE = 100;
+const HUD_TOP_RESERVE_MOBILE = 124;
 
 // ─── calculateViewport ────────────────────────────────────
 

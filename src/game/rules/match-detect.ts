@@ -480,10 +480,24 @@ export function detectMatches(
   // 套用優先序：僅在玩家主動 swap 時限制為一顆最高優先的特殊寶石。
   // cascade（無 swapPos）時允許每個獨立 match 各自生成特殊寶石。
   if (options?.swapPos !== undefined) {
+    // Matches containing swapPos/swapPos2 are the player's intended match and
+    // take priority over any pre-existing matches on the board. Only if no
+    // swap-position match spawns a special do we fall back to global priority.
+    const swapKeys = new Set<string>();
+    if (options.swapPos) swapKeys.add(posKey(options.swapPos));
+    if (options.swapPos2) swapKeys.add(posKey(options.swapPos2));
+
+    const hasSwapPosSpecial = matches.some(
+      (m) => m.spawnsSpecial !== undefined && m.cells.some((c) => swapKeys.has(posKey(c))),
+    );
+
     let maxPriority = 0;
     let maxIdx = -1;
     for (let i = 0; i < matches.length; i++) {
-      const p = specialPriority(matches[i].spawnsSpecial);
+      const m = matches[i];
+      if (m.spawnsSpecial === undefined) continue;
+      if (hasSwapPosSpecial && !m.cells.some((c) => swapKeys.has(posKey(c)))) continue;
+      const p = specialPriority(m.spawnsSpecial);
       if (p > maxPriority) {
         maxPriority = p;
         maxIdx = i;

@@ -52,7 +52,7 @@ export interface Board {
 
 /** 建立寶石的便利函式 */
 export function createGem(
-  colour: GemColour,
+  colour: GemColour | null,
   special: SpecialGemType | null = null,
 ): Gem {
   return {

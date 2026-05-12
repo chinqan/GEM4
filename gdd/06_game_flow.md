@@ -197,6 +197,7 @@ export interface EndlessResult {
 | Swap 動畫 | 200 |
 | Invalid shake | 240 |
 | Match 消除縮放 | 200 |
+| 特殊寶石生成聚合移動（成員→定位點） | 300（越遠越快，精準同時抵達） |
 | Cascade drop step | 120 per row fallen |
 | 特殊寶石 spawn 震波 | 600 |
 | 特殊寶石啟動效果 | 800 |

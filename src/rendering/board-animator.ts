@@ -34,13 +34,13 @@ import {
   createBrewAnimation,
   createEnhancedBlastAnimation,
   createSpecialSpawnShockwave,
-  createSpawnConvergeEffect,
-  SPAWN_CONVERGE_MS,
+  createGemConvergeAnimation,
 } from './animations';
 import {
   CELL_SIZE,
   GEM_COLOURS,
   MATCH_CLEAR_DURATION_MS,
+  GEM_CONVERGE_DURATION_MS,
   BREW_PHASE_DURATION_MS,
   BLAST_PARTICLE_MULTIPLIER,
   BLAST_ZONE_COLOUR_LINE_H,
@@ -456,8 +456,22 @@ export class BoardAnimator {
         allActivationCells.add(`${e.pos[0]},${e.pos[1]}`);
         for (const [c, r] of e.clearedCells) allActivationCells.add(`${c},${r}`);
       }
+      // Extract spawn infos first so we can exclude their cells from pureMatchCells
+      const spawnInfos = step.matches
+        .filter((m): m is typeof m & { spawnAt: CellPos; spawnsSpecial: SpecialGemType } =>
+          m.spawnAt !== undefined && m.spawnsSpecial !== undefined,
+        )
+        .map(m => ({ pos: m.spawnAt, type: m.spawnsSpecial, cells: m.cells }));
+
+      // Cells belonging to a spawn match animate via converge slide, not shrink-in-place
+      const spawnMatchCellKeys = new Set<string>();
+      for (const info of spawnInfos) {
+        for (const c of info.cells) spawnMatchCellKeys.add(`${c[0]},${c[1]}`);
+      }
+
       const pureMatchCells = step.clearedCells.filter(
-        c => !allActivationCells.has(`${c.pos[0]},${c.pos[1]}`),
+        c => !allActivationCells.has(`${c.pos[0]},${c.pos[1]}`) &&
+             !spawnMatchCellKeys.has(`${c.pos[0]},${c.pos[1]}`),
       );
 
       const colourByPos = this.buildColourMap(step.preClearSnapshot, step.clearedCells);
@@ -471,13 +485,6 @@ export class BoardAnimator {
       }
       this.showScorePopup(step.score, step.clearedCells.map(c => c.pos), step.chain);
       this.showComboChainText(step.chain, step.clearedCells.map(c => c.pos));
-
-      // Extract spawn infos: which positions get a new special gem and of what type
-      const spawnInfos = step.matches
-        .filter((m): m is typeof m & { spawnAt: CellPos; spawnsSpecial: SpecialGemType } =>
-          m.spawnAt !== undefined && m.spawnsSpecial !== undefined,
-        )
-        .map(m => ({ pos: m.spawnAt, type: m.spawnsSpecial }));
 
       await this.playRadiationTimeline(
         step.specialActivations.map(this.toRadiationEvent),
@@ -548,7 +555,7 @@ export class BoardAnimator {
     colourByPos: Map<string, GemColour | null>,
     chain: number,
     blockerHits: BlockerHit[] = [],
-    spawnInfos: Array<{ pos: CellPos; type: SpecialGemType }> = [],
+    spawnInfos: Array<{ pos: CellPos; type: SpecialGemType; cells: CellPos[] }> = [],
   ): Promise<void> {
     const eventByPos = new Map<string, RadiationEvent>();
     for (const e of rootEvents) eventByPos.set(`${e.pos[0]},${e.pos[1]}`, e);
@@ -726,23 +733,34 @@ export class BoardAnimator {
       if (candidateEnd > endTime) endTime = candidateEnd;
     };
 
-    // ── Spawn VFX: converge ring (during clear tail) + reveal + shockwave + SFX ──
-    for (const { pos, type } of spawnInfos) {
+    // ── Spawn VFX: 成員寶石聚合飛向定位點，全員抵達後生成特殊寶石 ──
+    if (spawnInfos.length > 0 && GEM_CONVERGE_DURATION_MS > endTime) {
+      endTime = GEM_CONVERGE_DURATION_MS;
+    }
+    for (const { pos, type, cells } of spawnInfos) {
       const [cx, cy] = this.cellToPixel(pos);
 
-      // Converge ring starts 280ms before clear completes → energy gathering cue
-      tasks.push({
-        time: Math.max(0, MATCH_CLEAR_DURATION_MS - SPAWN_CONVERGE_MS),
-        fn: () => {
-          void this.playAnims([createSpawnConvergeEffect(cx, cy, this.layers.boardLayer)]);
-        },
-      });
+      // 所有成員（含定位點）同時啟動聚合動畫，持續 GEM_CONVERGE_DURATION_MS
+      // 越遠的格子移動距離越長但時間相同 → 速度自然更快，精準同時抵達
+      for (const cell of cells) {
+        const [startX, startY] = this.cellToPixel(cell);
+        tasks.push({
+          time: 0,
+          fn: () => {
+            const spr = this.boardRenderer.getSprite(cell[0], cell[1]);
+            if (spr) {
+              void this.playAnims([
+                createGemConvergeAnimation(spr as any, startX, startY, cx, cy),
+              ]);
+            }
+          },
+        });
+      }
 
-      // At clear completion: reveal special gem sprite + shockwave + SFX
+      // 全員消失完畢：揭示特殊寶石 + 震波 + SFX
       tasks.push({
-        time: MATCH_CLEAR_DURATION_MS,
+        time: GEM_CONVERGE_DURATION_MS,
         fn: () => {
-          // Update only the spawn cell to show the special gem
           const snap = this.makeSingleCellSnapshot(pos, type);
           this.boardRenderer.updateCell(pos[0], pos[1], snap as any);
           void this.playAnims([createSpecialSpawnShockwave(cx, cy, this.layers.boardLayer)]);

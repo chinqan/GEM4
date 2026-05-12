@@ -53,42 +53,91 @@ registerLevel({
 });
 
 // ═══════════════════════════════════════════════════════════════
-// 特殊寶石生成測試 — levelId = -2
+// 炸彈發動 + 特殊寶石生成 綜合測試 — levelId = -2
 //
-// 驗證：移動觸發炸彈發動，同時旁邊形成 4 連，應正確生成 LineV 炸彈
+// 四個情境驗證「炸彈發動時，concurrent match 的 spawn 位置落在爆炸範圍內，
+// 應優先生成特殊寶石（不被清除）」的修復邏輯。
 //
-// 初始配置：
-//   col:  0  1  2  3   4  5  6  7
-//   row3: ?  ?  ?  B   R  R  R [LineH]  ← (7,3) LineH 炸彈
-//   row4: ?  ?  ?  ?   ?  ?  ?  R       ← (7,4) 交換目標
+// 棋盤示意（8×8）：
+//   col:  0   1   2   3   4   5   6   7
+//   row0: [B] [G] [G] [G] [☆B][G]            ← 情境B
+//   row1:      [B] [B] [B]
+//   row2:                               [B]   ← 情境A blocker
+//   row3:              [B] [R] [R] [R] [☆A]  ← 情境A
+//   row4: [B]                           [R]   ← 情境C/A
+//   row5: [G] [G] [G] [B]               [B]  ← 情境C
+//   row6: [G] [B] [B] [B] [B] [B] [B]        ← 情境C/D blockers
+//   row7: [☆C][G] [P] [P] [P] [P] [☆D][P]   ← 情境C / 情境D
 //
-// 操作：把 (7,3) [LineH] 往下拖到 (7,4) [R]
-//   → LineH 移到 (7,4) 發動，清除整列 row4（不影響 row3）
-//   → (7,3) 出現 R，(4,3)(5,3)(6,3)(7,3) 形成 R×4 水平直線
-//   → 應在 (7,3) 生成 LineV 炸彈 ✓（修復前：不生成）
+// ── 情境 A：lineV + 四連消 → lineV ──────────────────────────
+//   操作：(7,3)[lineV] 往下拖到 (7,4)[R]
+//   → lineV 清除 col7；(4,3)-(7,3) 形成 R×4 → 生成 lineV
+//
+// ── 情境 B：area bomb + 四連消 → lineV ──────────────────────
+//   操作：(4,0)[area] 往右拖到 (5,0)[G]
+//   → area 清除 3×3；(1,0)-(4,0) 形成 G×4 → 生成 lineV
+//
+// ── 情境 C：area bomb + L形5格 → area bomb ──────────────────
+//   操作：(0,7)[area] 往右拖到 (1,7)[G]
+//   → area 清除 3×3；col0+row5 形成 G×5 L形 → 生成 area bomb
+//
+// ── 情境 D：area bomb + 直線5 → Colour Gem ──────────────────
+//   操作：(6,7)[area] 往右拖到 (7,7)[P]
+//   → area 清除 3×3；(2,7)-(6,7) 形成 P×5 直線 → 生成 Colour Gem
 // ═══════════════════════════════════════════════════════════════
 registerLevel({
   id: -2,
   worldId: 0,
-  name: { 'zh-TW': '炸彈＋生成測試', en: 'Bomb + Spawn Test' },
+  name: { 'zh-TW': '炸彈生成綜合測試', en: 'Bomb Spawn Test Suite' },
   board: {
     width: 8,
     height: 8,
     empty: [],
     fixedGems: [
-      // row3 右側 3 個 R（與炸彈形成 4 連）
+      // ── 情境 A：lineV + 四連消 → lineV ───────────────────────
+      { at: [7, 2], colour: 'B' },          // 防止 col7 縱向 3 連
+      { at: [3, 3], colour: 'B' },          // 截斷左側防 5 連
       { at: [4, 3], colour: 'R' },
       { at: [5, 3], colour: 'R' },
       { at: [6, 3], colour: 'R' },
-      // (7,3)：LineH 炸彈（colour=null）→ 拖這顆往下
-      { at: [7, 3], colour: null, special: 'lineH' },
-      // 截斷左側（防止延伸成 5 連變 Colour Gem）
-      { at: [3, 3], colour: 'B' },
-      // (7,4)：交換目標
-      { at: [7, 4], colour: 'R' },
-      // 防止 col7 在交換後形成縱向 3 連
-      { at: [7, 2], colour: 'B' },
-      { at: [7, 5], colour: 'B' },
+      { at: [7, 3], colour: null, special: 'lineV' }, // ← 拖到 (7,4)
+      { at: [7, 4], colour: 'R' },          // 交換目標
+      { at: [7, 5], colour: 'B' },          // 防止 col7 縱向 3 連
+
+      // ── 情境 B：area bomb + 四連消 → lineV ───────────────────
+      { at: [0, 0], colour: 'B' },          // 截斷左側防 5 連
+      { at: [1, 0], colour: 'G' },
+      { at: [2, 0], colour: 'G' },
+      { at: [3, 0], colour: 'G' },
+      { at: [4, 0], colour: null, special: 'area' }, // ← 拖到 (5,0)
+      { at: [5, 0], colour: 'G' },          // 交換目標
+      { at: [1, 1], colour: 'B' },          // 防止 col1-3 縱向 3 連
+      { at: [2, 1], colour: 'B' },
+      { at: [3, 1], colour: 'B' },
+
+      // ── 情境 C：area bomb + L形5格 → area bomb ───────────────
+      { at: [0, 4], colour: 'B' },          // 截斷 col0 向上延伸
+      { at: [0, 5], colour: 'G' },          // L 交會點（row5 橫 + col0 縱）
+      { at: [1, 5], colour: 'G' },
+      { at: [2, 5], colour: 'G' },
+      { at: [3, 5], colour: 'B' },          // 截斷右側防 4+ 連
+      { at: [0, 6], colour: 'G' },
+      { at: [1, 6], colour: 'B' },          // 防止 col1-2 縱向 3 連
+      { at: [2, 6], colour: 'B' },
+      { at: [0, 7], colour: null, special: 'area' }, // ← 拖到 (1,7)
+      { at: [1, 7], colour: 'G' },          // 交換目標（兼作情境D左側擋板）
+
+      // ── 情境 D：area bomb + 直線5 → Colour Gem ───────────────
+      { at: [2, 7], colour: 'P' },
+      { at: [3, 7], colour: 'P' },
+      { at: [4, 7], colour: 'P' },
+      { at: [5, 7], colour: 'P' },
+      { at: [6, 7], colour: null, special: 'area' }, // ← 拖到 (7,7)
+      { at: [7, 7], colour: 'P' },          // 交換目標
+      { at: [3, 6], colour: 'B' },          // 防止 col3-6 縱向 P 3 連
+      { at: [4, 6], colour: 'B' },
+      { at: [5, 6], colour: 'B' },
+      { at: [6, 6], colour: 'B' },
     ],
   },
   gems: { colours: ['R', 'G', 'B', 'Y', 'P'] },

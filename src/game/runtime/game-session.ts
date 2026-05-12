@@ -10,7 +10,7 @@ import type { LevelSpec } from '../level/level-spec';
 import type { RngStreams } from '../rules/rng';
 import type { CellPos, GemColour, SpecialGemType, MatchDescriptor, ComboType, BlockerKind } from '../../types';
 import type { ObjectiveTracker } from '../level/objective';
-import { getCell } from '../rules/board';
+import { getCell, createGem } from '../rules/board';
 import { detectMatches } from '../rules/match-detect';
 import { applyGravity, fillFromTop, collectDeliveryItems } from '../rules/cascade';
 import { matchScore, specialActivationScore, comboScore, remainingMovesBonus, remainingTimeBonus } from '../rules/scoring';
@@ -121,8 +121,8 @@ export interface SwapResult {
     boardSnapshot: BoardSnapshot;
     /** Jelly blocker changes from the initial activation blast */
     blockerHits: BlockerHit[];
-    /** Special gems spawned by concurrent matches during directBomb (pos + type) */
-    spawnInfos?: Array<{ pos: CellPos; type: SpecialGemType }>;
+    /** Special gems spawned by concurrent matches during directBomb (pos + type + source cells) */
+    spawnInfos?: Array<{ pos: CellPos; type: SpecialGemType; cells: CellPos[] }>;
   };
   /** Cascade steps after the initial clear */
   cascadeSteps: CascadeStep[];
@@ -952,9 +952,14 @@ export class GameSessionController {
 
     // Special gem always activates its ability when swapped,
     // regardless of whether normal matches also exist.
-    // Any concurrent matches are also cleared alongside the activation.
+    // Only matches formed by this swap (containing swapPos/swapPos2) are treated
+    // as concurrent — pre-existing board matches are excluded so they don't
+    // interfere with spawn priority or clear unrelated setup gems.
     if (swappedSpecialPos) {
-      return this.doDirectBombSwap(from, to, swappedSpecialPos, scoreBeforeSwap, matches);
+      const directBombMatches = matches.filter((m) =>
+        m.cells.some(([c, r]) => (c === from[0] && r === from[1]) || (c === to[0] && r === to[1])),
+      );
+      return this.doDirectBombSwap(from, to, swappedSpecialPos, scoreBeforeSwap, directBombMatches);
     }
 
     // Normal match path (no special involved)
@@ -1165,21 +1170,32 @@ export class GameSessionController {
       const k = `${c},${r}`;
       if (!clearedSet.has(k)) { clearedSet.add(k); activatedCells.push([c, r]); }
     }
-    // Concurrent match spawn positions: preserve cells that qualify for a new
-    // special gem. Skip any position already cleared by the bomb's own blast.
+    // Concurrent match spawn positions: spawn takes priority over the bomb's
+    // blast. If the bomb already cleared the spawn cell (e.g. lineV clearing
+    // the same column), un-clear it and recreate the gem as a special.
     const spawnPosSet = new Set<string>();
-    const directSpawnInfos: Array<{ pos: CellPos; type: SpecialGemType }> = [];
+    const directSpawnInfos: Array<{ pos: CellPos; type: SpecialGemType; cells: CellPos[] }> = [];
     for (const m of concurrentMatches) {
       if (m.spawnsSpecial && m.spawnAt) {
         const spKey = `${m.spawnAt[0]},${m.spawnAt[1]}`;
-        if (!clearedSet.has(spKey)) {
-          spawnPosSet.add(spKey);
-          directSpawnInfos.push({ pos: m.spawnAt, type: m.spawnsSpecial });
-          const sc = getCell(this.board, m.spawnAt);
-          if (sc?.gem) {
-            sc.gem.colour = null;
-            sc.gem.special = m.spawnsSpecial;
-          }
+        spawnPosSet.add(spKey);
+        directSpawnInfos.push({ pos: m.spawnAt, type: m.spawnsSpecial, cells: m.cells });
+
+        // If the bomb blast already cleared this cell, rescue it from the
+        // cleared list — the special gem spawn wins over the blast.
+        if (clearedSet.has(spKey)) {
+          clearedSet.delete(spKey);
+          const idx = activatedCells.findIndex(([c, r]) => `${c},${r}` === spKey);
+          if (idx !== -1) activatedCells.splice(idx, 1);
+        }
+
+        const [sc, sr] = m.spawnAt;
+        if (!this.board.cells[sc][sr].gem) {
+          // Cell was already nulled by the bomb — recreate as special gem.
+          this.board.cells[sc][sr].gem = createGem(null, m.spawnsSpecial);
+        } else {
+          this.board.cells[sc][sr].gem.colour = null;
+          this.board.cells[sc][sr].gem.special = m.spawnsSpecial;
         }
       }
     }

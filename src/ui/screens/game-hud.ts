@@ -108,9 +108,9 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
   const btnSize = isMobile ? Math.round(36 * scaleFactor) : 40;
   const btnFontSize = isMobile ? Math.round(18 * scaleFactor) : 20;
 
-  // ── 面板尺寸：兩列（緊湊） ───────────────────────────────
-  const row1H = isMobile ? Math.round(46 * scaleFactor) : 50;  // 按鈕+分數列
-  const row2H = isMobile ? Math.round(42 * scaleFactor) : 46;  // 目標+手數列
+  // ── 面板尺寸：兩列 ───────────────────────────────────────
+  const row1H = isMobile ? Math.round(60 * scaleFactor) : 60;  // 按鈕+分數列
+  const row2H = isMobile ? Math.round(60 * scaleFactor) : 60;  // 目標+手數列
   const panelH = row1H + row2H;
 
   // ── 深色半透明頭部面板 ───────────────────────────────────

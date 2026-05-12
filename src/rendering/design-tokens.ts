@@ -90,6 +90,9 @@ export const INVALID_SHAKE_AMPLITUDE = 4;
 /** Match 消除動畫時長（ms） */
 export const MATCH_CLEAR_DURATION_MS = 200;
 
+/** 特殊寶石生成：成員寶石聚合飛向定位點的總時長（ms） */
+export const GEM_CONVERGE_DURATION_MS = 300;
+
 /** Cascade 掉落動畫每行時長（ms） */
 export const CASCADE_DROP_MS_PER_ROW = 120;
 
