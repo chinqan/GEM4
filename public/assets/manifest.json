@@ -26,7 +26,6 @@
         { "alias": "item-water-drop", "src": "assets/items/water-drop.png" },
         { "alias": "item-wood-plank", "src": "assets/items/wood-plank.png" },
         { "alias": "blocker-stone", "src": "assets/blockers/stone.png" },
-        { "alias": "blocker-jelly", "src": "assets/blockers/jelly.png" },
         { "alias": "blocker-unstable", "src": "assets/blockers/unstable.png" },
         { "alias": "blocker-lock", "src": "assets/blockers/lock.png" }
       ]

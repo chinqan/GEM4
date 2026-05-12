@@ -37,14 +37,19 @@ export interface ParticleConfig {
   shrink?: boolean;
 }
 
+// ─── 粒子圓形紋理基礎尺寸 ──────────────────────────────────
+
+/** particle-circle texture is 16×16; radius = 8px */
+const PARTICLE_BASE_RADIUS = 8;
+
 // ─── Particle ──────────────────────────────────────────────
 
 /**
- * 單一粒子。使用 Graphics 繪製，支援物件池回收。
+ * 單一粒子。使用 Sprite（circle texture + tint）繪製，支援物件池回收。
  */
 export class Particle {
-  /** 粒子的 Graphics 顯示物件 */
-  readonly graphics: Graphics;
+  /** 粒子的 Sprite 顯示物件 */
+  readonly graphics: Sprite;
 
   /** X 位置 */
   x = 0;
@@ -71,8 +76,9 @@ export class Particle {
   /** 是否已死亡 */
   isDead = true;
 
-  constructor() {
-    this.graphics = new Graphics();
+  constructor(texture: Texture) {
+    this.graphics = new Sprite(texture);
+    this.graphics.anchor.set(0.5);
     this.graphics.visible = false;
     this.graphics.label = 'particle';
   }
@@ -92,11 +98,14 @@ export class Particle {
     this.shrink = config.shrink ?? false;
     this.isDead = false;
 
-    this.redraw();
+    // Apply colour via tint (no redraw needed)
+    this.graphics.tint = config.colour;
+    // Scale relative to 16px base texture (radius 8px)
+    const s = config.radius / PARTICLE_BASE_RADIUS;
+    this.graphics.scale.set(s, s);
     this.graphics.visible = true;
     this.graphics.position.set(this.x, this.y);
     this.graphics.alpha = this.baseAlpha;
-    this.graphics.scale.set(1, 1);
   }
 
   /** 每幀更新 */
@@ -135,10 +144,11 @@ export class Particle {
 
     // 縮小：前 50% 保持原大小，後 50% 才縮小
     if (this.shrink) {
+      const baseScale = this.radius / PARTICLE_BASE_RADIUS;
       if (lifeRatio > 0.5) {
-        this.graphics.scale.set(1, 1);
+        this.graphics.scale.set(baseScale, baseScale);
       } else {
-        const s = lifeRatio / 0.5;
+        const s = baseScale * (lifeRatio / 0.5);
         this.graphics.scale.set(s, s);
       }
     }
@@ -154,13 +164,6 @@ export class Particle {
     this.graphics.alpha = 0;
   }
 
-  /** 重繪粒子圖形 */
-  private redraw(): void {
-    this.graphics.clear();
-    this.graphics.circle(0, 0, this.radius);
-    this.graphics.fill({ color: this.colour, alpha: 1 });
-  }
-
   /** 銷毀 */
   destroy(): void {
     this.graphics.destroy();
@@ -172,7 +175,9 @@ export class Particle {
 /**
  * 粒子物件池。
  *
- * 預先建立粒子物件，避免 hot path 上的 GC 壓力。
+ * 預先建立粒子 Sprite 物件，避免 hot path 上的 GC 壓力。
+ * 所有粒子共用同一 circle texture，透過 tint 著色，
+ * 在同一 Container 中自動 batch 為單一 draw call。
  * 上限依圖形預設決定（low=100、medium=300、high=500）。
  */
 export class ParticlePool {
@@ -187,9 +192,12 @@ export class ParticlePool {
     this.container.label = 'particlePool';
     parentLayer.addChild(this.container);
 
-    // 預先建立所有粒子
+    // Resolve the circle texture from the particle atlas
+    const circleTexture = Texture.from('particle-circle');
+
+    // 預先建立所有粒子 Sprite
     for (let i = 0; i < this.cap; i++) {
-      const p = new Particle();
+      const p = new Particle(circleTexture);
       this.container.addChild(p.graphics);
       this.pool.push(p);
     }
@@ -284,26 +292,26 @@ interface FxParticle {
 
 // ─── Ring Texture 快取 ─────────────────────────────────────
 
-const _ringTextureCache = new Map<string, Texture>();
+/** Single white ring texture — tinted per-particle to avoid texture switches. */
+let _whiteRingTex: Texture | null = null;
 
 /**
- * 用 renderer.generateTexture 預渲染圓環紋理（參考版做法）。
+ * 用 renderer.generateTexture 預渲染白色圓環紋理（一次性）。
+ * 使用 sprite.tint 著色，所有 ring 共用同一 texture 以 batch 為單一 draw call。
  */
-function getRingTex(renderer: Renderer, colour: number): Texture {
-  const key = colour.toString(16);
-  if (_ringTextureCache.has(key)) return _ringTextureCache.get(key)!;
+function getWhiteRingTex(renderer: Renderer): Texture {
+  if (_whiteRingTex) return _whiteRingTex;
 
   const R = 5;
   const g = new Graphics();
-  g.circle(R + 4, R + 4, R).stroke({ color: colour, width: 4, alpha: 0.7 });
+  g.circle(R + 4, R + 4, R).stroke({ color: 0xffffff, width: 4, alpha: 1 });
   const pad = R + 6;
-  const tex = renderer.generateTexture({
+  _whiteRingTex = renderer.generateTexture({
     target: g,
     frame: new Rectangle(0, 0, pad * 2, pad * 2),
   });
   g.destroy();
-  _ringTextureCache.set(key, tex);
-  return tex;
+  return _whiteRingTex;
 }
 
 /**
@@ -327,8 +335,8 @@ export class MergeParticleSystem {
   // removeChild/addChild. Pooled objects stay parented; we toggle `visible`.
   private static readonly POOL_CAP = 128;
   private ringPool: Sprite[] = [];
-  private shardPool: Graphics[] = [];
-  private dotPool: Graphics[] = [];
+  private shardPool: Sprite[] = [];
+  private dotPool: Sprite[] = [];
 
   constructor(parentLayer: Container, renderer: Renderer) {
     this.renderer = renderer;
@@ -340,13 +348,12 @@ export class MergeParticleSystem {
   private acquireRing(colour: number): Sprite {
     let s = this.ringPool.pop();
     if (!s) {
-      s = new Sprite(getRingTex(this.renderer, colour));
+      s = new Sprite(getWhiteRingTex(this.renderer));
       s.anchor.set(0.5);
       s.blendMode = 'add';
       this.container.addChild(s);
-    } else {
-      s.texture = getRingTex(this.renderer, colour);
     }
+    s.tint = colour;
     s.visible = true;
     s.scale.set(1, 1);
     return s;
@@ -362,47 +369,57 @@ export class MergeParticleSystem {
     }
   }
 
-  private acquireShard(): Graphics {
-    let g = this.shardPool.pop();
-    if (!g) {
-      g = new Graphics();
-      g.blendMode = 'add';
-      this.container.addChild(g);
+  private acquireShard(colour: number): Sprite {
+    let s = this.shardPool.pop();
+    if (!s) {
+      s = new Sprite(Texture.from('particle-diamond'));
+      s.anchor.set(0.5);
+      s.blendMode = 'add';
+      this.container.addChild(s);
     }
-    g.clear();
-    g.visible = true;
-    return g;
+    s.tint = colour;
+    s.visible = true;
+    return s;
   }
 
-  private releaseShard(g: Graphics): void {
-    g.visible = false;
+  private releaseShard(s: Sprite): void {
+    s.visible = false;
+    s.alpha = 1;
+    s.scale.set(1, 1);
+    s.rotation = 0;
+    s.tint = 0xffffff;
     if (this.shardPool.length < MergeParticleSystem.POOL_CAP) {
-      this.shardPool.push(g);
+      this.shardPool.push(s);
     } else {
-      this.container.removeChild(g);
-      g.destroy();
+      this.container.removeChild(s);
+      s.destroy();
     }
   }
 
-  private acquireDot(): Graphics {
-    let g = this.dotPool.pop();
-    if (!g) {
-      g = new Graphics();
-      g.blendMode = 'add';
-      this.container.addChild(g);
+  private acquireDot(colour: number): Sprite {
+    let s = this.dotPool.pop();
+    if (!s) {
+      s = new Sprite(Texture.from('particle-circle'));
+      s.anchor.set(0.5);
+      s.blendMode = 'add';
+      this.container.addChild(s);
     }
-    g.clear();
-    g.visible = true;
-    return g;
+    s.tint = colour;
+    s.visible = true;
+    return s;
   }
 
-  private releaseDot(g: Graphics): void {
-    g.visible = false;
+  private releaseDot(s: Sprite): void {
+    s.visible = false;
+    s.alpha = 1;
+    s.scale.set(1, 1);
+    s.rotation = 0;
+    s.tint = 0xffffff;
     if (this.dotPool.length < MergeParticleSystem.POOL_CAP) {
-      this.dotPool.push(g);
+      this.dotPool.push(s);
     } else {
-      this.container.removeChild(g);
-      g.destroy();
+      this.container.removeChild(s);
+      s.destroy();
     }
   }
 
@@ -435,15 +452,11 @@ export class MergeParticleSystem {
       const sc = 0.32 + Math.random() * 0.26;
       const size = 3 + Math.random() * 3;
 
-      const shard = this.acquireShard();
-      shard.moveTo(0, -size);
-      shard.lineTo(size * 0.5, 0);
-      shard.lineTo(0, size * 0.6);
-      shard.lineTo(-size * 0.5, 0);
-      shard.closePath();
-      shard.fill({ color: colour, alpha: 1 });
+      const shard = this.acquireShard(colour);
       shard.position.set(x, y);
-      shard.scale.set(sc);
+      // Diamond texture is 16×16; scale to desired size (size/8 maps size to radius)
+      const texScale = (size / 8) * sc;
+      shard.scale.set(texScale);
       shard.rotation = Math.random() * Math.PI * 2;
       shard.alpha = 1;
 
@@ -455,7 +468,7 @@ export class MergeParticleSystem {
         life: 1,
         decay: 0.012 + Math.random() * 0.015,
         rotSpeed: (Math.random() - 0.5) * 0.3,
-        initScale: sc,
+        initScale: texScale,
       });
     }
 
@@ -466,12 +479,12 @@ export class MergeParticleSystem {
       const speed = 2 + Math.random() * 7;
       const sz = 2 + Math.random() * 5;
 
-      const dot = this.acquireDot();
-      dot.circle(0, 0, sz);
-      dot.fill({ color: colour, alpha: 1 });
+      const dot = this.acquireDot(colour);
       dot.position.set(x, y);
+      // Circle texture is 16×16 (radius 8); scale to desired radius
+      const dotScale = sz / 8;
+      dot.scale.set(dotScale);
       dot.alpha = 1;
-      dot.scale.set(1, 1);
 
       this.particles.push({
         type: 'dot',
@@ -500,8 +513,8 @@ export class MergeParticleSystem {
         // Return display to its pool (kept parented, just hidden) and
         // swap-remove from the active list — O(1) instead of splice's O(N).
         if (p.type === 'ring') this.releaseRing(p.display as Sprite);
-        else if (p.type === 'shard') this.releaseShard(p.display as Graphics);
-        else this.releaseDot(p.display as Graphics);
+        else if (p.type === 'shard') this.releaseShard(p.display as Sprite);
+        else this.releaseDot(p.display as Sprite);
         const last = this.particles.length - 1;
         if (i !== last) this.particles[i] = this.particles[last];
         this.particles.pop();
@@ -628,9 +641,15 @@ export function emitSpecialSpawnRing(
 
 // ─── Jelly 障礙粒子特效 ─────────────────────────────────────
 
+/** Blob texture is 16×16; radius = 8px */
+const BLOB_BASE_RADIUS = 8;
+
+/** Default pool capacity: handles 4 simultaneous jelly clears of 12 particles each */
+const JELLY_POOL_CAP = 48;
+
 /** 單一 jelly 粒子狀態 */
 interface JellyBlob {
-  g: Graphics;
+  spriteIndex: number;
   vx: number;
   vy: number;
   life: number;
@@ -642,20 +661,58 @@ interface JellyBlob {
  *
  * - hit（層數減少）：6 顆小綠色果凍球，輕快噴出
  * - cleared（完全消除）：12 顆較大的果凍球，更強烈噴發
+ *
+ * Uses a pre-allocated pool of Sprites (blob texture + tint) to avoid
+ * Graphics creation/destruction during gameplay.
  */
 export class JellyParticleSystem {
+  private readonly pool: Sprite[];
+  private readonly available: number[];
   private readonly blobs: JellyBlob[] = [];
   private readonly container: Container;
+  private readonly poolCap: number;
 
-  constructor(parentLayer: Container) {
+  constructor(parentLayer: Container, capacity: number = JELLY_POOL_CAP) {
+    this.poolCap = capacity;
     this.container = new Container();
     this.container.label = 'jelly-fx';
     parentLayer.addChild(this.container);
+
+    const blobTexture = Texture.from('particle-blob');
+
+    // Pre-allocate all Sprites
+    this.pool = new Array<Sprite>(this.poolCap);
+    this.available = new Array<number>(this.poolCap);
+    for (let i = 0; i < this.poolCap; i++) {
+      const s = new Sprite(blobTexture);
+      s.anchor.set(0.5);
+      s.visible = false;
+      s.label = 'jelly-blob';
+      this.container.addChild(s);
+      this.pool[i] = s;
+      this.available[i] = i;
+    }
+  }
+
+  /** Number of sprites currently available in the pool */
+  get availableCount(): number {
+    return this.available.length;
+  }
+
+  /** Total pool capacity */
+  get capacity(): number {
+    return this.poolCap;
   }
 
   spawn(x: number, y: number, cleared: boolean): void {
     const count = cleared ? 12 : 6;
     for (let i = 0; i < count; i++) {
+      // Graceful degradation: skip if pool exhausted
+      if (this.available.length === 0) return;
+
+      const idx = this.available.pop()!;
+      const s = this.pool[idx];
+
       const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.7;
       const speed = cleared
         ? 90 + Math.random() * 85
@@ -664,16 +721,15 @@ export class JellyParticleSystem {
       const life = cleared ? 380 + Math.random() * 120 : 250 + Math.random() * 100;
       const col = Math.random() < 0.6 ? 0x44ffaa : 0xaaffdd;
 
-      const g = new Graphics();
-      // blob body
-      g.circle(0, 0, r).fill({ color: col, alpha: 0.88 });
-      // inner gloss highlight
-      g.circle(-r * 0.28, -r * 0.28, r * 0.38).fill({ color: 0xffffff, alpha: 0.45 });
-      this.container.addChild(g);
-      g.position.set(x, y);
+      // Configure sprite
+      s.tint = col;
+      s.position.set(x, y);
+      s.scale.set(r / BLOB_BASE_RADIUS);
+      s.alpha = 0.88;
+      s.visible = true;
 
       this.blobs.push({
-        g,
+        spriteIndex: idx,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed - (cleared ? 25 : 8),
         life,
@@ -687,17 +743,25 @@ export class JellyParticleSystem {
     const dtSec = dtMs / 1000;
     for (let i = this.blobs.length - 1; i >= 0; i--) {
       const b = this.blobs[i];
+      const s = this.pool[b.spriteIndex];
+
       b.vx *= drag;
       b.vy += 220 * dtSec;
-      b.g.x += b.vx * dtSec;
-      b.g.y += b.vy * dtSec;
+      s.x += b.vx * dtSec;
+      s.y += b.vy * dtSec;
       b.life -= dtMs;
+
       const t = b.life / b.maxLife;
-      b.g.alpha = t < 0.35 ? t / 0.35 : 1;
+      s.alpha = t < 0.35 ? (t / 0.35) * 0.88 : 0.88;
+
       if (b.life <= 0) {
-        this.container.removeChild(b.g);
-        b.g.destroy();
-        this.blobs.splice(i, 1);
+        // Return sprite to pool
+        s.visible = false;
+        this.available.push(b.spriteIndex);
+        // Swap-remove: O(1) instead of splice's O(N)
+        const last = this.blobs.length - 1;
+        if (i !== last) this.blobs[i] = this.blobs[last];
+        this.blobs.pop();
       }
     }
   }

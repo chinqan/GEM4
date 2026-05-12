@@ -2,6 +2,7 @@
 // Bundle loading system with splash preload, lazy world loading,
 // retry strategy, and cache-busting support.
 
+import { Assets } from 'pixi.js';
 import type { AssetManifest, AssetBundle, BundleName } from './manifest';
 
 // ─── Types ──────────────────────────────────────────────────
@@ -43,6 +44,11 @@ export interface LoadControllerConfig {
 
 const DEFAULT_MANIFEST_PATH = 'assets/manifest.json';
 
+const ATLAS_PATHS = [
+  'assets/atlases/game-atlas.json',
+  'assets/atlases/particle-atlas.json',
+];
+
 const DEFAULT_RETRY: RetryConfig = {
   maxRetries: 2,
   baseDelayMs: 1000,
@@ -66,12 +72,18 @@ export class LoadController {
   private readonly manifestPath: string;
   private readonly cacheBusting: boolean;
   private readonly buildVersion: string;
+  private _atlasLoaded = false;
 
   constructor(config: LoadControllerConfig = {}) {
     this.manifestPath = config.manifestPath ?? DEFAULT_MANIFEST_PATH;
     this.retryConfig = { ...DEFAULT_RETRY, ...config.retry };
     this.cacheBusting = config.cacheBusting ?? true;
     this.buildVersion = config.buildVersion ?? '0.0.0';
+  }
+
+  /** Whether spritesheet atlases were successfully loaded */
+  get atlasLoaded(): boolean {
+    return this._atlasLoaded;
   }
 
   // ─── Manifest Loading ───────────────────────────────────
@@ -95,10 +107,33 @@ export class LoadController {
 
   /**
    * Preload the core bundle during splash screen.
-   * This loads gems, UI elements, and particles.
+   * Attempts to load spritesheet atlases first (registers all frame aliases).
+   * Falls back to individual PNG loading if atlas load fails.
    */
   async preloadCore(onProgress?: ProgressCallback): Promise<BundleLoadResult> {
-    return this.loadBundle('core', onProgress);
+    const startTime = performance.now();
+
+    try {
+      // Load both atlas spritesheets — PixiJS Assets.load() with a spritesheet
+      // JSON auto-loads the backing PNG and registers all frame aliases in cache.
+      await Promise.all(ATLAS_PATHS.map((path) => Assets.load(path)));
+      this._atlasLoaded = true;
+
+      const durationMs = performance.now() - startTime;
+      this.loadedBundles.add('core');
+      return { bundleName: 'core', assetCount: ATLAS_PATHS.length, durationMs, fromCache: false };
+    } catch (err) {
+      console.warn(
+        '[LoadController] Atlas load failed, falling back to individual PNGs:',
+        err instanceof Error ? err.message : err,
+      );
+      // Fallback: load individual PNGs via the existing bundle mechanism
+      const result = await this.loadBundle('core', onProgress);
+      // Also register gem/blocker texture aliases for Texture.from() resolution
+      const { preloadGemTextures } = await import('../rendering/gem-sprites');
+      await preloadGemTextures();
+      return result;
+    }
   }
 
   /**

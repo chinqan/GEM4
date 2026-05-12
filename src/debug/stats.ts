@@ -142,6 +142,41 @@ export class ClockScaleController {
   }
 }
 
+// ─── Draw Call Counter ──────────────────────────────────────
+
+/**
+ * Read the current draw call count from the PixiJS 8 renderer internals.
+ *
+ * In PixiJS 8, the BatcherPipe at `renderer.renderPipes.batch` holds a
+ * `_batchersByInstructionSet` map. Each batcher's `batchIndex` is the
+ * number of batches (≈ draw calls) it produced in the last frame.
+ *
+ * We sum across all active batchers to get the total draw call count.
+ *
+ * @returns Draw call count, or -1 if unavailable.
+ */
+export function getDrawCallCount(renderer: any): number {
+  // PixiJS 8.x: BatcherPipe._batchersByInstructionSet → { [uid]: { [name]: Batcher } }
+  const batcherPipe = renderer?.renderPipes?.batch;
+  if (!batcherPipe) return -1;
+
+  const byInstructionSet = batcherPipe._batchersByInstructionSet;
+  if (!byInstructionSet) return -1;
+
+  let total = 0;
+  for (const uid in byInstructionSet) {
+    const batchers = byInstructionSet[uid];
+    for (const name in batchers) {
+      const batcher = batchers[name];
+      if (typeof batcher?.batchIndex === 'number') {
+        total += batcher.batchIndex;
+      }
+    }
+  }
+
+  return total > 0 ? total : -1;
+}
+
 // ─── Declare global for Vite define ─────────────────────────
 
 declare const __ENABLE_DEVTOOLS__: string;

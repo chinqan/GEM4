@@ -84,6 +84,25 @@ vi.mock('../particles', () => ({
   })),
 }));
 
+// ─── Mock graphics-pool ─────────────────────────────────────
+
+vi.mock('../graphics-pool', () => ({
+  GraphicsPool: vi.fn().mockImplementation(() => ({
+    acquire: vi.fn(() => ({
+      visible: true,
+      alpha: 1,
+      position: { set: vi.fn() },
+      clear: vi.fn().mockReturnThis(),
+      rect: vi.fn().mockReturnThis(),
+      fill: vi.fn().mockReturnThis(),
+      destroy: vi.fn(),
+    })),
+    release: vi.fn(),
+    destroy: vi.fn(),
+    available: 16,
+  })),
+}));
+
 // ─── Mock animations ────────────────────────────────────────
 
 vi.mock('../animations', () => ({
@@ -199,6 +218,7 @@ function createMockConfig(): BoardAnimatorConfig {
     } as any,
     layers: {
       boardLayer: new Container(),
+      cellLayer: new Container(),
       glowLayer: new Container(),
       fxLayer: new Container(),
       uiLayer: new Container(),

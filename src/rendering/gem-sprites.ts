@@ -1,4 +1,4 @@
-import { Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
+import { Assets, Cache, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import type { GemColour, SpecialGemType } from '../types';
 import {
   GEM_COLOURS,
@@ -11,41 +11,110 @@ import {
   SHIMMER_ALPHA_MAX,
 } from './design-tokens';
 
-// PNG paths (preloaded by LoadController core bundle). Using direct paths
-// because LoadController currently fetches by URL and does not register
-// PixiJS Assets aliases — Texture.from(url) hits the browser cache.
-const GEM_TEX_PATHS: Record<GemColour, string> = {
-  R: 'assets/gems/r-base.png',
-  O: 'assets/gems/o-base.png',
-  Y: 'assets/gems/y-base.png',
-  G: 'assets/gems/g-base.png',
-  B: 'assets/gems/b-base.png',
-  P: 'assets/gems/p-base.png',
-  W: 'assets/gems/w-base.png',
+// Atlas frame aliases — when the spritesheet atlas is loaded, Texture.from(alias)
+// resolves to the atlas sub-texture. When atlas is not loaded, PixiJS falls back
+// to loading individual PNGs registered under these aliases by preloadGemTextures().
+const GEM_TEX_ALIASES: Record<GemColour, string> = {
+  R: 'gem-tex-R',
+  O: 'gem-tex-O',
+  Y: 'gem-tex-Y',
+  G: 'gem-tex-G',
+  B: 'gem-tex-B',
+  P: 'gem-tex-P',
+  W: 'gem-tex-W',
 };
-const COLOUR_GEM_TEX_PATH = 'assets/gems/rainbow.png';
-const BOMB_TEX_PATH = 'assets/gems/bomb.png';
-const LINE_H_TEX_PATH = 'assets/gems/h-line.png';
-const LINE_V_TEX_PATH = 'assets/gems/v-line.png';
+const COLOUR_GEM_TEX_ALIAS = 'gem-tex-colour';
+const BOMB_TEX_ALIAS = 'gem-tex-area';
+const LINE_H_TEX_ALIAS = 'gem-tex-lineH';
+const LINE_V_TEX_ALIAS = 'gem-tex-lineV';
 
-/** Preload all gem/special PNG textures so Texture.from() resolves synchronously. */
+/**
+ * Preload all gem/special PNG textures so Texture.from() resolves synchronously.
+ * No-op when atlas is already loaded (aliases are registered by the spritesheet).
+ */
 export async function preloadGemTextures(): Promise<void> {
-  const paths = [
-    ...Object.values(GEM_TEX_PATHS),
-    COLOUR_GEM_TEX_PATH,
-    BOMB_TEX_PATH,
-    LINE_H_TEX_PATH,
-    LINE_V_TEX_PATH,
-    'assets/items/water-drop.png',
-    'assets/items/wood-plank.png',
-    'assets/items/layer1.png',
-    'assets/items/layer2.png',
-    'assets/items/layer3.png',
-    'assets/blockers/lock.png',
-    'assets/blockers/unstable.png',
-    'assets/blockers/stone.png',
+  // If the atlas has already registered the aliases, skip individual PNG loading.
+  const firstAlias = GEM_TEX_ALIASES.R;
+  if (Assets.get(firstAlias)) return;
+
+  // Fallback: load individual PNGs and register them under the alias names
+  // so that Texture.from(alias) works regardless of atlas availability.
+  const aliasToPng: [string, string][] = [
+    ['gem-tex-R', 'assets/gems/r-base.png'],
+    ['gem-tex-O', 'assets/gems/o-base.png'],
+    ['gem-tex-Y', 'assets/gems/y-base.png'],
+    ['gem-tex-G', 'assets/gems/g-base.png'],
+    ['gem-tex-B', 'assets/gems/b-base.png'],
+    ['gem-tex-P', 'assets/gems/p-base.png'],
+    ['gem-tex-W', 'assets/gems/w-base.png'],
+    ['gem-tex-colour', 'assets/gems/rainbow.png'],
+    ['gem-tex-area', 'assets/gems/bomb.png'],
+    ['gem-tex-lineH', 'assets/gems/h-line.png'],
+    ['gem-tex-lineV', 'assets/gems/v-line.png'],
+    ['item-water-drop', 'assets/items/water-drop.png'],
+    ['item-wood-plank', 'assets/items/wood-plank.png'],
+    ['item-layer1', 'assets/items/layer1.png'],
+    ['item-layer2', 'assets/items/layer2.png'],
+    ['item-layer3', 'assets/items/layer3.png'],
+    ['blocker-lock', 'assets/blockers/lock.png'],
+    ['blocker-unstable', 'assets/blockers/unstable.png'],
+    ['blocker-stone', 'assets/blockers/stone.png'],
   ];
-  await Promise.all(paths.map((p) => Assets.load(p).catch(() => null)));
+
+  await Promise.all(
+    aliasToPng.map(([alias, path]) =>
+      Assets.load({ alias, src: path }).catch(() => null),
+    ),
+  );
+
+  // Also register particle texture aliases if not already present (atlas not loaded).
+  // These are simple white shapes that get tinted at runtime.
+  if (!Assets.get('particle-circle')) {
+    const size = 16;
+    const mid = size / 2;
+
+    // Generate circle texture
+    const circleCanvas = document.createElement('canvas');
+    circleCanvas.width = size;
+    circleCanvas.height = size;
+    const cCtx = circleCanvas.getContext('2d')!;
+    cCtx.fillStyle = 'white';
+    cCtx.beginPath();
+    cCtx.arc(mid, mid, mid - 1, 0, Math.PI * 2);
+    cCtx.fill();
+    const circleTex = Texture.from(circleCanvas);
+    Cache.set('particle-circle', circleTex);
+
+    // Generate diamond texture
+    const diamondCanvas = document.createElement('canvas');
+    diamondCanvas.width = size;
+    diamondCanvas.height = size;
+    const dCtx = diamondCanvas.getContext('2d')!;
+    dCtx.fillStyle = 'white';
+    dCtx.beginPath();
+    dCtx.moveTo(mid, 1);
+    dCtx.lineTo(size - 1, mid);
+    dCtx.lineTo(mid, size - 1);
+    dCtx.lineTo(1, mid);
+    dCtx.closePath();
+    dCtx.fill();
+    const diamondTex = Texture.from(diamondCanvas);
+    Cache.set('particle-diamond', diamondTex);
+
+    // Generate blob texture (soft circle with radial gradient)
+    const blobCanvas = document.createElement('canvas');
+    blobCanvas.width = size;
+    blobCanvas.height = size;
+    const bCtx = blobCanvas.getContext('2d')!;
+    const grad = bCtx.createRadialGradient(mid, mid, 0, mid, mid, mid - 1);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.7, 'rgba(255,255,255,0.9)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    bCtx.fillStyle = grad;
+    bCtx.fillRect(0, 0, size, size);
+    const blobTex = Texture.from(blobCanvas);
+    Cache.set('particle-blob', blobTex);
+  }
 }
 
 function buildGemSprite(path: string): Sprite {
@@ -154,11 +223,11 @@ export class GemSpriteFactory {
     colour: GemColour | null,
     special: SpecialGemType | null,
   ): Container {
-    if (special === 'area') return buildGemSprite(BOMB_TEX_PATH);
-    if (special === 'colour') return buildGemSprite(COLOUR_GEM_TEX_PATH);
-    if (special === 'lineH') return buildGemSprite(LINE_H_TEX_PATH);
-    if (special === 'lineV') return buildGemSprite(LINE_V_TEX_PATH);
-    if (colour) return buildGemSprite(GEM_TEX_PATHS[colour]);
+    if (special === 'area') return buildGemSprite(BOMB_TEX_ALIAS);
+    if (special === 'colour') return buildGemSprite(COLOUR_GEM_TEX_ALIAS);
+    if (special === 'lineH') return buildGemSprite(LINE_H_TEX_ALIAS);
+    if (special === 'lineV') return buildGemSprite(LINE_V_TEX_ALIAS);
+    if (colour) return buildGemSprite(GEM_TEX_ALIASES[colour]);
     return this.drawBody(colour);
   }
 

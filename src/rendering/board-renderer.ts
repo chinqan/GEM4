@@ -189,7 +189,7 @@ export class BoardRenderer {
         // For jelly, recreate the sprite when the layer count changes (each layer has its own PNG)
         if (overlay && cell.blocker.kind === 'jelly') {
           if (this.blockerLayerCache.get(key) !== cell.blocker.layers) {
-            this.layers.glowLayer.removeChild(overlay);
+            this.layers.gemLayer.removeChild(overlay);
             overlay.destroy({ children: true });
             overlay = undefined;
             this.blockerSprites.delete(key);
@@ -201,7 +201,7 @@ export class BoardRenderer {
           const layers = cell.blocker.kind === 'jelly' ? cell.blocker.layers : undefined;
           overlay = this.createBlockerOverlay(cell.blocker.kind, layers);
           this.blockerSprites.set(key, overlay);
-          this.layers.glowLayer.addChild(overlay);
+          this.layers.gemLayer.addChild(overlay);
           if (cell.blocker.kind === 'jelly') {
             this.blockerLayerCache.set(key, cell.blocker.layers);
           }
@@ -216,7 +216,7 @@ export class BoardRenderer {
     }
     for (const [key, overlay] of this.blockerSprites) {
       if (!activeBlockerKeys.has(key)) {
-        this.layers.glowLayer.removeChild(overlay);
+        this.layers.gemLayer.removeChild(overlay);
         overlay.destroy({ children: true });
         this.blockerSprites.delete(key);
       }
@@ -422,7 +422,7 @@ export class BoardRenderer {
         this.removeBlockerSprite(key);
         const overlay = this.createBlockerOverlay('jelly', blocker.layers);
         this.blockerSprites.set(key, overlay);
-        this.layers.glowLayer.addChild(overlay);
+        this.layers.gemLayer.addChild(overlay);
         overlay.alpha = 0.85;
         overlay.position.set(col * CELL_SIZE + CELL_SIZE / 2, row * CELL_SIZE + CELL_SIZE / 2);
         this.blockerLayerCache.set(key, blocker.layers);
@@ -449,7 +449,7 @@ export class BoardRenderer {
         this.removeBlockerSprite(key);
         const overlay = this.createBlockerOverlay('jelly', newLayer);
         this.blockerSprites.set(key, overlay);
-        this.layers.glowLayer.addChild(overlay);
+        this.layers.gemLayer.addChild(overlay);
         overlay.alpha = 0.85;
         overlay.position.set(col * CELL_SIZE + CELL_SIZE / 2, row * CELL_SIZE + CELL_SIZE / 2);
         this.blockerLayerCache.set(key, newLayer);
@@ -479,7 +479,7 @@ export class BoardRenderer {
     }
     this.deliverySprites.clear();
     for (const overlay of this.blockerSprites.values()) {
-      this.layers.glowLayer.removeChild(overlay);
+      this.layers.gemLayer.removeChild(overlay);
       overlay.destroy({ children: true });
     }
     this.blockerSprites.clear();
@@ -522,26 +522,26 @@ export class BoardRenderer {
   private removeBlockerSprite(key: string): void {
     const overlay = this.blockerSprites.get(key);
     if (overlay) {
-      this.layers.glowLayer.removeChild(overlay);
+      this.layers.gemLayer.removeChild(overlay);
       overlay.destroy({ children: true });
       this.blockerSprites.delete(key);
     }
   }
 
-  /** 建立 blocker overlay（依 kind 選 PNG；jelly 依層數選 layer1~3.png） */
+  /** 建立 blocker overlay（依 kind 選 atlas alias；jelly 依層數選 item-layer1~3） */
   private createBlockerOverlay(kind: 'jelly' | 'lock' | 'generator' | 'unstable', layers?: number): Container {
-    let path: string;
+    let alias: string;
     if (kind === 'jelly') {
       const l = Math.max(1, Math.min(3, layers ?? 1));
-      path = `assets/items/layer${l}.png`;
+      alias = `item-layer${l}`;
     } else if (kind === 'lock') {
-      path = 'assets/blockers/lock.png';
+      alias = 'blocker-lock';
     } else if (kind === 'unstable') {
-      path = 'assets/blockers/unstable.png';
+      alias = 'blocker-unstable';
     } else {
-      path = 'assets/blockers/stone.png';
+      alias = 'blocker-stone';
     }
-    const sprite = new Sprite(Texture.from(path));
+    const sprite = new Sprite(Texture.from(alias));
     sprite.label = `blocker-${kind}`;
     sprite.anchor.set(0.5);
     const target = CELL_SIZE * 0.9;
@@ -564,7 +564,7 @@ export class BoardRenderer {
 
   /** 建立傳送道具 overlay（水滴貼圖） */
   private createDeliveryOverlay(): Container {
-    const sprite = new Sprite(Texture.from('assets/items/water-drop.png'));
+    const sprite = new Sprite(Texture.from('item-water-drop'));
     sprite.label = 'deliveryItem';
     sprite.anchor.set(0.5);
     const target = CELL_SIZE * 0.7;

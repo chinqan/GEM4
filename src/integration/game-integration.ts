@@ -961,6 +961,7 @@ export class GameIntegration {
 
     try {
       const { createDebugPanel } = await import('../debug/tweakpane');
+      const { getDrawCallCount } = await import('../debug/stats');
       const panel = await createDebugPanel();
       if (panel) {
         this.subsystems.debugPanel = panel;
@@ -974,6 +975,7 @@ export class GameIntegration {
           const particleLayer = this.subsystems.app!.layers.particleLayer;
           const boardLayer = this.subsystems.app!.layers.boardLayer;
           const stage = app.stage;
+          const renderer = app.renderer;
 
           const updateDebugMetrics = () => {
             // FPS from PixiJS ticker
@@ -992,19 +994,25 @@ export class GameIntegration {
               }
             }
 
-            // Draw calls approximation: count visible leaf nodes in stage
+            // Draw calls: read from PixiJS renderer internals (falls back to leaf-node count)
             let drawCalls = 0;
-            const countVisible = (container: any) => {
-              for (const child of container.children ?? []) {
-                if (!child.visible) continue;
-                if (child.children && child.children.length > 0) {
-                  countVisible(child);
-                } else {
-                  drawCalls++;
+            const rendererCount = getDrawCallCount(renderer);
+            if (rendererCount >= 0) {
+              drawCalls = rendererCount;
+            } else {
+              // Fallback: approximate by counting visible leaf nodes in stage
+              const countVisible = (container: any) => {
+                for (const child of container.children ?? []) {
+                  if (!child.visible) continue;
+                  if (child.children && child.children.length > 0) {
+                    countVisible(child);
+                  } else {
+                    drawCalls++;
+                  }
                 }
-              }
-            };
-            countVisible(stage);
+              };
+              countVisible(stage);
+            }
 
             // Game state metrics from active session
             const session = this.activeSession;

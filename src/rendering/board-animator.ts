@@ -12,6 +12,7 @@ import type { Board } from '../game/rules/board';
 import type { BoardRenderer } from './board-renderer';
 import type { LayerRefs } from './app-layers';
 import type { Animation } from './animations';
+import { GraphicsPool } from './graphics-pool';
 import type {
   SwapResult,
   ActivateResult,
@@ -145,6 +146,7 @@ export class BoardAnimator {
   private readonly layers: LayerRefs;
   private readonly mergeFx: MergeParticleSystem;
   private readonly jellyFx: JellyParticleSystem;
+  private readonly gfxPool: GraphicsPool;
 
   private hintFlashGfx: Graphics[] = [];
   private hintFlashTime = 0;
@@ -157,6 +159,7 @@ export class BoardAnimator {
     this.layers = config.layers;
     this.mergeFx = new MergeParticleSystem(config.layers.boardLayer, config.renderer);
     this.jellyFx = new JellyParticleSystem(config.layers.boardLayer);
+    this.gfxPool = new GraphicsPool(config.layers.cellLayer);
   }
 
   // ─── Public: Animate a Swap Result ────────────────────────
@@ -448,18 +451,17 @@ export class BoardAnimator {
   showHintFlash(cells: CellPos[]): void {
     this.clearHintFlash();
     for (const [col, row] of cells) {
-      const gfx = new Graphics();
+      const gfx = this.gfxPool.acquire();
       gfx.rect(0, 0, CELL_SIZE, CELL_SIZE).fill({ color: 0xffffff });
       gfx.position.set(col * CELL_SIZE, row * CELL_SIZE);
       gfx.alpha = 0.04;
-      this.layers.cellLayer.addChild(gfx);
       this.hintFlashGfx.push(gfx);
     }
     this.hintFlashTime = 0;
   }
 
   clearHintFlash(): void {
-    for (const gfx of this.hintFlashGfx) gfx.destroy();
+    for (const gfx of this.hintFlashGfx) this.gfxPool.release(gfx);
     this.hintFlashGfx = [];
     this.hintFlashTime = 0;
   }
@@ -537,6 +539,7 @@ export class BoardAnimator {
 
   destroy(): void {
     this.clearHintFlash();
+    this.gfxPool.destroy();
     this.mergeFx.destroy();
     this.jellyFx.destroy();
   }

@@ -3,16 +3,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ─── Mock PixiJS ────────────────────────────────────────────
 
 vi.mock('pixi.js', () => {
-  class MockGraphics {
+  class MockSprite {
     visible = true;
     alpha = 1;
     label = '';
+    tint = 0xffffff;
+    texture: any;
     position = { set: vi.fn(), x: 0, y: 0 };
     scale = { set: vi.fn(), x: 1, y: 1 };
-    clear = vi.fn().mockReturnThis();
-    circle = vi.fn().mockReturnThis();
-    fill = vi.fn().mockReturnThis();
+    anchor = { set: vi.fn() };
     destroy = vi.fn();
+
+    constructor(texture?: any) {
+      this.texture = texture;
+    }
   }
 
   class MockContainer {
@@ -29,11 +33,25 @@ vi.mock('pixi.js', () => {
     destroy = vi.fn();
   }
 
+  class MockGraphics {
+    visible = true;
+    alpha = 1;
+    label = '';
+    position = { set: vi.fn(), x: 0, y: 0 };
+    scale = { set: vi.fn(), x: 1, y: 1 };
+    clear = vi.fn().mockReturnThis();
+    circle = vi.fn().mockReturnThis();
+    fill = vi.fn().mockReturnThis();
+    destroy = vi.fn();
+  }
+
+  const mockTexture = { width: 16, height: 16 };
+
   return {
     Container: MockContainer,
     Graphics: MockGraphics,
-    Sprite: vi.fn(),
-    Texture: { from: vi.fn() },
+    Sprite: MockSprite,
+    Texture: { from: vi.fn(() => mockTexture) },
     Rectangle: vi.fn(),
   };
 });
@@ -44,14 +62,21 @@ import type { ParticleConfig } from '../particles';
 // ─── Particle 單元測試 ──────────────────────────────────────
 
 describe('Particle', () => {
+  let mockTexture: any;
+
+  beforeEach(async () => {
+    const { Texture } = await import('pixi.js');
+    mockTexture = Texture.from('particle-circle');
+  });
+
   it('初始狀態為 dead', () => {
-    const p = new Particle();
+    const p = new Particle(mockTexture);
     expect(p.isDead).toBe(true);
     expect(p.graphics.visible).toBe(false);
   });
 
   it('init 後變為 alive', () => {
-    const p = new Particle();
+    const p = new Particle(mockTexture);
     const config: ParticleConfig = {
       x: 100,
       y: 200,
@@ -75,10 +100,11 @@ describe('Particle', () => {
     expect(p.colour).toBe(0xff0000);
     expect(p.baseAlpha).toBe(0.8);
     expect(p.graphics.visible).toBe(true);
+    expect(p.graphics.tint).toBe(0xff0000);
   });
 
   it('update 移動粒子位置', () => {
-    const p = new Particle();
+    const p = new Particle(mockTexture);
     p.init({
       x: 0,
       y: 0,
@@ -99,7 +125,7 @@ describe('Particle', () => {
   });
 
   it('update 套用重力', () => {
-    const p = new Particle();
+    const p = new Particle(mockTexture);
     p.init({
       x: 0,
       y: 0,
@@ -121,7 +147,7 @@ describe('Particle', () => {
   });
 
   it('生命耗盡後標記為 dead', () => {
-    const p = new Particle();
+    const p = new Particle(mockTexture);
     p.init({
       x: 0,
       y: 0,
@@ -140,7 +166,7 @@ describe('Particle', () => {
   });
 
   it('alpha 在生命後 40% 淡出', () => {
-    const p = new Particle();
+    const p = new Particle(mockTexture);
     p.init({
       x: 0,
       y: 0,
@@ -161,7 +187,7 @@ describe('Particle', () => {
   });
 
   it('shrink 在生命後 50% 縮小', () => {
-    const p = new Particle();
+    const p = new Particle(mockTexture);
     p.init({
       x: 0,
       y: 0,
@@ -178,15 +204,16 @@ describe('Particle', () => {
     p.update(800);
 
     // lifeRatio = 200/1000 = 0.2 < 0.5 → 縮小
-    // scale = 0.2 / 0.5 = 0.4
+    // baseScale = 3/8 = 0.375
+    // scale = 0.375 * (0.2 / 0.5) = 0.375 * 0.4 = 0.15
     expect(p.graphics.scale.set).toHaveBeenCalledWith(
-      expect.closeTo(0.4, 1),
-      expect.closeTo(0.4, 1),
+      expect.closeTo(0.15, 1),
+      expect.closeTo(0.15, 1),
     );
   });
 
   it('reset 回到 dead 狀態', () => {
-    const p = new Particle();
+    const p = new Particle(mockTexture);
     p.init({
       x: 100,
       y: 200,
@@ -206,7 +233,7 @@ describe('Particle', () => {
   });
 
   it('dead 粒子 update 不做任何事', () => {
-    const p = new Particle();
+    const p = new Particle(mockTexture);
     // 不呼叫 init，保持 dead
     const initialX = p.x;
     p.update(100);
@@ -323,5 +350,24 @@ describe('ParticlePool', () => {
     expect(pool.activeCount).toBe(10);
     pool.clear();
     expect(pool.activeCount).toBe(0);
+  });
+
+  it('capacity 回傳正確上限', () => {
+    expect(pool.capacity).toBe(100);
+  });
+
+  it('availableCount 隨 spawn/recycle 變化', () => {
+    expect(pool.availableCount).toBe(100);
+
+    pool.spawn({
+      x: 0, y: 0, vx: 0, vy: 0,
+      lifetime: 10, radius: 3, colour: 0xffffff, alpha: 1,
+    });
+
+    expect(pool.availableCount).toBe(99);
+
+    // Let it die and recycle
+    pool.update(50);
+    expect(pool.availableCount).toBe(100);
   });
 });

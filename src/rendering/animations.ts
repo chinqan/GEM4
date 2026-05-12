@@ -1,4 +1,4 @@
-import { Container, Graphics, ColorMatrixFilter } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture, ColorMatrixFilter } from 'pixi.js';
 import type { CellPos, GemColour } from '../types';
 import type { GemSprite } from './gem-sprites';
 import {
@@ -308,18 +308,23 @@ export function createCascadeDropAnimation(config: CascadeDropConfig): Animation
  * 建立特殊寶石 spawn 震波動畫：600ms 擴展環。
  *
  * 在寶石位置產生一個向外擴展的光環效果。
+ * 使用 Sprite + scale 動畫取代每幀 clear/redraw 的 Graphics。
  */
 export function createSpecialSpawnShockwave(
   x: number,
   y: number,
   fxLayer: Container,
 ): Animation {
-  const ring = new Graphics();
+  const circleTexture = Texture.from('particle-circle');
+  const ring = new Sprite(circleTexture);
   ring.label = 'spawnShockwave';
+  ring.anchor.set(0.5);
+  ring.tint = 0xffffff;
   ring.position.set(x, y);
+  ring.scale.set(0);
   fxLayer.addChild(ring);
 
-  const maxRadius = CELL_SIZE * 1.5;
+  const maxScale = (CELL_SIZE * 1.5 * 2) / 16; // diameter / texSize
 
   return {
     elapsed: 0,
@@ -329,12 +334,9 @@ export function createSpecialSpawnShockwave(
       this.elapsed += dtMs;
       const progress = Math.min(this.elapsed / this.duration, 1);
 
-      const radius = maxRadius * smoothstep(progress);
-      const alpha = 1 - progress;
-
-      ring.clear();
-      ring.circle(0, 0, radius);
-      ring.stroke({ color: 0xffffff, width: 3, alpha });
+      const t = smoothstep(progress);
+      ring.scale.set(maxScale * t);
+      ring.alpha = 1 - progress;
 
       return this.elapsed >= this.duration;
     },
@@ -424,12 +426,15 @@ export function createSpawnConvergeEffect(
   y: number,
   fxLayer: Container,
 ): Animation {
-  const ring = new Graphics();
+  const circleTexture = Texture.from('particle-circle');
+  const ring = new Sprite(circleTexture);
   ring.label = 'spawnConverge';
+  ring.anchor.set(0.5);
+  ring.tint = 0xffe082;
   ring.position.set(x, y);
   fxLayer.addChild(ring);
 
-  const maxRadius = CELL_SIZE * 1.5;
+  const maxScale = (CELL_SIZE * 1.5 * 2) / 16; // diameter / texSize
 
   return {
     elapsed: 0,
@@ -438,12 +443,9 @@ export function createSpawnConvergeEffect(
     update(dtMs: number): boolean {
       this.elapsed += dtMs;
       const t = Math.min(this.elapsed / this.duration, 1);
-      const radius = maxRadius * (1 - smoothstep(t));
-      const alpha = 0.85 * (1 - t * 0.35);
-
-      ring.clear();
-      ring.circle(0, 0, radius);
-      ring.stroke({ color: 0xffe082, width: 3, alpha });
+      const scale = maxScale * (1 - smoothstep(t));
+      ring.scale.set(scale);
+      ring.alpha = 0.85 * (1 - t * 0.35);
 
       return this.elapsed >= this.duration;
     },
@@ -463,6 +465,7 @@ export { SPAWN_CONVERGE_MS };
  * 建立特殊寶石啟動效果：800ms 擴展爆發。
  *
  * 從寶石位置向外擴展的多層光環 + 閃光效果。
+ * 使用 Sprite + scale 動畫取代每幀 clear/redraw 的 Graphics，減少 draw calls。
  */
 export function createSpecialActivationEffect(
   x: number,
@@ -476,21 +479,36 @@ export function createSpecialActivationEffect(
   container.position.set(x, y);
   fxLayer.addChild(container);
 
-  // 外環
-  const outerRing = new Graphics();
+  const circleTexture = Texture.from('particle-circle');
+
+  // 外環 — tinted ring sprite
+  const outerRing = new Sprite(circleTexture);
+  outerRing.anchor.set(0.5);
+  outerRing.tint = colour;
+  outerRing.alpha = 0;
+  outerRing.scale.set(0);
   container.addChild(outerRing);
 
-  // 內環
-  const innerRing = new Graphics();
+  // 內環 — white ring sprite
+  const innerRing = new Sprite(circleTexture);
+  innerRing.anchor.set(0.5);
+  innerRing.tint = 0xffffff;
+  innerRing.alpha = 0;
+  innerRing.scale.set(0);
   container.addChild(innerRing);
 
-  // 中心閃光
-  const flash = new Graphics();
+  // 中心閃光 — white filled circle
+  const flash = new Sprite(circleTexture);
+  flash.anchor.set(0.5);
+  flash.tint = 0xffffff;
+  flash.alpha = 0;
+  flash.blendMode = 'add';
   container.addChild(flash);
 
-  const maxOuterRadius = CELL_SIZE * 2.5;
-  const maxInnerRadius = CELL_SIZE * 1.8;
-  const flashRadius = CELL_SIZE * 0.8;
+  // Target scales (relative to 16px base texture → desired pixel radius)
+  const maxOuterScale = (CELL_SIZE * 2.5 * 2) / 16; // diameter / texSize
+  const maxInnerScale = (CELL_SIZE * 1.8 * 2) / 16;
+  const flashScale = (CELL_SIZE * 0.8 * 2) / 16;
 
   return {
     elapsed: 0,
@@ -504,25 +522,20 @@ export function createSpecialActivationEffect(
       const fadeOut = 1 - progress;
 
       // 外環：快速擴展
-      const outerR = maxOuterRadius * t;
-      outerRing.clear();
-      outerRing.circle(0, 0, outerR);
-      outerRing.stroke({ color: colour, width: 2, alpha: fadeOut * 0.6 });
+      outerRing.scale.set(maxOuterScale * t);
+      outerRing.alpha = fadeOut * 0.6;
 
       // 內環：稍慢擴展
       const innerT = smoothstep(Math.min(progress * 1.3, 1));
-      const innerR = maxInnerRadius * innerT;
-      innerRing.clear();
-      innerRing.circle(0, 0, innerR);
-      innerRing.stroke({ color: 0xffffff, width: 4, alpha: fadeOut * 0.8 });
+      innerRing.scale.set(maxInnerScale * innerT);
+      innerRing.alpha = fadeOut * 0.8;
 
       // 中心閃光：快速出現後消失
       const flashAlpha = progress < 0.3
         ? smoothstep(progress / 0.3)
         : 1 - smoothstep((progress - 0.3) / 0.7);
-      flash.clear();
-      flash.circle(0, 0, flashRadius * (1 - t * 0.5));
-      flash.fill({ color: 0xffffff, alpha: flashAlpha * 0.9 });
+      flash.scale.set(flashScale * (1 - t * 0.5));
+      flash.alpha = flashAlpha * 0.9;
 
       return this.elapsed >= this.duration;
     },
@@ -539,6 +552,7 @@ export function createSpecialActivationEffect(
 /**
  * 建立半透明遮片，標示特殊寶石啟動時的影響區域。
  * 遮片在指定期間顯示，之後自動移除。
+ * 使用單一 Graphics 繪製所有格子（而非每格一個），減少 draw calls。
  *
  * @param cells 受影響的格子座標
  * @param parentLayer 要掛載遮片的圖層（通常是 boardLayer）
@@ -551,16 +565,15 @@ export function createBlastZoneOverlay(
   duration: number = SPECIAL_ACTIVATION_MS,
   colour: number = 0xff0000,
 ): Animation {
-  const container = new Container();
-  container.label = 'blastZoneOverlay';
-  parentLayer.addChild(container);
+  const overlay = new Graphics();
+  overlay.label = 'blastZoneOverlay';
 
+  // Draw all cells into a single Graphics object (1 draw call total)
   for (const [col, row] of cells) {
-    const rect = new Graphics();
-    rect.rect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    rect.fill({ color: colour, alpha: 0.35 });
-    container.addChild(rect);
+    overlay.rect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
   }
+  overlay.fill({ color: colour, alpha: 0.35 });
+  parentLayer.addChild(overlay);
 
   return {
     elapsed: 0,
@@ -571,14 +584,14 @@ export function createBlastZoneOverlay(
       // 淡出效果：後半段逐漸降低透明度
       const progress = Math.min(this.elapsed / this.duration, 1);
       if (progress > 0.5) {
-        container.alpha = 1 - (progress - 0.5) * 2;
+        overlay.alpha = 1 - (progress - 0.5) * 2;
       }
       return this.elapsed >= this.duration;
     },
 
     complete(): void {
-      parentLayer.removeChild(container);
-      container.destroy({ children: true });
+      parentLayer.removeChild(overlay);
+      overlay.destroy();
     },
   };
 }
@@ -757,6 +770,7 @@ export interface EnhancedBlastConfig {
  * 並增加粒子爆破效果（數量 × particleMultiplier）。
  *
  * 粒子以 sprite 中心為原點向外噴射，帶有重力與淡出效果。
+ * 使用 Sprite + particle-circle texture 取代 Graphics，大幅減少 draw calls。
  * 若未提供 fxLayer，則僅執行縮放/淡出（不產生粒子）。
  */
 export function createEnhancedBlastAnimation(config: EnhancedBlastConfig): Animation {
@@ -770,28 +784,40 @@ export function createEnhancedBlastAnimation(config: EnhancedBlastConfig): Anima
   // ── Particle burst setup ──
   const particleCount = Math.round(MATCH_BURST_PARTICLE_COUNT * particleMultiplier);
   const burstColour = colour ? GEM_COLOURS[colour] : 0xffffff;
-  const particles: Graphics[] = [];
+
+  interface BurstDot {
+    sprite: Sprite;
+    vx: number;
+    vy: number;
+    initScale: number;
+  }
+  const particles: BurstDot[] = [];
 
   // Spawn burst particles on the fxLayer if available
   if (fxLayer) {
     const cx = sprite.position.x;
     const cy = sprite.position.y;
+    const circleTexture = Texture.from('particle-circle');
 
     for (let i = 0; i < particleCount; i++) {
       const angle = (i / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
       const radius = 2 + Math.random() * 3;
+      const initScale = radius / 8; // particle-circle is 16×16, radius 8
 
-      const dot = new Graphics();
-      dot.circle(0, 0, radius);
-      dot.fill({ color: burstColour, alpha: 1 });
+      const dot = new Sprite(circleTexture);
+      dot.anchor.set(0.5);
+      dot.tint = burstColour;
+      dot.scale.set(initScale);
       dot.position.set(cx, cy);
       dot.blendMode = 'add';
       fxLayer.addChild(dot);
 
-      // Store velocity data on the particle for update
-      (dot as any)._vx = Math.cos(angle) * (120 + Math.random() * 200);
-      (dot as any)._vy = Math.sin(angle) * (120 + Math.random() * 200);
-      particles.push(dot);
+      particles.push({
+        sprite: dot,
+        vx: Math.cos(angle) * (120 + Math.random() * 200),
+        vy: Math.sin(angle) * (120 + Math.random() * 200),
+        initScale,
+      });
     }
   }
 
@@ -814,25 +840,23 @@ export function createEnhancedBlastAnimation(config: EnhancedBlastConfig): Anima
 
       // ── Update burst particles ──
       const dtSec = dtMs / 1000;
-      for (const dot of particles) {
-        if (!dot.visible) continue;
-        const vx: number = (dot as any)._vx;
-        const vy: number = (dot as any)._vy;
+      for (const p of particles) {
+        if (!p.sprite.visible) continue;
 
-        dot.position.x += vx * dtSec;
-        dot.position.y += vy * dtSec;
+        p.sprite.position.x += p.vx * dtSec;
+        p.sprite.position.y += p.vy * dtSec;
 
         // Apply gravity
-        (dot as any)._vy += 400 * dtSec;
+        p.vy += 400 * dtSec;
 
         // Fade out in the second half
         if (progress > 0.5) {
-          dot.alpha = 1 - (progress - 0.5) * 2;
+          p.sprite.alpha = 1 - (progress - 0.5) * 2;
         }
 
-        // Shrink slightly
+        // Shrink slightly (absolute scale from initial size)
         const s = 1 - progress * 0.6;
-        dot.scale.set(s, s);
+        p.sprite.scale.set(s * p.initScale);
       }
 
       return this.elapsed >= this.duration;
@@ -847,11 +871,11 @@ export function createEnhancedBlastAnimation(config: EnhancedBlastConfig): Anima
       }
 
       // Clean up burst particles
-      for (const dot of particles) {
-        if (dot.parent) {
-          dot.parent.removeChild(dot);
+      for (const p of particles) {
+        if (p.sprite.parent) {
+          p.sprite.parent.removeChild(p.sprite);
         }
-        dot.destroy();
+        p.sprite.destroy();
       }
       particles.length = 0;
     },

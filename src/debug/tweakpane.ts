@@ -19,6 +19,7 @@ export interface DebugMetrics {
   score: number;
   movesRemaining: number;
   clockScale: number;
+  drawCallOverBudget: boolean;
 }
 
 /** Clock scale control for slow-mo / pause / frame-step */
@@ -56,6 +57,7 @@ function createDefaultMetrics(): DebugMetrics {
     score: 0,
     movesRemaining: 0,
     clockScale: 1,
+    drawCallOverBudget: false,
   };
 }
 
@@ -94,6 +96,25 @@ export async function createDebugPanel(): Promise<DebugPanel | null> {
   perfFolder.addBinding(metrics, 'fps', { readonly: true, label: 'FPS' });
   perfFolder.addBinding(metrics, 'drawCalls', { readonly: true, label: 'Draw Calls' });
   perfFolder.addBinding(metrics, 'particleCount', { readonly: true, label: 'Particles' });
+
+  // Over-budget warning indicator (red text when draw calls > 12)
+  const warningBlade = perfFolder.addBlade({
+    view: 'text',
+    label: '⚠️ Budget',
+    value: '',
+    parse: (v: string) => v,
+    stringify: (v: string) => v,
+  }) as any;
+  // Style the warning element for visibility
+  const warningEl = warningBlade?.element?.querySelector('.tp-txtv_i') as HTMLElement | undefined;
+  if (warningEl) {
+    warningEl.style.color = '#ff4444';
+    warningEl.style.fontWeight = 'bold';
+  }
+  // Initially hidden
+  if (warningBlade?.element) {
+    (warningBlade.element as HTMLElement).style.display = 'none';
+  }
 
   // ─── Game State folder ──────────────────────────────────
   const stateFolder = pane.addFolder({ title: 'Game State', expanded: true });
@@ -138,6 +159,21 @@ export async function createDebugPanel(): Promise<DebugPanel | null> {
   return {
     updateMetrics(partial: Partial<DebugMetrics>): void {
       Object.assign(metrics, partial);
+
+      // Update over-budget warning visibility
+      const overBudget = metrics.drawCalls > 12;
+      metrics.drawCallOverBudget = overBudget;
+      if (warningBlade?.element) {
+        (warningBlade.element as HTMLElement).style.display = overBudget ? '' : 'none';
+      }
+      if (overBudget && warningBlade) {
+        try {
+          warningBlade.controller.value.rawValue = `OVER (${metrics.drawCalls})`;
+        } catch {
+          // Tweakpane API may vary
+        }
+      }
+
       pane.refresh();
     },
 
