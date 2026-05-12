@@ -40,7 +40,7 @@ describe('State Machine', () => {
     });
 
     it('所有目標都是合法的 AppStateKind', () => {
-      for (const [from, targets] of Object.entries(LEGAL_TRANSITIONS)) {
+      for (const [_from, targets] of Object.entries(LEGAL_TRANSITIONS)) {
         for (const to of targets) {
           expect(ALL_STATE_KINDS).toContain(to);
         }

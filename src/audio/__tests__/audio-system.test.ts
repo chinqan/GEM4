@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ─── Mock document (for autoplay unlock & visibility) ───────
 
-const docListeners = new Map<string, Set<Function>>();
+const docListeners = new Map<string, Set<(...args: unknown[]) => unknown>>();
 const mockDocument = {
-  addEventListener: vi.fn((event: string, handler: Function) => {
+  addEventListener: vi.fn((event: string, handler: (...args: unknown[]) => unknown) => {
     if (!docListeners.has(event)) docListeners.set(event, new Set());
     docListeners.get(event)!.add(handler);
   }),
-  removeEventListener: vi.fn((event: string, handler: Function) => {
+  removeEventListener: vi.fn((event: string, handler: (...args: unknown[]) => unknown) => {
     docListeners.get(event)?.delete(handler);
   }),
   hidden: false,

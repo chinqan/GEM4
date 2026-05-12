@@ -1,7 +1,6 @@
 import { Container, Graphics, ColorMatrixFilter } from 'pixi.js';
 import type { CellPos, GemColour } from '../types';
 import type { GemSprite } from './gem-sprites';
-import type { LayerRefs } from './app-layers';
 import {
   CELL_SIZE,
   SWAP_DURATION_MS,
@@ -17,7 +16,6 @@ import {
   MARK_PULSE_CYCLE_MS,
   BREW_SHAKE_AMPLITUDE,
   BREW_BRIGHTNESS_MAX,
-  BLAST_PARTICLE_MULTIPLIER,
   MATCH_BURST_PARTICLE_COUNT,
   GEM_COLOURS,
 } from './design-tokens';

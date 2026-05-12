@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import type { CellPos, GemColour } from '../../../types';
+import type { CellPos } from '../../../types';
 import {
   createBoard,
   createGem,
@@ -10,7 +10,7 @@ import {
   getNeighbors,
   cloneBoard,
 } from '../board';
-import type { Cell, Gem } from '../board';
+import type { Cell } from '../board';
 
 // ─── 單元測試 ───────────────────────────────────────────────
 

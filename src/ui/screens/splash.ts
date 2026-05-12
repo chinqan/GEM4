@@ -2,7 +2,7 @@
 // 載入進度條、使用者手勢提示（Tap to Begin 脈動文字）。
 
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
-import { BG, TEXT_COLOURS, FONT_SIZES, SPACING, MOTION } from '../theme';
+import { BG, TEXT_COLOURS, FONT_SIZES, SPACING } from '../theme';
 import { createProgressBar, type UIProgressBar } from '../factory';
 
 // ─── 型別 ──────────────────────────────────────────────────

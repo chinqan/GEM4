@@ -1,6 +1,5 @@
 import type { CellPos, GemColour, SpecialGemType, MatchShape, MatchDescriptor } from '../../types';
 import type { Board } from './board';
-import { getCell } from './board';
 
 // ─── 內部型別 ───────────────────────────────────────────────
 
@@ -391,7 +390,7 @@ function getCenterCell(cells: CellPos[]): CellPos {
 /** 找出 T 形或 L 形的交會/轉角點 */
 function getIntersectionCell(
   cells: CellPos[],
-  shape: MatchShape,
+  _shape: MatchShape,
 ): CellPos {
   // 對於 T/L/cross，交會點是同時在水平和垂直方向上有鄰居的格子
   // 簡化：找出在 cells 中同時有水平和垂直鄰居的格子

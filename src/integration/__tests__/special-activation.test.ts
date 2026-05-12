@@ -1,18 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
-import type { CellPos, GemColour, SpecialGemType, ComboType } from '../../types';
+import { describe, it, expect } from 'vitest';
+import type { CellPos, GemColour } from '../../types';
 import {
   createBoard,
-  createGem,
   getCell,
   cloneBoard,
 } from '../../game/rules/board';
 import type { Board } from '../../game/rules/board';
-import { resolveCombo, comboKey } from '../../game/rules/combo-matrix';
+import { resolveCombo } from '../../game/rules/combo-matrix';
 import {
   activateColourGem,
-  processSpecialActivations,
 } from '../../game/rules/special-gems';
-import { comboScore, specialActivationScore } from '../../game/rules/scoring';
 import { placeGem } from '../../game/__tests__/test-helpers';
 
 // ─── 測試工具 ───────────────────────────────────────────────

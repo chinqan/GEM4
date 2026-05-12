@@ -2,8 +2,8 @@
 // 分數、手數/時間、目標進度、暫停按鈕。
 // 自適應佈局：手機（寬度 < 600px）使用緊湊排版。
 
-import { Container, Graphics, Sprite, Text, TextStyle, Texture } from 'pixi.js';
-import { BG, TEXT_COLOURS, FONT_SIZES, SPACING, RADIUS, WORLD_ACCENTS } from '../theme';
+import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { TEXT_COLOURS, FONT_SIZES, SPACING, RADIUS, WORLD_ACCENTS } from '../theme';
 import {
   createButton,
   createStarDisplay,
@@ -12,7 +12,6 @@ import {
   type UIButton,
   type UIStarDisplay,
   type UIObjectiveChip,
-  type ObjectiveDisplayInfo,
 } from '../factory';
 import { MOBILE_BREAKPOINT } from '../../rendering/viewport';
 
@@ -85,7 +84,7 @@ export interface CreateGameHUDOptions {
 export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
   const {
     width,
-    height,
+    height: _height,
     mode = 'moves',
     objective,
     worldId,

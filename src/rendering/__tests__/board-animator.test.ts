@@ -181,6 +181,7 @@ vi.stubGlobal('cancelAnimationFrame', vi.fn());
 // ─── 測試工具 ───────────────────────────────────────────────
 
 function createMockConfig(): BoardAnimatorConfig {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Container } = require('pixi.js');
   return {
     boardRenderer: {

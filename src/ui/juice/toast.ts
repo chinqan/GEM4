@@ -103,7 +103,6 @@ export function createToast(config: ToastConfig): ToastHandle {
   // 淡入
   container.alpha = 0;
   let visible = true;
-  let fadeTimer: ReturnType<typeof setTimeout> | null = null;
   let dismissTimer: ReturnType<typeof setTimeout> | null = null;
 
   // 簡易淡入動畫

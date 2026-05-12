@@ -7,7 +7,6 @@
 // making both independently testable.
 
 import { Graphics } from 'pixi.js';
-import type { Container } from 'pixi.js';
 import type { CellPos, GemColour, SpecialGemType } from '../types';
 import type { Board } from '../game/rules/board';
 import type { BoardRenderer } from './board-renderer';
@@ -18,7 +17,6 @@ import type {
   ActivateResult,
   CascadeStep,
   ClearedCellInfo,
-  DropInfo,
   SpecialActivationEvent,
   GravityResult,
   BlockerHit,
@@ -60,8 +58,6 @@ import {
   playSwap,
   playInvalid,
   playCombo,
-  playLevelComplete,
-  playLevelFail,
   playSpecialByKind,
   playEvent,
   playBlockerImmovable,
@@ -179,7 +175,11 @@ export class BoardAnimator {
   ): Promise<void> {
     if (!result.valid) {
       await this.playSwapSlide(from, to);
-      result.type === 'jellyBlocked' ? playBlockerImmovable() : playInvalid();
+      if (result.type === 'jellyBlocked') {
+        playBlockerImmovable();
+      } else {
+        playInvalid();
+      }
       await this.playSwapSlide(to, from);
       return;
     }
@@ -540,7 +540,7 @@ export class BoardAnimator {
 
   // ─── Private: Cascade Steps ─────────────────────────────
 
-  private async animateCascadeSteps(steps: CascadeStep[], board: Board): Promise<void> {
+  private async animateCascadeSteps(steps: CascadeStep[], _board: Board): Promise<void> {
     for (const step of steps) {
       // Sync to pre-clear state: every gem still visible (including in-match
       // special blast targets — game-session captures preClearSnapshot before

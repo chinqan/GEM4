@@ -2,8 +2,8 @@
 // 純 TypeScript，零瀏覽器依賴
 
 import type { CellPos, GemColour, BlockerPlacement } from '../../types';
-import type { Board, Cell } from '../rules/board';
-import { createBoard, createGem, getCell, cloneBoard } from '../rules/board';
+import type { Board } from '../rules/board';
+import { createBoard, createGem, getCell } from '../rules/board';
 import { detectMatches } from '../rules/match-detect';
 import type { Mulberry32 } from '../rules/rng';
 import type { LevelSpec } from '../level/level-spec';

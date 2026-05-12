@@ -2,8 +2,8 @@
 // 關卡節點、星數、鎖定狀態、世界切換。
 
 import { Container, Graphics, Sprite, Text, TextStyle, Texture } from 'pixi.js';
-import { BG, TEXT_COLOURS, FONT_SIZES, SPACING, STAR_COLOURS, WORLD_ACCENTS, RADIUS } from '../theme';
-import { createButton, createStarDisplay, type UIButton, type UIStarDisplay } from '../factory';
+import { BG, TEXT_COLOURS, FONT_SIZES, SPACING, WORLD_ACCENTS } from '../theme';
+import { createButton, createStarDisplay, type UIButton } from '../factory';
 
 // ─── 型別 ──────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ export function createWorldMapScreen(options: CreateWorldMapOptions): WorldMapSc
   const {
     width,
     height,
-    worldId = 1,
+    worldId: _worldId = 1,
     worldName = 'World 1',
     levels = [],
     onBack,
@@ -189,7 +189,7 @@ export function createWorldMapScreen(options: CreateWorldMapOptions): WorldMapSc
 
   container.setWorld = (wId: number, wName: string) => {
     titleText.text = wName;
-    const accent = WORLD_ACCENTS[wId] ?? WORLD_ACCENTS[1];
+    const _accent = WORLD_ACCENTS[wId] ?? WORLD_ACCENTS[1];
     // Could update accent colours here in future
   };
 

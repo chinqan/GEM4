@@ -9,7 +9,7 @@
 
 import type { Settings, AudioSettings, GraphicsPreset, AccessibilitySettings, GameplaySettings } from '../../state/save-state';
 import type { KeyAction, KeybindMap } from '../../input/keybinds';
-import { ALL_KEY_ACTIONS, defaultKeybinds } from '../../input/keybinds';
+import { ALL_KEY_ACTIONS } from '../../input/keybinds';
 
 // ─── 回呼介面 ──────────────────────────────────────────────
 

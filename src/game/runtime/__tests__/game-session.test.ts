@@ -4,7 +4,6 @@ import { createBoard, createGem, getCell } from '../../rules/board';
 import { createRngStreams } from '../../rules/rng';
 import { initBoard, findValidSwaps } from '../reshuffle';
 import type { LevelSpec } from '../../level/level-spec';
-import type { CellPos } from '../../../types';
 import type { GemColour } from '../../../types';
 
 // ─── Test Helpers ───────────────────────────────────────────

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import type { GemColour, CellPos } from '../../../types';
+import { describe, it, expect } from 'vitest';
+import type { GemColour } from '../../../types';
 import { createBoard, createGem, cloneBoard } from '../../rules/board';
 import type { Board } from '../../rules/board';
 import { detectMatches } from '../../rules/match-detect';

@@ -3,14 +3,12 @@ import * as fc from 'fast-check';
 import type { CellPos, GemColour, SpecialGemType, ComboType } from '../../types';
 import {
   createBoard,
-  createGem,
   getCell,
 } from '../../game/rules/board';
 import type { Board } from '../../game/rules/board';
 import {
   specialActivationScore,
   comboScore,
-  chainMultiplier,
 } from '../../game/rules/scoring';
 import {
   activateColourGem,

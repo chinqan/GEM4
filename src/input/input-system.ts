@@ -3,7 +3,6 @@
 // 將原始瀏覽器事件正規化為 NormalizedPointer，
 // 並將鍵盤事件轉發給 KeybindManager。
 
-import type { ViewportInfo } from '../rendering/viewport';
 import type { BoardInput } from './board-input';
 import type { KeybindManager } from './keybinds';
 

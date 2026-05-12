@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { CellPos, GemColour } from '../../../types';
 import type { LevelSpec } from '../../level/level-spec';
-import { createBoard, createGem, getCell } from '../../rules/board';
+import { createBoard, createGem } from '../../rules/board';
 import { detectMatches } from '../../rules/match-detect';
 import { Mulberry32 } from '../../rules/rng';
 import { initBoard, findValidSwaps, reshuffle } from '../reshuffle';

@@ -1,11 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import type { CellPos, GemColour } from '../../../types';
+import type { CellPos } from '../../../types';
 import {
   createBoard,
-  createGem,
   getCell,
 } from '../board';
-import type { Board } from '../board';
 import {
   activateLineBomb,
   activateAreaBomb,

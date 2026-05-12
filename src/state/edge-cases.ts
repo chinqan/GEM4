@@ -6,7 +6,7 @@
 // 37.5 多頁籤 localStorage 競態處理（timestamp 解決）
 
 import type { SaveState } from './save-state';
-import { SAVE_KEY, SaveManager } from './save-state';
+import { SAVE_KEY } from './save-state';
 
 // ─── 37.1 Tab 可見性處理 ──────────────────────────────────
 
@@ -61,7 +61,6 @@ export function setupBeforeUnloadHandler(isPlaying: () => boolean): () => void {
     if (isPlaying()) {
       e.preventDefault();
       // 現代瀏覽器忽略自訂訊息，但仍需設定 returnValue
-      // eslint-disable-next-line no-param-reassign
       e.returnValue = '';
     }
   };

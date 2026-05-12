@@ -1,13 +1,7 @@
 import { Container, Graphics, Sprite, Texture, Rectangle } from 'pixi.js';
 import type { Renderer } from 'pixi.js';
-import type { GemColour } from '../types';
 import {
-  GEM_COLOURS,
   GRAPHICS_PRESETS,
-  MATCH_BURST_PARTICLE_COUNT,
-  MATCH_BURST_LIFETIME_MS,
-  MATCH_BURST_SPEED,
-  MATCH_BURST_RADIUS,
   CHAIN_GLOW_LIFETIME_MS,
   CHAIN_GLOW_RADIUS,
   CHAIN_GLOW_SPEED,

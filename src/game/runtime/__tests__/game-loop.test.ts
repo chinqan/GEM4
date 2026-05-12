@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { CellPos, GemColour, LevelResult } from '../../../types';
+import type { GemColour, LevelResult } from '../../../types';
 import { createBoard, createGem, getCell } from '../../rules/board';
-import type { Board } from '../../rules/board';
 import { Mulberry32 } from '../../rules/rng';
 import { initBoard, findValidSwaps } from '../reshuffle';
 import {

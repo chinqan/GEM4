@@ -6,7 +6,7 @@ import {
   createGem,
   getCell,
 } from '../../../game/rules/board';
-import type { Board, BlockerState } from '../../../game/rules/board';
+import type { Board } from '../../../game/rules/board';
 import { Mulberry32 } from '../../../game/rules/rng';
 import {
   JellyOverlay,
@@ -689,7 +689,7 @@ describe('CP-4: 手數計數一致性', () => {
 
           const rng = new Mulberry32(12345);
           let expectedMoves = 0;
-          let spawns = 0;
+          let _spawns = 0;
 
           for (let i = 0; i < ticks; i++) {
             // 檢查 tick 前的狀態
@@ -706,7 +706,7 @@ describe('CP-4: 手數計數一致性', () => {
             if (spawnedThisTick.length > 0) {
               // 生成了 blocker，movesSinceLastSpawn 被重置為 0
               expect(genAfter.movesSinceLastSpawn).toBe(0);
-              spawns++;
+              _spawns++;
               expectedMoves = 0;
             } else {
               // 沒生成，movesSinceLastSpawn 應該 +1

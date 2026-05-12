@@ -8,16 +8,13 @@
 // This catches timing bugs where gems change color before falling,
 // or where sprites are synced to the wrong intermediate state.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { CellPos, GemColour } from '../../types';
-import { createBoard, createGem, getCell } from '../../game/rules/board';
+import { describe, it, expect } from 'vitest';
+import type { GemColour } from '../../types';
+import { createBoard } from '../../game/rules/board';
 import type { Board } from '../../game/rules/board';
 import { GameSessionController } from '../../game/runtime/game-session';
 import type {
-  SwapResult,
-  CascadeStep,
   BoardSnapshot,
-  BoardSnapshotCell,
 } from '../../game/runtime/game-session';
 import { placeGem } from '../../game/__tests__/test-helpers';
 import { createRngStreams } from '../../game/rules/rng';
@@ -41,7 +38,7 @@ function createTestSpec(width = 8, height = 8): LevelSpec {
 }
 
 /** Create a board with a specific layout (no pre-existing matches) */
-function createTestBoard(): Board {
+function _createTestBoard(): Board {
   const board = createBoard(5, 5);
   // Layout (no matches):
   // Row 0: R G B Y P
@@ -907,7 +904,7 @@ describe('Animation flow invariant: no premature color changes', () => {
     // (they enter from above the board)
     // We can identify new gems: their distance > toRow (they come from above row 0)
     for (const drop of step.gravity.drops) {
-      const fromRow = drop.toRow - drop.distance;
+      const _fromRow = drop.toRow - drop.distance;
       // fromRow can be negative (new gem from above) or >= 0 (existing gem falling)
       // But distance must always be positive
       expect(drop.distance).toBeGreaterThan(0);

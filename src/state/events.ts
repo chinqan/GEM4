@@ -188,7 +188,7 @@ export function createIntensityPool(
  * 當前 emit 迭代的安全性——透過快照迭代保證。
  */
 export class EventBusImpl implements EventBus {
-  private handlers = new Map<string, Set<Function>>();
+  private handlers = new Map<string, Set<(event: GameEvent) => void>>();
 
   /** 發射事件至所有已註冊的 handler */
   emit(event: GameEvent): void {
@@ -211,9 +211,9 @@ export class EventBusImpl implements EventBus {
       set = new Set();
       this.handlers.set(kind, set);
     }
-    set.add(handler);
+    set.add(handler as (event: GameEvent) => void);
     return () => {
-      this.handlers.get(kind)?.delete(handler);
+      this.handlers.get(kind)?.delete(handler as (event: GameEvent) => void);
     };
   }
 

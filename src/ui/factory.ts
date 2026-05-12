@@ -17,7 +17,6 @@ import {
   getProgressBarColour,
   type ProgressBarVariant,
   DEFAULT_ACCENT,
-  MOTION,
 } from './theme';
 
 // ─── 共用文字樣式 ──────────────────────────────────────────
@@ -348,7 +347,7 @@ export function objectiveToDisplayInfo(objective: {
 }): ObjectiveDisplayInfo {
   switch (objective.type) {
     case 'score': {
-      const target = objective.target as number;
+      const _target = objective.target as number;
       return {
         type: 'score',
         label: '達成分數',

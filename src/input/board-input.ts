@@ -6,7 +6,7 @@ import type { CellPos } from '../types';
 import type { ViewportInfo } from '../rendering/viewport';
 import type { NormalizedPointer } from './input-system';
 import type { CommandQueue } from '../game/runtime/game-loop';
-import { CELL_SIZE, CELL_GAP } from '../rendering/design-tokens';
+import { CELL_SIZE } from '../rendering/design-tokens';
 
 // ─── 28.4 棋盤座標轉換 ─────────────────────────────────────
 

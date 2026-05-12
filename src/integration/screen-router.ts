@@ -9,7 +9,6 @@
 import type { Container } from 'pixi.js';
 import type { AppState } from '../state/app-state';
 import type { LevelResult, EndlessResult, Objective } from '../types';
-import type { LayerRefs } from '../rendering/app-layers';
 
 // ─── Types ──────────────────────────────────────────────────
 

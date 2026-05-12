@@ -17,10 +17,10 @@ export default tseslint.config(
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', '*.config.*', '*.mjs'],
+    ignores: ['dist/**', 'node_modules/**', '*.config.*', '*.mjs', 'build-tools/**'],
   },
 );

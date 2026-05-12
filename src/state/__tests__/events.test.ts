@@ -155,13 +155,13 @@ describe('EventBusImpl', () => {
     it('handler 中 unsub 不影響當前 emit 迭代', () => {
       const bus = new EventBusImpl();
       const calls: string[] = [];
-      let unsub2: (() => void) | undefined;
+      const unsub2Ref: [(() => void) | undefined] = [undefined];
 
       bus.on('cascade.stepEnded', () => {
         calls.push('h1');
-        unsub2?.(); // 在 h1 中移除 h2
+        unsub2Ref[0]?.(); // 在 h1 中移除 h2
       });
-      unsub2 = bus.on('cascade.stepEnded', () => {
+      unsub2Ref[0] = bus.on('cascade.stepEnded', () => {
         calls.push('h2');
       });
       bus.on('cascade.stepEnded', () => {

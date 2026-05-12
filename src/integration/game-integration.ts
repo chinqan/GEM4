@@ -5,8 +5,8 @@
 // This is the top-level orchestrator that bootstraps the game
 // and wires all subsystems together via the event bus.
 
-import type { AppState, AppStateKind } from '../state/app-state';
-import type { EventBus, GameEventKind } from '../state/events';
+import type { AppState } from '../state/app-state';
+import type { EventBus } from '../state/events';
 import { EventBusImpl } from '../state/events';
 import type { AppRefs } from '../app';
 import type { DebugPanel } from '../debug/tweakpane';
@@ -18,9 +18,9 @@ import type { BoardRenderer } from '../rendering/board-renderer';
 import type { BoardInput } from '../input/board-input';
 import type { InputSystem } from '../input/input-system';
 import type { ViewportManager } from '../rendering/viewport';
-import type { Objective, GemColour, BlockerKind, CellPos } from '../types';
+import type { Objective, GemColour, BlockerKind } from '../types';
 import type { ScreenRouter } from './screen-router';
-import type { GameSessionController, SwapResult, ActivateResult } from '../game/runtime/game-session';
+import type { GameSessionController } from '../game/runtime/game-session';
 import type { BoardAnimator } from '../rendering/board-animator';
 import type { BoardInteraction } from '../input/board-interaction';
 
@@ -698,7 +698,7 @@ export class GameIntegration {
   }
 
   /** Update HUD from session state */
-  private updateHud(hud: any, session: GameSessionController, spec: import('../game/level/level-spec').LevelSpec): void {
+  private updateHud(hud: any, session: GameSessionController, _spec: import('../game/level/level-spec').LevelSpec): void {
     hud.setScore(session.score);
     hud.setMoves(session.movesRemaining === Infinity ? 99 : session.movesRemaining);
     const state = session.getState();

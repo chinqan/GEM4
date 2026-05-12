@@ -34,7 +34,7 @@ function fillCol(board: Board, col: number, colours: (GemColour | null)[]): void
   }
 }
 
-function posKey(pos: CellPos): string {
+function _posKey(pos: CellPos): string {
   return `${pos[0]},${pos[1]}`;
 }
 

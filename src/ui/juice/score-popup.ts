@@ -2,7 +2,7 @@
 // 分數飛字：從指定位置向上飄動並淡出。
 
 import { Container, Text, TextStyle } from 'pixi.js';
-import { TEXT_COLOURS, FONT_SIZES } from '../theme';
+import { FONT_SIZES } from '../theme';
 
 // ─── 型別 ──────────────────────────────────────────────────
 

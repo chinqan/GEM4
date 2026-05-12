@@ -659,7 +659,7 @@ export class BoardRenderer {
   }
 
   /** 取得寶石的 glow 顏色 */
-  private getGemGlowColour(sprite: GemSprite): number {
+  private getGemGlowColour(_sprite: GemSprite): number {
     // 嘗試從 sprite 的 col/row 找到對應的 Board 資料
     // 這裡使用簡單的 fallback：白色
     // 實際上可以從 GEM_GLOW_COLOURS 查找

@@ -5,7 +5,6 @@
 import { Howl } from 'howler';
 import type { SfxEvent } from './sfx-catalog';
 import { DEFAULT_SFX_CATALOG } from './sfx-catalog';
-import type { SfxEntry } from './sfx-catalog';
 
 // ─── 常數 ──────────────────────────────────────────────────
 

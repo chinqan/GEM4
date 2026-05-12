@@ -13,20 +13,18 @@ import type {
   ComboType,
 } from '../../types';
 import type { Board } from '../rules/board';
-import { getCell, isValidPos, getNeighbors, cloneBoard } from '../rules/board';
+import { getCell, isValidPos } from '../rules/board';
 import { detectMatches } from '../rules/match-detect';
 import { runCascade } from '../rules/cascade';
 import {
   matchScore,
-  specialActivationScore,
   comboScore,
   remainingMovesBonus,
   remainingTimeBonus,
-  chainMultiplier,
 } from '../rules/scoring';
 import { resolveCombo } from '../rules/combo-matrix';
 import { processBlockersOnClear } from '../../game/level/blocker';
-import { findValidSwaps, reshuffle } from './reshuffle';
+import { reshuffle } from './reshuffle';
 import type { LevelSpec } from '../level/level-spec';
 import type { ObjectiveTracker } from '../level/objective';
 import { createTracker, calculateStars, ScoreTracker, CollectTracker } from '../level/objective';
@@ -501,7 +499,7 @@ export class RulesEngine {
 
   // ─── 目標追蹤 ─────────────────────────────────────────
 
-  private updateObjectiveFromCleared(clearedCells: CellPos[]): void {
+  private updateObjectiveFromCleared(_clearedCells: CellPos[]): void {
     // 更新 score tracker
     if (this.tracker instanceof ScoreTracker) {
       (this.tracker as ScoreTracker).updateScore(this.score);

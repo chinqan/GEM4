@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import type { CellPos, GemColour } from '../../../types';
+import type { GemColour } from '../../../types';
 import { createBoard, createGem } from '../board';
-import type { Board, Gem } from '../board';
+import type { Board } from '../board';
 import { Mulberry32 } from '../rng';
 import { applyGravity, fillFromTop, runCascade } from '../cascade';
 import { detectMatches } from '../match-detect';

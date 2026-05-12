@@ -9,7 +9,6 @@ import {
   DEBOUNCE_MS,
   CURRENT_VERSION,
 } from '../save-state';
-import type { SaveState } from '../save-state';
 import { migrate } from '../migrations';
 
 // ─── localStorage mock ─────────────────────────────────────

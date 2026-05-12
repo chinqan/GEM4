@@ -3,7 +3,6 @@ import fc from 'fast-check';
 import type { CellPos, GemColour, SpecialGemType } from '../../../types';
 import {
   createBoard,
-  createGem,
   getCell,
   cloneBoard,
 } from '../board';

@@ -68,7 +68,6 @@ function createDefaultMetrics(): DebugMetrics {
  * Returns null if Tweakpane is not available or devtools are disabled.
  */
 export async function createDebugPanel(): Promise<DebugPanel | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let pane: any;
   try {
     const mod = await import('tweakpane');
@@ -126,7 +125,6 @@ export async function createDebugPanel(): Promise<DebugPanel | null> {
       max: 2,
       step: 0.25,
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .on('change', (ev: any) => {
       clockControl.scale = ev.value;
     });

@@ -7,7 +7,7 @@
  * Validates: Requirements FR-19, CP-8
  */
 import { describe, it, expect } from 'vitest';
-import type { CellPos, GemColour } from '../../../types';
+import type { GemColour } from '../../../types';
 import type { LevelSpec } from '../../level/level-spec';
 import { Mulberry32 } from '../../rules/rng';
 import { initBoard, findValidSwaps } from '../reshuffle';
