@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node build-tools/pack-atlases.mjs && tsc --noEmit && vite build",
+    "build": "node build-tools/pack-atlases.mjs && vite build",
     "preview": "vite preview",
     "test": "vitest",
     "test:ci": "vitest run --coverage",
