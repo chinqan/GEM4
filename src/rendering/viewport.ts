@@ -154,8 +154,10 @@ export class ViewportManager {
 
   /** 手動觸發重新計算（例如全螢幕切換後） */
   recalculate(): void {
-    const canvasWidth = this.canvas.width / (window.devicePixelRatio || 1);
-    const canvasHeight = this.canvas.height / (window.devicePixelRatio || 1);
+    // Use CSS dimensions (clientWidth/clientHeight) which reflect the actual
+    // layout size regardless of devicePixelRatio vs renderer resolution mismatch.
+    const canvasWidth = this.canvas.clientWidth || (this.canvas.width / (window.devicePixelRatio || 1));
+    const canvasHeight = this.canvas.clientHeight || (this.canvas.height / (window.devicePixelRatio || 1));
 
     this._viewport = calculateViewport(
       canvasWidth,
