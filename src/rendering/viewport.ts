@@ -74,9 +74,9 @@ export function calculateViewport(
   const scale =
     Math.min(effectiveCanvasW / boardPixelW, availableHeight / boardPixelH) * paddingFactor;
 
-  // 水平置中，垂直方向為頂部 HUD 留出空間後置中
+  // 水平置中，垂直方向為頂部 HUD 留出空間後置中，再上移 60px
   const offsetX = (canvasWidth - boardPixelW * scale) / 2;
-  const offsetY = hudReserve + (canvasHeight - hudReserve - boardPixelH * scale) / 2;
+  const offsetY = hudReserve + (canvasHeight - hudReserve - boardPixelH * scale) / 2 - 60;
 
   return { scale, offsetX, offsetY };
 }

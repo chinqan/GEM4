@@ -353,7 +353,7 @@ export function objectiveToDisplayInfo(objective: {
         label: '達成分數',
         icon: '⭐',
         formatProgress: (cur, tot) =>
-          `${cur.toLocaleString()} / ${tot.toLocaleString()} 分`,
+          `${cur.toLocaleString()} / ${tot.toLocaleString()}`,
       };
     }
     case 'collect': {
@@ -364,14 +364,14 @@ export function objectiveToDisplayInfo(objective: {
           type: 'collect',
           label: `收集${COLOUR_NAMES[t.colour] ?? ''}寶石`,
           icon: GEM_ICONS[t.colour] ?? '💎',
-          formatProgress: (cur, tot) => `${cur} / ${tot} 個`,
+          formatProgress: (cur, tot) => `${cur} / ${tot}`,
         };
       }
       return {
         type: 'collect',
         label: '收集寶石',
         icon: '💎',
-        formatProgress: (cur, tot) => `${cur} / ${tot} 個`,
+        formatProgress: (cur, tot) => `${cur} / ${tot}`,
       };
     }
     case 'clear': {
@@ -382,14 +382,14 @@ export function objectiveToDisplayInfo(objective: {
           type: 'clear',
           label: `清除${BLOCKER_NAMES[t.blocker] ?? '障礙'}`,
           icon: BLOCKER_ICONS[t.blocker] ?? '🧱',
-          formatProgress: (cur, tot) => `${cur} / ${tot} 個`,
+          formatProgress: (cur, tot) => `${cur} / ${tot}`,
         };
       }
       return {
         type: 'clear',
         label: '清除障礙',
         icon: '🧱',
-        formatProgress: (cur, tot) => `${cur} / ${tot} 個`,
+        formatProgress: (cur, tot) => `${cur} / ${tot}`,
       };
     }
     case 'drop': {
@@ -397,7 +397,7 @@ export function objectiveToDisplayInfo(objective: {
         type: 'drop',
         label: '送達寶石',
         icon: '⬇️',
-        formatProgress: (cur, tot) => `${cur} / ${tot} 個`,
+        formatProgress: (cur, tot) => `${cur} / ${tot}`,
       };
     }
     case 'multi': {
@@ -418,6 +418,15 @@ export function objectiveToDisplayInfo(objective: {
   }
 }
 
+/** 目標類型對應的進度條顏色 */
+const OBJ_FILL_COLOURS: Record<string, number> = {
+  score: 0xd4a017,    // 黃色
+  collect: 0x9c27b0,  // 紫色
+  clear: 0x42a5f5,    // 藍色
+  drop: 0x66bb6a,     // 綠色
+  multi: 0xf6c453,    // 金色
+};
+
 export interface CreateObjectiveChipOptions {
   /** 目標顯示資訊（優先使用） */
   displayInfo?: ObjectiveDisplayInfo;
@@ -432,10 +441,10 @@ export interface CreateObjectiveChipOptions {
 /**
  * 建立目標 chip 元件（HUD 用）。
  *
- * 根據 displayInfo 顯示：
- * - 對應目標類型的 icon
- * - 描述標籤（例如「達成分數」「收集紅色寶石」）
- * - 格式化的進度文字（例如「5,740 / 10,020 分」「3 / 15 個」）
+ * 新設計：
+ * - 半透明深色背景（圓角 10px）
+ * - 左側 icon
+ * - 右側：標籤（小字）+ 進度文字（粗體白）+ 進度條
  */
 export function createObjectiveChip(options: CreateObjectiveChipOptions = {}): UIObjectiveChip {
   const {
@@ -443,17 +452,19 @@ export function createObjectiveChip(options: CreateObjectiveChipOptions = {}): U
     icon = displayInfo?.icon ?? '🎯',
     current = 0,
     total = 1,
-    accent = DEFAULT_ACCENT.accent,
   } = options;
 
   const formatProgress = displayInfo?.formatProgress ?? ((cur: number, tot: number) => `${cur}/${tot}`);
   const labelStr = displayInfo?.label ?? '';
+  const fillColour = OBJ_FILL_COLOURS[displayInfo?.type ?? 'score'] ?? 0xd4a017;
 
   const container = new Container() as UIObjectiveChip;
   container.label = 'objective-chip';
 
-  const chipHeight = labelStr ? 44 : 34;
-  const chipPadding = SPACING.md;
+  const chipHeight = 48;
+  const chipPadding = 8;
+  const trackH = 6;
+  const trackRadius = 3;
 
   // 背景
   const bg = new Graphics();
@@ -462,58 +473,85 @@ export function createObjectiveChip(options: CreateObjectiveChipOptions = {}): U
   // Icon 文字
   const iconText = new Text({
     text: icon,
-    style: makeTextStyle(FONT_SIZES.body, TEXT_COLOURS.primary),
+    style: new TextStyle({
+      fontSize: 18,
+      fill: 0xffffff,
+    }),
   });
-  iconText.position.set(chipPadding, chipHeight / 2);
+  iconText.position.set(chipPadding, chipHeight / 2 - 4);
   iconText.anchor.set(0, 0.5);
   container.addChild(iconText);
 
-  // 標籤文字（目標類型描述）
+  // 標籤文字
   const labelText = labelStr ? new Text({
     text: labelStr,
-    style: makeTextStyle(FONT_SIZES.caption, TEXT_COLOURS.secondary),
+    style: new TextStyle({
+      fontFamily: 'Nunito, system-ui, sans-serif',
+      fontSize: 9,
+      fontWeight: '600',
+      fill: 0xffffff,
+      letterSpacing: 0.5,
+    }),
   }) : null;
   if (labelText) {
-    labelText.anchor.set(0, 1);
+    labelText.anchor.set(0, 0);
     container.addChild(labelText);
   }
 
   // 進度文字
   const countText = new Text({
     text: formatProgress(current, total),
-    style: makeTextStyle(FONT_SIZES.body, TEXT_COLOURS.primary),
+    style: new TextStyle({
+      fontFamily: 'Nunito, system-ui, sans-serif',
+      fontSize: 11,
+      fontWeight: '700',
+      fill: 0xffffff,
+    }),
   });
-  countText.anchor.set(0, 0.5);
+  countText.anchor.set(0, 0);
   container.addChild(countText);
+
+  // 進度條軌道
+  const track = new Graphics();
+  container.addChild(track);
+
+  // 進度條填充
+  const fill = new Graphics();
+  container.addChild(fill);
 
   function updateLayout(cur: number, tot: number): void {
     countText.text = formatProgress(cur, tot);
-    const textX = iconText.x + iconText.width + SPACING.sm;
+    const textX = iconText.x + 24 + 6; // icon width estimate + gap
 
     if (labelText) {
-      // 雙行佈局：上方標籤、下方進度
-      labelText.position.set(textX, chipHeight / 2 - 1);
-      countText.anchor.set(0, 0);
-      countText.position.set(textX, chipHeight / 2 + 1);
+      labelText.position.set(textX, 6);
+      countText.position.set(textX, 17);
     } else {
-      // 單行佈局
-      countText.anchor.set(0, 0.5);
-      countText.position.set(textX, chipHeight / 2);
+      countText.position.set(textX, chipHeight / 2 - 8);
     }
 
-    const contentWidth = Math.max(
-      countText.width,
-      labelText?.width ?? 0,
-    );
+    const contentWidth = Math.max(countText.width, labelText?.width ?? 0, 80);
     const chipWidth = textX + contentWidth + chipPadding;
-    bg.clear();
-    bg.roundRect(0, 0, chipWidth, chipHeight, RADIUS.xs);
 
-    const progress = tot > 0 ? cur / tot : 0;
-    if (progress >= 1) {
-      bg.fill({ color: accent, alpha: 0.3 });
-    } else {
-      bg.fill({ color: BG.panel, alpha: 0.8 });
+    // 背景
+    bg.clear();
+    bg.roundRect(0, 0, chipWidth, chipHeight, 10);
+    bg.fill({ color: 0x1a3040, alpha: 0.45 });
+
+    // 進度條
+    const trackY = labelText ? 31 : chipHeight / 2 + 8;
+    const trackW = contentWidth;
+
+    track.clear();
+    track.roundRect(textX, trackY, trackW, trackH, trackRadius);
+    track.fill({ color: 0xffffff, alpha: 0.25 });
+
+    fill.clear();
+    const progress = tot > 0 ? Math.min(1, cur / tot) : 0;
+    if (progress > 0) {
+      const fillW = Math.max(trackH, trackW * progress);
+      fill.roundRect(textX, trackY, fillW, trackH, trackRadius);
+      fill.fill({ color: fillColour });
     }
   }
 

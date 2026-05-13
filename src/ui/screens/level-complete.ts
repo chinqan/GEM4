@@ -1,12 +1,36 @@
 // ─── 31.7 關卡完成畫面 ──────────────────────────────────────
 // 星星動畫、分數明細、下一關/重玩/返回。
+// 風格：淺色卡片（Fredoka + Nunito），綠色調 accent。
 
-import { Container, Graphics, Sprite, Text, TextStyle, Texture } from 'pixi.js';
-import { BG, TEXT_COLOURS, FONT_SIZES, SPACING, RADIUS } from '../theme';
-import { createButton, createStarDisplay, type UIButton, type UIStarDisplay } from '../factory';
+import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { BG, SPACING, RADIUS } from '../theme';
+import { createStarDisplay, type UIStarDisplay } from '../factory';
 import type { LevelResult } from '../../types';
 
+// ─── 局部色彩 Token（結算畫面專用） ─────────────────────────
+
+const LC = {
+  surface: 0xfcfcfc,
+  border: 0xd6e8d6,
+  fg: 0x2a3a2a,
+  muted: 0x6b7b6b,
+  accent: 0x4caf50,
+  accentDark: 0x388e3c,
+  yellow: 0xffc107,
+  bgOverlay: 0x2a3a2a,
+  overlayAlpha: 0.7,
+} as const;
+
+const FONT_DISPLAY = 'Fredoka, Nunito, system-ui, sans-serif';
+const FONT_BODY = 'Nunito, -apple-system, BlinkMacSystemFont, system-ui, sans-serif';
+
 // ─── 型別 ──────────────────────────────────────────────────
+
+export interface UIButton extends Container {
+  bg: Graphics;
+  label: string;
+  setEnabled(enabled: boolean): void;
+}
 
 export interface LevelCompleteScreen extends Container {
   mapButton: UIButton;
@@ -27,13 +51,128 @@ export interface CreateLevelCompleteOptions {
   onNext?: () => void;
 }
 
+// ─── 局部按鈕工廠（結算風格） ───────────────────────────────
+
+type LCButtonVariant = 'outline' | 'white' | 'primary';
+
+function createLCButton(options: {
+  text: string;
+  variant: LCButtonVariant;
+  width: number;
+  onClick?: () => void;
+}): UIButton {
+  const { text, variant, width, onClick } = options;
+  const height = 48;
+
+  const container = new Container() as UIButton;
+  container.label = `btn-${text}`;
+  container.hitArea = {
+    contains: (x: number, y: number) => x >= 0 && x <= width && y >= -4 && y <= height + 4,
+  };
+
+  const bg = new Graphics();
+
+  // 繪製按鈕背景
+  function drawBg(): void {
+    bg.clear();
+    switch (variant) {
+      case 'outline':
+        bg.roundRect(0, 0, width, height, 28);
+        bg.stroke({ color: LC.border, width: 2 });
+        break;
+      case 'white':
+        bg.roundRect(0, 0, width, height, 28);
+        bg.fill({ color: 0xf0f5f0 });
+        bg.stroke({ color: LC.border, width: 2 });
+        break;
+      case 'primary':
+        // 底部陰影
+        bg.roundRect(0, 4, width, height, 28);
+        bg.fill({ color: LC.accentDark });
+        // 主體
+        bg.roundRect(0, 0, width, height, 28);
+        bg.fill({ color: LC.accent });
+        break;
+    }
+  }
+  drawBg();
+  container.addChild(bg);
+  container.bg = bg;
+
+  // 文字色
+  let textColour: number;
+  switch (variant) {
+    case 'outline': textColour = LC.muted; break;
+    case 'white': textColour = LC.fg; break;
+    case 'primary': textColour = 0xffffff; break;
+  }
+
+  const label = new Text({
+    text,
+    style: new TextStyle({
+      fontFamily: FONT_BODY,
+      fontSize: 15,
+      fontWeight: '700',
+      fill: textColour,
+      align: 'center',
+    }),
+  });
+  label.anchor.set(0.5, 0.5);
+  label.position.set(width / 2, height / 2);
+  container.addChild(label);
+
+  // 互動
+  let enabled = true;
+  container.eventMode = 'static';
+  container.cursor = 'pointer';
+
+  container.on('pointerover', () => {
+    if (!enabled) return;
+    container.alpha = 0.9;
+  });
+  container.on('pointerout', () => {
+    if (!enabled) return;
+    container.alpha = 1;
+  });
+  container.on('pointerdown', () => {
+    if (!enabled) return;
+    container.scale.set(0.95);
+  });
+  container.on('pointerup', () => {
+    if (!enabled) return;
+    container.scale.set(1);
+    import('../../audio/sfx-player').then(({ playUiClick, playUiClickStrong }) => {
+      if (variant === 'primary') playUiClickStrong();
+      else playUiClick();
+    });
+    onClick?.();
+  });
+  container.on('pointerupoutside', () => {
+    if (!enabled) return;
+    container.scale.set(1);
+    container.alpha = 1;
+  });
+
+  container.setEnabled = (e: boolean) => {
+    enabled = e;
+    container.eventMode = e ? 'static' : 'none';
+    container.cursor = e ? 'pointer' : 'default';
+    container.alpha = e ? 1 : 0.5;
+  };
+
+  return container;
+}
+
+// ─── 主函式 ─────────────────────────────────────────────────
+
 /**
  * 建立關卡完成畫面。
  *
  * 結構：
  * - 半透明背景遮罩
+ * - 淺色圓角卡片
  * - 世界/關卡標題
- * - 星星（逐星點亮動畫 placeholder）
+ * - 星星
  * - 分數明細：Score、剩餘手數獎勵、Total
  * - 統計：Best chain、Specials spawned
  * - Map / Replay / Next 按鈕
@@ -55,182 +194,202 @@ export function createLevelCompleteScreen(options: CreateLevelCompleteOptions): 
   // ── 背景遮罩 ─────────────────────────────────────────
   const overlay = new Graphics();
   overlay.rect(0, 0, width, height);
-  overlay.fill({ color: 0x0b1026, alpha: BG.overlayAlpha });
+  overlay.fill({ color: LC.bgOverlay, alpha: LC.overlayAlpha });
   overlay.eventMode = 'static';
   container.addChild(overlay);
 
-  // ── 面板 ──────────────────────────────────────────────
-  const panelW = 480;
-  const panelH = 400;
+  // ── 卡片面板 ──────────────────────────────────────────
+  const panelW = Math.min(340, width - 48);
+  const panelH = 460;
   const panelX = (width - panelW) / 2;
   const panelY = (height - panelH) / 2;
 
   const panel = new Graphics();
-  panel.roundRect(panelX, panelY, panelW, panelH, RADIUS.lg);
-  panel.fill({ color: BG.panel });
+  panel.roundRect(panelX, panelY, panelW, panelH, 24);
+  panel.fill({ color: LC.surface });
   container.addChild(panel);
 
-  // ── 裝飾邊框（frame.png） ──────────────────────────────
-  const frame = new Sprite(Texture.from('assets/ui/frame.png'));
-  frame.anchor.set(0.5);
-  frame.position.set(panelX + panelW / 2, panelY + panelH / 2);
-  // 9-slice would be ideal; for now scale-fit with margin so border ornament
-  // sits flush around the panel.
-  const frameMargin = 24;
-  const fw = frame.texture.width || 256;
-  const fh = frame.texture.height || 256;
-  frame.scale.set(
-    (panelW + frameMargin * 2) / fw,
-    (panelH + frameMargin * 2) / fh,
-  );
-  frame.alpha = 0.9;
-  container.addChild(frame);
-
-  // ── 標題 ──────────────────────────────────────────────
-  const worldStyle = new TextStyle({
-    fontFamily: 'Inter, "Noto Sans CJK TC", sans-serif',
-    fontSize: FONT_SIZES.caption,
-    fill: TEXT_COLOURS.muted,
-    align: 'center',
+  // ── 標題區 ────────────────────────────────────────────
+  const worldText = new Text({
+    text: '',
+    style: new TextStyle({
+      fontFamily: FONT_BODY,
+      fontSize: 13,
+      fontWeight: '600',
+      fill: LC.muted,
+      align: 'center',
+      letterSpacing: 0.8,
+    }),
   });
-  const worldText = new Text({ text: '', style: worldStyle });
   worldText.anchor.set(0.5, 0);
-  worldText.position.set(width / 2, panelY + SPACING.lg);
+  worldText.position.set(width / 2, panelY + 28);
   container.addChild(worldText);
 
-  const levelStyle = new TextStyle({
-    fontFamily: 'Inter, "Noto Sans CJK TC", sans-serif',
-    fontSize: FONT_SIZES.subtitle,
-    fill: TEXT_COLOURS.primary,
-    align: 'center',
+  const levelText = new Text({
+    text: '',
+    style: new TextStyle({
+      fontFamily: FONT_DISPLAY,
+      fontSize: 28,
+      fontWeight: '700',
+      fill: LC.fg,
+      align: 'center',
+    }),
   });
-  const levelText = new Text({ text: '', style: levelStyle });
   levelText.anchor.set(0.5, 0);
-  levelText.position.set(width / 2, panelY + SPACING.lg + 20);
+  levelText.position.set(width / 2, panelY + 46);
   container.addChild(levelText);
 
   // ── 星星 ──────────────────────────────────────────────
   const starDisplay = createStarDisplay({ starSize: 28, gap: 16, initialStars: 0 });
-  starDisplay.position.set(width / 2 - 58, panelY + 96);
+  const starDisplayWidth = 28 * 3 + 16 * 2;
+  starDisplay.position.set(width / 2 - starDisplayWidth / 2, panelY + 90);
   container.addChild(starDisplay);
 
-  // ── 寶箱獎勵（金=3星、銀=1-2星、0星不顯示） ───────────
-  const chest = new Sprite(Texture.from('assets/ui/chest-silver.png'));
-  chest.anchor.set(0.5);
-  const chestTarget = 64;
-  const cw = chest.texture.width || 256;
-  const ch = chest.texture.height || 256;
-  chest.scale.set(chestTarget / Math.max(cw, ch));
-  chest.position.set(panelX + panelW - 56, panelY + 110);
-  chest.visible = false;
-  container.addChild(chest);
-
   // ── 分數明細 ──────────────────────────────────────────
+  const contentX = panelX + 28;
+  const contentRight = panelX + panelW - 28;
+  let rowY = panelY + 140;
+
   const detailStyle = new TextStyle({
-    fontFamily: 'Inter, sans-serif',
-    fontSize: FONT_SIZES.body,
-    fill: TEXT_COLOURS.secondary,
+    fontFamily: FONT_BODY,
+    fontSize: 16,
+    fontWeight: '600',
+    fill: LC.muted,
   });
   const valueStyle = new TextStyle({
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: FONT_SIZES.body,
-    fill: TEXT_COLOURS.primary,
+    fontFamily: FONT_DISPLAY,
+    fontSize: 20,
+    fontWeight: '700',
+    fill: LC.fg,
   });
 
   const scoreLabel = new Text({ text: 'Score', style: detailStyle });
-  scoreLabel.position.set(panelX + SPACING.xl, panelY + 130);
+  scoreLabel.position.set(contentX, rowY);
   container.addChild(scoreLabel);
 
   const scoreValue = new Text({ text: '0', style: valueStyle });
   scoreValue.anchor.set(1, 0);
-  scoreValue.position.set(panelX + panelW - SPACING.xl, panelY + 130);
+  scoreValue.position.set(contentRight, rowY);
   container.addChild(scoreValue);
 
-  const bonusLabel = new Text({ text: '', style: detailStyle });
-  bonusLabel.position.set(panelX + SPACING.xl, panelY + 160);
+  rowY += 34;
+  const bonusStyle = new TextStyle({
+    fontFamily: FONT_BODY,
+    fontSize: 14,
+    fontWeight: '600',
+    fill: LC.muted,
+  });
+  const bonusValueStyle = new TextStyle({
+    fontFamily: FONT_DISPLAY,
+    fontSize: 18,
+    fontWeight: '700',
+    fill: LC.muted,
+  });
+
+  const bonusLabel = new Text({ text: '', style: bonusStyle });
+  bonusLabel.position.set(contentX, rowY);
   container.addChild(bonusLabel);
 
-  const bonusValue = new Text({ text: '', style: valueStyle });
+  const bonusValue = new Text({ text: '', style: bonusValueStyle });
   bonusValue.anchor.set(1, 0);
-  bonusValue.position.set(panelX + panelW - SPACING.xl, panelY + 160);
+  bonusValue.position.set(contentRight, rowY);
   container.addChild(bonusValue);
 
   // 分隔線
+  rowY += 30;
   const divider = new Graphics();
-  divider.moveTo(panelX + SPACING.xl, panelY + 190);
-  divider.lineTo(panelX + panelW - SPACING.xl, panelY + 190);
-  divider.stroke({ color: TEXT_COLOURS.muted, width: 1, alpha: 0.3 });
+  divider.moveTo(contentX, rowY);
+  divider.lineTo(contentRight, rowY);
+  divider.stroke({ color: LC.border, width: 1 });
   container.addChild(divider);
 
-  const totalLabel = new Text({ text: 'Total', style: new TextStyle({
-    fontFamily: 'Inter, sans-serif',
-    fontSize: FONT_SIZES.body,
-    fill: TEXT_COLOURS.primary,
-    fontWeight: 'bold',
-  }) });
-  totalLabel.position.set(panelX + SPACING.xl, panelY + 200);
+  // Total
+  rowY += 10;
+  const totalLabel = new Text({
+    text: 'Total',
+    style: new TextStyle({
+      fontFamily: FONT_BODY,
+      fontSize: 16,
+      fontWeight: '700',
+      fill: LC.fg,
+    }),
+  });
+  totalLabel.position.set(contentX, rowY);
   container.addChild(totalLabel);
 
-  const totalValue = new Text({ text: '0', style: new TextStyle({
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: FONT_SIZES.body,
-    fill: TEXT_COLOURS.primary,
-    fontWeight: 'bold',
-  }) });
+  const totalValue = new Text({
+    text: '0',
+    style: new TextStyle({
+      fontFamily: FONT_DISPLAY,
+      fontSize: 24,
+      fontWeight: '700',
+      fill: LC.accent,
+    }),
+  });
   totalValue.anchor.set(1, 0);
-  totalValue.position.set(panelX + panelW - SPACING.xl, panelY + 200);
+  totalValue.position.set(contentRight, rowY);
   container.addChild(totalValue);
 
-  // 統計
-  const chainLabel = new Text({ text: 'Best chain', style: detailStyle });
-  chainLabel.position.set(panelX + SPACING.xl, panelY + 240);
+  // ── 統計 ──────────────────────────────────────────────
+  rowY += 44;
+  const statLabelStyle = new TextStyle({
+    fontFamily: FONT_BODY,
+    fontSize: 14,
+    fill: LC.muted,
+  });
+  const statValueStyle = new TextStyle({
+    fontFamily: FONT_DISPLAY,
+    fontSize: 14,
+    fontWeight: '700',
+    fill: LC.fg,
+  });
+
+  const chainLabel = new Text({ text: 'Best chain', style: statLabelStyle });
+  chainLabel.position.set(contentX, rowY);
   container.addChild(chainLabel);
 
-  const chainValue = new Text({ text: '0', style: valueStyle });
+  const chainValue = new Text({ text: '0', style: statValueStyle });
   chainValue.anchor.set(1, 0);
-  chainValue.position.set(panelX + panelW - SPACING.xl, panelY + 240);
+  chainValue.position.set(contentRight, rowY);
   container.addChild(chainValue);
 
-  const specialLabel = new Text({ text: 'Specials spawned', style: detailStyle });
-  specialLabel.position.set(panelX + SPACING.xl, panelY + 270);
+  rowY += 24;
+  const specialLabel = new Text({ text: 'Specials spawned', style: statLabelStyle });
+  specialLabel.position.set(contentX, rowY);
   container.addChild(specialLabel);
 
-  const specialValue = new Text({ text: '0', style: valueStyle });
+  const specialValue = new Text({ text: '0', style: statValueStyle });
   specialValue.anchor.set(1, 0);
-  specialValue.position.set(panelX + panelW - SPACING.xl, panelY + 270);
+  specialValue.position.set(contentRight, rowY);
   container.addChild(specialValue);
 
   // ── 按鈕 ──────────────────────────────────────────────
-  const btnY = panelY + panelH - 56 - SPACING.lg;
-  const btnWidth = 120;
-  const btnGap = SPACING.md;
-  const totalBtnW = btnWidth * 3 + btnGap * 2;
-  const btnStartX = (width - totalBtnW) / 2;
+  const btnY = panelY + panelH - 48 - 28;
+  const btnGap = 10;
+  const btnWidth = Math.floor((panelW - 28 * 2 - btnGap * 2) / 3);
+  const btnStartX = contentX;
 
-  const mapButton = createButton({
+  const mapButton = createLCButton({
     text: 'Map',
-    variant: 'ghost',
-    size: 'md',
+    variant: 'outline',
     width: btnWidth,
     onClick: onMap,
   });
   mapButton.position.set(btnStartX, btnY);
   container.addChild(mapButton);
 
-  const replayButton = createButton({
+  const replayButton = createLCButton({
     text: 'Replay',
-    variant: 'secondary',
-    size: 'md',
+    variant: 'white',
     width: btnWidth,
     onClick: onReplay,
   });
   replayButton.position.set(btnStartX + btnWidth + btnGap, btnY);
   container.addChild(replayButton);
 
-  const nextButton = createButton({
+  const nextButton = createLCButton({
     text: 'Next',
     variant: 'primary',
-    size: 'md',
     width: btnWidth,
     onClick: onNext,
   });
@@ -247,17 +406,6 @@ export function createLevelCompleteScreen(options: CreateLevelCompleteOptions): 
     worldText.text = `WORLD ${wId}`;
     levelText.text = `Level ${String(r.levelId).padStart(2, '0')}`;
     starDisplay.setStars(r.stars);
-
-    // 寶箱：3 星金 / 1-2 星銀 / 0 星不顯示
-    if (r.stars >= 3) {
-      chest.texture = Texture.from('assets/ui/chest-gold.png');
-      chest.visible = true;
-    } else if (r.stars >= 1) {
-      chest.texture = Texture.from('assets/ui/chest-silver.png');
-      chest.visible = true;
-    } else {
-      chest.visible = false;
-    }
 
     // Play star grant sounds with staggered timing
     if (r.stars >= 1) {

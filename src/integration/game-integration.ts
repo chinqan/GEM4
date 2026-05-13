@@ -808,43 +808,41 @@ export class GameIntegration {
   }
 
   /**
-   * Apply a world background sprite (full-canvas, cover-fit) into the
-   * background layer. Falls back silently when no asset exists for the world.
+   * Apply a world background gradient into the background layer.
+   * Uses the new bright natural style instead of image sprites.
    */
   private async applyWorldBackground(
     appRefs: AppRefs,
-    worldId: number,
+    _worldId: number,
   ): Promise<void> {
-    // World-3 → 火山；其他（含測試模式 worldId=-1/0/undefined）→ 草原
-    const path =
-      worldId === 3
-        ? 'assets/worlds/world-3-bg.png'
-        : 'assets/worlds/world-1-bg.png';
+    const { Assets, Sprite } = await import('pixi.js');
+    const bg = appRefs.layers.background;
+    bg.removeChildren();
 
-    const { Sprite, Assets } = await import('pixi.js');
-    try {
-      const tex = await Assets.load(path);
-      const bg = appRefs.layers.background;
-      bg.removeChildren();
-      const sprite = new Sprite(tex);
-      sprite.label = 'world-bg';
-      sprite.anchor.set(0.5);
-      const canvas = appRefs.app.canvas as HTMLCanvasElement;
-      const cw = canvas.width;
-      const ch = canvas.height;
-      sprite.position.set(cw / 2, ch / 2);
-      // cover-fit: scale to fully cover canvas, preserving aspect ratio
-      const scale = Math.max(cw / tex.width, ch / tex.height);
-      sprite.scale.set(scale);
-      bg.addChild(sprite);
-    } catch {
-      // texture failed to load — leave background empty
-    }
+    const cw = appRefs.app.screen.width;
+    const ch = appRefs.app.screen.height;
+
+    // 使用世界背景圖片，適應高度、水平置中
+    const worldBgPath = `assets/worlds/world-${_worldId ?? 1}-bg.png`;
+    const texture = await Assets.load(worldBgPath);
+    const sprite = new Sprite(texture);
+    sprite.label = 'world-bg';
+
+    // 適應高度（cover height），水平置中
+    const texW = texture.width || 1;
+    const texH = texture.height || 1;
+    const scale = ch / texH;
+    sprite.width = texW * scale;
+    sprite.height = ch;
+    sprite.x = (cw - sprite.width) / 2;
+    sprite.y = 0;
+
+    bg.addChild(sprite);
   }
 
   /**
-   * Refit the world background sprite to the current canvas size.
-   * Called on resize to ensure the background always covers the full canvas.
+   * Refit the world background to the current canvas size.
+   * Re-applies cover-height + center-x logic on resize.
    */
   private refitWorldBackground(): void {
     const appRefs = this.subsystems.app;
@@ -854,12 +852,15 @@ export class GameIntegration {
     const sprite = bg.children.find((c) => c.label === 'world-bg') as import('pixi.js').Sprite | undefined;
     if (!sprite || !sprite.texture) return;
 
-    const canvas = appRefs.app.canvas as HTMLCanvasElement;
-    const cw = canvas.width;
-    const ch = canvas.height;
-    sprite.position.set(cw / 2, ch / 2);
-    const scale = Math.max(cw / sprite.texture.width, ch / sprite.texture.height);
-    sprite.scale.set(scale);
+    const cw = appRefs.app.screen.width;
+    const ch = appRefs.app.screen.height;
+    const texW = sprite.texture.width || 1;
+    const texH = sprite.texture.height || 1;
+    const scale = ch / texH;
+    sprite.width = texW * scale;
+    sprite.height = ch;
+    sprite.x = (cw - sprite.width) / 2;
+    sprite.y = 0;
   }
 
   /** Draw a grid background for the board */
@@ -869,6 +870,25 @@ export class GameIntegration {
     cellSize: number,
   ): Promise<void> {
     const { Graphics, Sprite, Texture } = await import('pixi.js');
+
+    // ── 棋盤外框面板（圓角半透明深色背景） ──────────────
+    const boardPixelW = board.width * cellSize;
+    const boardPixelH = board.height * cellSize;
+    const framePad = 8;
+    const frameRadius = 20;
+    const frame = new Graphics();
+    frame.label = 'board-frame';
+    frame.roundRect(
+      -framePad,
+      -framePad,
+      boardPixelW + framePad * 2,
+      boardPixelH + framePad * 2,
+      frameRadius,
+    );
+    frame.fill({ color: 0x243a48, alpha: 0.4 });
+    appRefs.layers.cellLayer.addChild(frame);
+
+    // ── 格子背景 ────────────────────────────────────────
     const grid = new Graphics();
     grid.label = 'grid-bg';
 
@@ -889,7 +909,7 @@ export class GameIntegration {
         const y = row * cellSize;
         const isEven = (col + row) % 2 === 0;
         grid.rect(x, y, cellSize, cellSize);
-        grid.fill({ color: isEven ? 0x1a1f3a : 0x14183a, alpha: 0.8 });
+        grid.fill({ color: isEven ? 0x2a4050 : 0x243a48, alpha: 0.4 });
       }
     }
 

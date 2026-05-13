@@ -6,7 +6,8 @@ import { createGame } from './integration/game-integration';
 async function main(): Promise<void> {
   try {
     console.log('Gem v1 — 啟動中...');
-    const game = await createGame(document.body);
+    const container = document.getElementById('game-container') ?? document.body;
+    const game = await createGame(container);
     console.log(`Gem v1 — 啟動完成 (phase: ${game.getPhase()})`);
 
     // Expose to console for debugging in dev mode
