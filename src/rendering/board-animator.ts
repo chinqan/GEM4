@@ -247,6 +247,7 @@ export class BoardAnimator {
           allPassiveEvents,
           colourByPos,
           1,
+          score,
         );
 
         await this.afterClear(result.initialActivation.boardSnapshot, gravity, result.initialActivation.blockerHits);
@@ -292,6 +293,7 @@ export class BoardAnimator {
           allPassiveEvents,
           colourByPos,
           1,
+          score,
         );
 
         await this.afterClear(result.initialActivation.boardSnapshot, gravity, result.initialActivation.blockerHits);
@@ -316,6 +318,7 @@ export class BoardAnimator {
           [],
           colourByPos,
           1,
+          score,
         );
 
         await this.afterClear(result.initialActivation.boardSnapshot, gravity, result.initialActivation.blockerHits);
@@ -737,7 +740,7 @@ export class BoardAnimator {
         }
 
         colourGemPromises.push(
-          this.playColourGemStagedTimeline(event.pos, targets, colourPassiveEvents, colourByPos, chain),
+          this.playColourGemStagedTimeline(event.pos, targets, colourPassiveEvents, colourByPos, chain, event.score),
         );
         return; // Don't proceed with the default per-cell shrink behaviour
       }
@@ -908,6 +911,7 @@ export class BoardAnimator {
     passiveEvents: RadiationEvent[],
     colourByPos: Map<string, GemColour | null>,
     chain: number,
+    actualScore?: number,
   ): Promise<void> {
     // ── No-target fast path: just shrink the source gem and return ──
     if (targets.length === 0) {
@@ -1040,7 +1044,7 @@ export class BoardAnimator {
 
     // ── Score popup: show after blast completes ──
     const scorePopupTime = blastStartTime + MATCH_CLEAR_DURATION_MS + SCORE_POPUP_TAIL_MS;
-    const totalScore = targets.length * 10 * chain; // approximate; actual score comes from caller
+    const totalScore = actualScore ?? targets.length * 10 * chain;
     tasks.push({
       time: scorePopupTime,
       fn: () => {
@@ -1068,6 +1072,7 @@ export class BoardAnimator {
     passiveEvents: RadiationEvent[],
     colourByPos: Map<string, GemColour | null>,
     chain: number,
+    actualScore?: number,
   ): Promise<void> {
     // ── No-target fast path: just shrink the source gem and return ──
     if (targets.length === 0) {
@@ -1287,7 +1292,7 @@ export class BoardAnimator {
 
     // ── Score popup: show after blast completes ──
     const scorePopupTime = blastStartTime + MATCH_CLEAR_DURATION_MS + SCORE_POPUP_TAIL_MS;
-    const totalScore = targets.length * 10 * chain;
+    const totalScore = actualScore ?? targets.length * 10 * chain;
     tasks.push({
       time: scorePopupTime,
       fn: () => {
@@ -1315,6 +1320,7 @@ export class BoardAnimator {
     passiveEvents: RadiationEvent[],
     colourByPos: Map<string, GemColour | null>,
     chain: number,
+    actualScore?: number,
   ): Promise<void> {
     // ── No-target fast path: just shrink the source gem and return ──
     if (targets.length === 0) {
@@ -1475,7 +1481,7 @@ export class BoardAnimator {
 
     // ── Score popup: show after blast completes ──
     const scorePopupTime = blastStartTime + MATCH_CLEAR_DURATION_MS + SCORE_POPUP_TAIL_MS;
-    const totalScore = targets.length * 10 * chain;
+    const totalScore = actualScore ?? targets.length * 10 * chain;
     tasks.push({
       time: scorePopupTime,
       fn: () => {

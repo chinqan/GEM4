@@ -469,6 +469,20 @@ export class GameIntegration {
       animatedScore += delta;
       if (this.activeHud) {
         this.activeHud.setScore(animatedScore);
+        // Progressively update score-type objective progress
+        if (spec.objective.type === 'score') {
+          this.activeHud.setObjective(Math.min(animatedScore, spec.objective.target), spec.objective.target);
+        } else if (spec.objective.type === 'multi') {
+          const state = session.getState();
+          const progress = state.objectiveProgress.map((p, i) => {
+            const sub = spec.objective.type === 'multi' ? spec.objective.objectives[i] : null;
+            if (sub?.type === 'score') {
+              return { current: Math.min(animatedScore, sub.target), total: sub.target };
+            }
+            return p;
+          });
+          this.activeHud.setObjective(progress);
+        }
       }
     };
 
