@@ -3,10 +3,10 @@ module.exports = {
     {
       name: 'gem4',
       script: 'npx',
-      args: 'vite preview --port 8188',
-      cwd: __dirname,
+      args: 'vite preview --host 0.0.0.0 --port 7860',
+      cwd: './',
       env: {
-        NODE_ENV: 'production',
+        NODE_ENV: 'production'
       },
     },
   ],
