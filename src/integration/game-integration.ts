@@ -815,7 +815,7 @@ export class GameIntegration {
     appRefs: AppRefs,
     _worldId: number,
   ): Promise<void> {
-    const { Assets, Sprite } = await import('pixi.js');
+    const { Assets, Sprite, Graphics } = await import('pixi.js');
     const bg = appRefs.layers.background;
     bg.removeChildren();
 
@@ -823,21 +823,33 @@ export class GameIntegration {
     const ch = appRefs.app.screen.height;
 
     // 使用世界背景圖片，適應高度、水平置中
-    const worldBgPath = `assets/worlds/world-${_worldId ?? 1}-bg.png`;
-    const texture = await Assets.load(worldBgPath);
-    const sprite = new Sprite(texture);
-    sprite.label = 'world-bg';
+    // worldId=0（測試模式）fallback 到 world-1
+    const effectiveWorldId = _worldId > 0 ? _worldId : 1;
+    const worldBgPath = `assets/worlds/world-${effectiveWorldId}-bg.png`;
 
-    // 適應高度（cover height），水平置中
-    const texW = texture.width || 1;
-    const texH = texture.height || 1;
-    const scale = ch / texH;
-    sprite.width = texW * scale;
-    sprite.height = ch;
-    sprite.x = (cw - sprite.width) / 2;
-    sprite.y = 0;
+    try {
+      const texture = await Assets.load(worldBgPath);
+      const sprite = new Sprite(texture);
+      sprite.label = 'world-bg';
 
-    bg.addChild(sprite);
+      // 適應高度（cover height），水平置中
+      const texW = texture.width || 1;
+      const texH = texture.height || 1;
+      const scale = ch / texH;
+      sprite.width = texW * scale;
+      sprite.height = ch;
+      sprite.x = (cw - sprite.width) / 2;
+      sprite.y = 0;
+
+      bg.addChild(sprite);
+    } catch {
+      // Fallback：純色背景（深藍綠）
+      const fallback = new Graphics();
+      fallback.label = 'world-bg';
+      fallback.rect(0, 0, cw, ch);
+      fallback.fill({ color: 0x0b1a2a });
+      bg.addChild(fallback);
+    }
   }
 
   /**

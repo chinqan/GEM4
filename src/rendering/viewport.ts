@@ -27,11 +27,11 @@ const PADDING_FACTOR = 0.96;
 /** 手機留白係數 */
 const MOBILE_PADDING_FACTOR = 0.96;
 
-/** 頂部 HUD 保留高度（px）— 桌面（兩列面板 120px + 間距） */
-const HUD_TOP_RESERVE = 124;
+/** 頂部 HUD 保留高度（px）— 基於 390px 設計寬度的基準值 */
+const HUD_TOP_RESERVE_BASE = 124;
 
-/** 頂部 HUD 保留高度（px）— 手機 */
-const HUD_TOP_RESERVE_MOBILE = 124;
+/** HUD 設計參考寬度（與 game-hud.ts 的 DESIGN_WIDTH 一致） */
+const HUD_DESIGN_WIDTH = 390;
 
 // ─── calculateViewport ────────────────────────────────────
 
@@ -67,7 +67,8 @@ export function calculateViewport(
   const boardPixelH = boardHeight * cellSize;
 
   const paddingFactor = isMobile ? MOBILE_PADDING_FACTOR : PADDING_FACTOR;
-  const hudReserve = isMobile ? HUD_TOP_RESERVE_MOBILE : HUD_TOP_RESERVE;
+  const hudScale = Math.max(0.65, Math.min(effectiveCanvasW / HUD_DESIGN_WIDTH, 2.5));
+  const hudReserve = Math.round(HUD_TOP_RESERVE_BASE * hudScale);
 
   // 手機上以可用高度（扣除 HUD）計算縮放，避免棋盤被 HUD 遮擋
   const availableHeight = effectiveCanvasH - hudReserve;

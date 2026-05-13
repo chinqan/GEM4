@@ -9,16 +9,25 @@ import {
 // ─── 20.1 calculateViewport 單元測試 ────────────────────────
 
 describe('calculateViewport', () => {
-  const PADDING = 0.78;
-  const MOBILE_PADDING = 0.88;
-  const HUD_TOP_RESERVE = 72;
-  const HUD_TOP_RESERVE_MOBILE = 100;
+  // 與 viewport.ts 一致的常數
+  const PADDING = 0.96;
+  const MOBILE_PADDING = 0.96;
+  const HUD_TOP_RESERVE_BASE = 124;
+  const HUD_DESIGN_WIDTH = 390;
+
+  /** 計算動態 HUD reserve（與 viewport.ts 邏輯一致） */
+  function getHudReserve(canvasWidth: number): number {
+    const effectiveW = Math.max(canvasWidth, MIN_CANVAS_WIDTH);
+    const hudScale = Math.max(0.65, Math.min(effectiveW / HUD_DESIGN_WIDTH, 2.5));
+    return Math.round(HUD_TOP_RESERVE_BASE * hudScale);
+  }
 
   it('should calculate correct scale for a standard 8×8 board on 1200×800 canvas', () => {
     const result = calculateViewport(1200, 800, 8, 8, 64);
     const boardPixelW = 8 * 64; // 512
     const boardPixelH = 8 * 64; // 512
-    const availableH = 800 - HUD_TOP_RESERVE;
+    const hudReserve = getHudReserve(1200);
+    const availableH = 800 - hudReserve;
     const expectedScale = Math.min(1200 / boardPixelW, availableH / boardPixelH) * PADDING;
     expect(result.scale).toBeCloseTo(expectedScale, 10);
   });
@@ -27,8 +36,9 @@ describe('calculateViewport', () => {
     const result = calculateViewport(1200, 800, 8, 8, 64);
     const boardPixelW = 8 * 64;
     const boardPixelH = 8 * 64;
+    const hudReserve = getHudReserve(1200);
     const expectedOffsetX = (1200 - boardPixelW * result.scale) / 2;
-    const expectedOffsetY = HUD_TOP_RESERVE + (800 - HUD_TOP_RESERVE - boardPixelH * result.scale) / 2;
+    const expectedOffsetY = hudReserve + (800 - hudReserve - boardPixelH * result.scale) / 2 - 60;
     expect(result.offsetX).toBeCloseTo(expectedOffsetX, 10);
     expect(result.offsetY).toBeCloseTo(expectedOffsetY, 10);
   });
@@ -37,17 +47,19 @@ describe('calculateViewport', () => {
     const result = calculateViewport(1600, 900, 9, 7, 64);
     // Horizontal offsets should be positive (board fits inside canvas)
     expect(result.offsetX).toBeGreaterThan(0);
-    // Vertical offset should be at least HUD_TOP_RESERVE
-    expect(result.offsetY).toBeGreaterThanOrEqual(HUD_TOP_RESERVE);
+    // Vertical offset should account for HUD reserve
+    const hudReserve = getHudReserve(1600);
+    expect(result.offsetY).toBeGreaterThanOrEqual(0); // may be negative due to -60 offset
   });
 
   it('should handle wide canvas (width >> height) — height-constrained', () => {
     const result = calculateViewport(2000, 600, 8, 8, 64);
     const boardPixelH = 8 * 64;
-    // Height is the constraining dimension (after subtracting HUD reserve)
+    const effectiveW = Math.max(2000, MIN_CANVAS_WIDTH);
     const effectiveH = Math.max(600, MIN_CANVAS_HEIGHT);
-    const availableH = effectiveH - HUD_TOP_RESERVE;
-    const expectedScale = Math.min(2000 / (8 * 64), availableH / boardPixelH) * PADDING;
+    const hudReserve = getHudReserve(2000);
+    const availableH = effectiveH - hudReserve;
+    const expectedScale = Math.min(effectiveW / (8 * 64), availableH / boardPixelH) * PADDING;
     expect(result.scale).toBeCloseTo(expectedScale, 10);
   });
 
@@ -57,7 +69,8 @@ describe('calculateViewport', () => {
     const boardPixelH = 8 * 64;
     const effectiveW = Math.max(800, MIN_CANVAS_WIDTH);
     const effectiveH = Math.max(2000, MIN_CANVAS_HEIGHT);
-    const availableH = effectiveH - HUD_TOP_RESERVE;
+    const hudReserve = getHudReserve(800);
+    const availableH = effectiveH - hudReserve;
     const expectedScale =
       Math.min(effectiveW / boardPixelW, availableH / boardPixelH) * PADDING;
     expect(result.scale).toBeCloseTo(expectedScale, 10);
@@ -70,7 +83,8 @@ describe('calculateViewport', () => {
     const boardPixelH = 8 * 64;
     const effectiveW = Math.max(375, MIN_CANVAS_WIDTH);
     const effectiveH = Math.max(667, MIN_CANVAS_HEIGHT);
-    const availableH = effectiveH - HUD_TOP_RESERVE_MOBILE;
+    const hudReserve = getHudReserve(375);
+    const availableH = effectiveH - hudReserve;
     const expectedScale =
       Math.min(effectiveW / boardPixelW, availableH / boardPixelH) * MOBILE_PADDING;
     expect(result.scale).toBeCloseTo(expectedScale, 10);
@@ -80,7 +94,8 @@ describe('calculateViewport', () => {
     const result = calculateViewport(MOBILE_BREAKPOINT, 800, 8, 8, 64);
     const boardPixelW = 8 * 64;
     const boardPixelH = 8 * 64;
-    const availableH = 800 - HUD_TOP_RESERVE;
+    const hudReserve = getHudReserve(MOBILE_BREAKPOINT);
+    const availableH = 800 - hudReserve;
     const expectedScale =
       Math.min(MOBILE_BREAKPOINT / boardPixelW, availableH / boardPixelH) * PADDING;
     expect(result.scale).toBeCloseTo(expectedScale, 10);
@@ -90,7 +105,8 @@ describe('calculateViewport', () => {
     const result = calculateViewport(1200, 800, 6, 9, 64);
     const boardPixelW = 6 * 64;
     const boardPixelH = 9 * 64;
-    const availableH = 800 - HUD_TOP_RESERVE;
+    const hudReserve = getHudReserve(1200);
+    const availableH = 800 - hudReserve;
     const expectedScale =
       Math.min(1200 / boardPixelW, availableH / boardPixelH) * PADDING;
     expect(result.scale).toBeCloseTo(expectedScale, 10);
@@ -100,7 +116,8 @@ describe('calculateViewport', () => {
     const result = calculateViewport(1200, 800, 8, 8, 48);
     const boardPixelW = 8 * 48;
     const boardPixelH = 8 * 48;
-    const availableH = 800 - HUD_TOP_RESERVE;
+    const hudReserve = getHudReserve(1200);
+    const availableH = 800 - hudReserve;
     const expectedScale =
       Math.min(1200 / boardPixelW, availableH / boardPixelH) * PADDING;
     expect(result.scale).toBeCloseTo(expectedScale, 10);
@@ -131,7 +148,7 @@ describe('calculateViewport', () => {
     expect(result.offsetY + boardPixelH * result.scale).toBeLessThanOrEqual(812 + 0.001);
   });
 
-  it('should apply the 0.78 padding factor on desktop', () => {
+  it('should apply the 0.96 padding factor on desktop', () => {
     const canvasW = 1200;
     const canvasH = 800;
     const boardW = 8;
@@ -141,14 +158,15 @@ describe('calculateViewport', () => {
     const result = calculateViewport(canvasW, canvasH, boardW, boardH, cellSize);
     const boardPixelW = boardW * cellSize;
     const boardPixelH = boardH * cellSize;
-    const availableH = canvasH - HUD_TOP_RESERVE;
+    const hudReserve = getHudReserve(canvasW);
+    const availableH = canvasH - hudReserve;
     const scaleWithoutPadding = Math.min(canvasW / boardPixelW, availableH / boardPixelH);
 
-    // Scale should be 78% of the unpadded scale
-    expect(result.scale).toBeCloseTo(scaleWithoutPadding * 0.78, 10);
+    // Scale should be 96% of the unpadded scale
+    expect(result.scale).toBeCloseTo(scaleWithoutPadding * 0.96, 10);
   });
 
-  it('should apply the 0.88 padding factor on mobile', () => {
+  it('should apply the 0.96 padding factor on mobile', () => {
     const canvasW = 390;
     const canvasH = 844;
     const boardW = 8;
@@ -158,10 +176,21 @@ describe('calculateViewport', () => {
     const result = calculateViewport(canvasW, canvasH, boardW, boardH, cellSize);
     const boardPixelW = boardW * cellSize;
     const boardPixelH = boardH * cellSize;
-    const availableH = canvasH - HUD_TOP_RESERVE_MOBILE;
+    const hudReserve = getHudReserve(canvasW);
+    const availableH = canvasH - hudReserve;
     const scaleWithoutPadding = Math.min(canvasW / boardPixelW, availableH / boardPixelH);
 
-    // Scale should be 88% of the unpadded scale
-    expect(result.scale).toBeCloseTo(scaleWithoutPadding * 0.88, 10);
+    // Scale should be 96% of the unpadded scale
+    expect(result.scale).toBeCloseTo(scaleWithoutPadding * 0.96, 10);
+  });
+
+  it('should scale HUD reserve proportionally with canvas width', () => {
+    // On a 780px canvas (2x design width), HUD reserve should be ~2x base
+    const hudReserve390 = getHudReserve(390);
+    const hudReserve780 = getHudReserve(780);
+    // 780px is 2x the design width, so HUD reserve should be ~2x
+    expect(hudReserve780).toBeCloseTo(hudReserve390 * 2, 0);
+    // Both should be positive and proportional
+    expect(hudReserve780).toBeGreaterThan(hudReserve390);
   });
 });

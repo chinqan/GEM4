@@ -11,7 +11,6 @@ import {
   type UIStarDisplay,
   type UIObjectiveChip,
 } from '../factory';
-import { MOBILE_BREAKPOINT } from '../../rendering/viewport';
 
 // ─── HUD 色彩 Token ────────────────────────────────────────
 
@@ -177,8 +176,10 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
   container.label = 'game-hud';
 
   // ── 自適應參數 ────────────────────────────────────────
-  const isMobile = width < MOBILE_BREAKPOINT;
-  const scaleFactor = isMobile ? Math.max(0.65, width / MOBILE_BREAKPOINT) : 1;
+  // HTML 原型以 390px 寬度設計，所有 HUD px 值基於此參考寬度。
+  // 依實際 canvas 寬度等比縮放，確保 HUD 在任何解析度下保持正確視覺比例。
+  const DESIGN_WIDTH = 390;
+  const scaleFactor = Math.max(0.65, Math.min(width / DESIGN_WIDTH, 2.5));
 
   const margin = Math.round(16 * scaleFactor);
   const btnSize = Math.round(40 * scaleFactor);
@@ -232,8 +233,8 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
     letterSpacing: 0.3,
   });
   const worldText = new Text({ text: worldStr, style: worldStyle });
-  worldText.anchor.set(0, 1);
-  worldText.position.set(levelInfoX, row1CY - 2);
+  worldText.anchor.set(0, 0);
+  worldText.position.set(levelInfoX, row1CY - btnSize / 2);
   worldText.alpha = 0.75;
   container.addChild(worldText);
 
@@ -245,7 +246,7 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
   });
   const levelNumText = new Text({ text: levelStr, style: levelNumStyle });
   levelNumText.anchor.set(0, 0);
-  levelNumText.position.set(levelInfoX, row1CY);
+  levelNumText.position.set(levelInfoX, row1CY - btnSize / 2 + Math.round(13 * scaleFactor));
   container.addChild(levelNumText);
 
   if (levelName) {
@@ -257,7 +258,7 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
     });
     const nameText = new Text({ text: levelName, style: nameStyle });
     nameText.anchor.set(0, 0);
-    nameText.position.set(levelInfoX, row1CY + Math.round(14 * scaleFactor));
+    nameText.position.set(levelInfoX, row1CY - btnSize / 2 + Math.round(27 * scaleFactor));
     container.addChild(nameText);
   }
 
@@ -298,8 +299,8 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
   for (const subObj of subObjectives) {
     const info = objectiveToDisplayInfo(subObj);
     const chip = createObjectiveChip({ displayInfo: info, current: 0, total: 1 });
-    if (isMobile) chip.scale.set(scaleFactor);
-    const chipVisualH = (info.label ? 44 : 34) * (isMobile ? scaleFactor : 1);
+    chip.scale.set(scaleFactor);
+    const chipVisualH = (info.label ? 44 : 34) * scaleFactor;
     chip.position.set(chipX, row2CY - chipVisualH / 2);
     container.addChild(chip);
     objectiveChips.push(chip);
