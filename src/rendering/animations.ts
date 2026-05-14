@@ -8,7 +8,7 @@ import {
   INVALID_SHAKE_AMPLITUDE,
   MATCH_CLEAR_DURATION_MS,
   GEM_CONVERGE_DURATION_MS,
-  CASCADE_DROP_MS_PER_ROW,
+  CASCADE_GRAVITY,
   SPECIAL_SPAWN_SHOCKWAVE_MS,
   SPECIAL_ACTIVATION_MS,
   MARK_GLOW_ALPHA_MIN,
@@ -243,23 +243,26 @@ export function createMatchClearAnimation(sprite: Container): Animation {
 // ─── 22.4 Cascade 掉落動畫 ─────────────────────────────────
 
 /**
- * 建立 cascade 掉落動畫：120ms/行的距離。
+ * 建立 cascade 掉落動畫：統一重力加速度自由落體。
  *
- * 使用 ease-in 加速模擬重力，落地時有微小彈跳。
- * 同欄所有寶石在 game-integration 中已統一為相同掉落距離，
- * 因此以相同速度剛體平移，不會出現超越現象。
+ * 所有寶石使用相同的重力加速度（CASCADE_GRAVITY），
+ * 不論掉落距離多遠，加速度一致，符合物理直覺。
+ * 掉越遠的寶石到達時速度越快，落地彈跳也越明顯。
  */
 export function createCascadeDropAnimation(config: CascadeDropConfig): Animation {
   const { sprite, fromRow, toRow, col, delayMs = 0 } = config;
-  const distance = Math.abs(toRow - fromRow);
-  const fallDuration = distance * CASCADE_DROP_MS_PER_ROW;
+  const distancePx = Math.abs(toRow - fromRow) * CELL_SIZE;
+
+  // 自由落體：d = ½gt² → t = √(2d/g)
+  const fallDuration = Math.sqrt((2 * distancePx) / CASCADE_GRAVITY);
 
   const startX = col * CELL_SIZE + CELL_SIZE / 2;
   const startY = fromRow * CELL_SIZE + CELL_SIZE / 2;
   const endY = toRow * CELL_SIZE + CELL_SIZE / 2;
 
-  // 彈跳參數
-  const bounceHeight = Math.min(distance * 2, 6);
+  // 彈跳參數：落地速度越快彈越高（但有上限）
+  const impactVelocity = CASCADE_GRAVITY * fallDuration; // v = g*t
+  const bounceHeight = Math.min(impactVelocity * 8, 8); // 像素，上限 8px
   const bounceDuration = 80;
   const totalDuration = delayMs + fallDuration + bounceDuration;
 
@@ -280,10 +283,9 @@ export function createCascadeDropAnimation(config: CascadeDropConfig): Animation
       const active = this.elapsed - delayMs;
 
       if (active <= fallDuration) {
-        // 掉落階段：ease-in（加速，模擬重力）
-        const fallProgress = Math.min(active / fallDuration, 1);
-        const t = fallProgress * fallProgress; // quadratic ease-in
-        sprite.position.set(startX, lerp(startY, endY, t));
+        // 掉落階段：真實自由落體 d = ½gt²
+        const y = startY + 0.5 * CASCADE_GRAVITY * active * active;
+        sprite.position.set(startX, Math.min(y, endY));
       } else {
         // 彈跳階段：快速上彈再回落
         const bounceElapsed = active - fallDuration;

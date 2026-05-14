@@ -25,8 +25,7 @@
       "@state/*": ["./src/state/*"],
       "@input/*": ["./src/input/*"],
       "@types/*": ["./src/types/*"]
-    },
-    "baseUrl": "."
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

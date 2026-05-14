@@ -93,8 +93,16 @@ export const MATCH_CLEAR_DURATION_MS = 200;
 /** 特殊寶石生成：成員寶石聚合飛向定位點的總時長（ms） */
 export const GEM_CONVERGE_DURATION_MS = 300;
 
-/** Cascade 掉落動畫每行時長（ms） */
+/** Cascade 掉落動畫每行時長（ms）— 已棄用，保留供測試參考 */
 export const CASCADE_DROP_MS_PER_ROW = 120;
+
+/**
+ * Cascade 掉落統一重力加速度（px/ms²）。
+ * 所有寶石不論距離皆使用相同加速度，模擬真實自由落體。
+ * 調大 → 掉更快；調小 → 掉更慢。
+ * 0.007 ≈ 掉 1 行（64px）約 135ms，掉 4 行約 270ms（√4 倍）。
+ */
+export const CASCADE_GRAVITY = 0.004;
 
 /** 特殊寶石 spawn 震波時長（ms） */
 export const SPECIAL_SPAWN_SHOCKWAVE_MS = 600;
