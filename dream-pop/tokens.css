@@ -1,0 +1,376 @@
+/* Dream Pop Gems — tokens + base styles. World accent vars are switched on
+   the root .dp-root via the [data-world] attribute. */
+
+:root {
+  /* Surface — vivid defaults; soft fallback when [data-vibrance="soft"] */
+  --bg-sky: #6BCEFF;
+  --bg-dream: #F4B8FF;
+  --bg-cream: #FFE680;
+  --bg-panel: #FFFFFF;
+  --bg-board: #DBEEFF;
+  --bg-board-alt: #C6E2FF;
+  --bg-board-frame: #3B5BB8;
+  --bg-overlay: rgba(43, 37, 80, 0.55);
+
+  /* Status */
+  --state-success: #34C04E;
+  --state-warning: #FFC233;
+  --state-danger: #FF4D6D;
+  --state-info: #2EB3F8;
+  --state-magic: #8B5DFF;
+
+  /* Text — darker for contrast on bright bg */
+  --text-primary: #1A1340;
+  --text-secondary: #3F3870;
+  --text-muted: #7872A0;
+  --text-inverse: #FFFFFF;
+  --ink: #2B2550;
+
+  /* Gem colours — saturated */
+  --gem-red: #FF3D78;
+  --gem-green: #34C04E;
+  --gem-blue: #2EB3F8;
+  --gem-yellow: #FFC233;
+  --gem-purple: #8B5DFF;
+  --gem-white: #F8FBFF;
+  --gem-orange: #FF7A1A;
+
+  /* Radius */
+  --r-pill: 999px;
+  --r-xl: 32px;
+  --r-lg: 28px;
+  --r-md: 24px;
+  --r-sm: 18px;
+  --r-xs: 12px;
+
+  /* Fonts */
+  --font-display: 'Fredoka', 'Noto Sans TC', system-ui, sans-serif;
+  --font-body: 'Nunito', 'Noto Sans TC', system-ui, sans-serif;
+
+  /* Sticker — tweakable via inline overrides */
+  --stroke-w: 3px;
+  --stroke-soft-w: 2px;
+  --ink-stroke: 2px;
+  --shadow-z1: 0 4px 0 rgba(27, 19, 64, 0.22), 0 6px 12px rgba(27, 19, 64, 0.18);
+  --shadow-z2: 0 6px 0 rgba(27, 19, 64, 0.22), 0 10px 20px rgba(27, 19, 64, 0.20);
+  --shadow-z3: 0 10px 0 rgba(27, 19, 64, 0.20), 0 16px 32px rgba(27, 19, 64, 0.28);
+
+  /* Default world accents (W1 Rainbow Garden — vivid) */
+  --w-accent: #FF3D8E;
+  --w-accent-2: #FFC233;
+  --w-bg-a: #FFC8DE;
+  --w-bg-b: #FFE680;
+  --w-bg-c: #6BCEFF;
+}
+
+[data-world="w1"] {
+  --w-accent: #FF3D8E;
+  --w-accent-2: #FFC233;
+  --w-bg-a: #FFC8DE;
+  --w-bg-b: #FFE680;
+  --w-bg-c: #6BCEFF;
+}
+[data-world="w2"] {
+  --w-accent: #2EB3F8;
+  --w-accent-2: #8B5DFF;
+  --w-bg-a: #A8D8FF;
+  --w-bg-b: #C7B0FF;
+  --w-bg-c: #6BCEFF;
+}
+[data-world="w3"] {
+  --w-accent: #5BB8FF;
+  --w-accent-2: #F47AC6;
+  --w-bg-a: #B4D4FF;
+  --w-bg-b: #F4B8FF;
+  --w-bg-c: #8FB8FF;
+}
+[data-world="w4"] {
+  --w-accent: #FFC233;
+  --w-accent-2: #FF3D8E;
+  --w-bg-a: #FFD966;
+  --w-bg-b: #FFB0D8;
+  --w-bg-c: #9CC7FF;
+}
+
+/* ─── Soft mode — original pastel feel ─────────────────────── */
+[data-vibrance="soft"] {
+  --bg-sky: #BFE9FF;
+  --bg-dream: #F7E9FF;
+  --bg-cream: #FFF8E8;
+  --bg-board: #EAF7FF;
+  --bg-board-alt: #DDF3FF;
+  --bg-board-frame: #B8C8E8;
+  --bg-overlay: rgba(102, 80, 140, 0.42);
+  --text-primary: #2B2550;
+  --text-secondary: #5E5A7A;
+  --text-muted: #8E8AA8;
+  --ink: #5E5A7A;
+  --shadow-z1: 0 4px 8px rgba(64, 50, 110, 0.18);
+  --shadow-z2: 0 8px 18px rgba(64, 50, 110, 0.18);
+  --shadow-z3: 0 12px 28px rgba(64, 50, 110, 0.22);
+  --ink-stroke: 0px;
+  --gem-red: #FF5C8A;
+  --gem-green: #65D96E;
+  --gem-blue: #4FC3FF;
+  --gem-yellow: #FFD84D;
+  --gem-purple: #B28DFF;
+  --gem-orange: #FF9F43;
+}
+[data-vibrance="soft"] [data-world="w1"] {
+  --w-accent: #FF8EC7; --w-accent-2: #FFD166;
+  --w-bg-a: #FFE5F1; --w-bg-b: #FFF7DA; --w-bg-c: #BFE9FF;
+}
+[data-vibrance="soft"] [data-world="w2"] {
+  --w-accent: #6AD7F8; --w-accent-2: #B28DFF;
+  --w-bg-a: #D7F0FF; --w-bg-b: #E6DBFF; --w-bg-c: #F2FAFF;
+}
+[data-vibrance="soft"] [data-world="w3"] {
+  --w-accent: #A6E3FF; --w-accent-2: #F7B7E0;
+  --w-bg-a: #D8E9FF; --w-bg-b: #F7E9FF; --w-bg-c: #EAF1FF;
+}
+[data-vibrance="soft"] [data-world="w4"] {
+  --w-accent: #FFD84D; --w-accent-2: #FF8EC7;
+  --w-bg-a: #FFF1B3; --w-bg-b: #FFE0EE; --w-bg-c: #D7E8FF;
+}
+
+/* ------------ base ------------ */
+.dp-root {
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.dp-display { font-family: var(--font-display); font-weight: 700; }
+
+/* Sticker title — white fill with thick accent stroke + depth shadow.
+   Uses stacked text-shadow because background-clip:text + drop-shadow is
+   buggy in Chromium when combined with a gradient that goes through pure
+   white. Reliable across all engines. */
+.dp-sticker-title {
+  color: #fff;
+  text-shadow:
+    -3px 0 0 var(--w-accent),
+     3px 0 0 var(--w-accent),
+     0 -3px 0 var(--w-accent),
+     0  3px 0 var(--w-accent),
+    -3px -3px 0 var(--w-accent),
+     3px -3px 0 var(--w-accent),
+    -3px  3px 0 var(--w-accent),
+     3px  3px 0 var(--w-accent),
+    -5px  0 0 color-mix(in oklab, var(--w-accent) 40%, #1A1340),
+     5px  0 0 color-mix(in oklab, var(--w-accent) 40%, #1A1340),
+     0 -5px 0 color-mix(in oklab, var(--w-accent) 40%, #1A1340),
+     0  5px 0 color-mix(in oklab, var(--w-accent) 40%, #1A1340),
+     0 8px 0 color-mix(in oklab, var(--w-accent) 35%, #1A1340),
+     0 14px 22px rgba(27, 19, 64, 0.32);
+}
+.dp-sticker-title-sm {
+  color: #fff;
+  text-shadow:
+    -2px 0 0 var(--w-accent),
+     2px 0 0 var(--w-accent),
+     0 -2px 0 var(--w-accent),
+     0  2px 0 var(--w-accent),
+    -2px -2px 0 var(--w-accent),
+     2px -2px 0 var(--w-accent),
+    -2px  2px 0 var(--w-accent),
+     2px  2px 0 var(--w-accent),
+    -3px  0 0 color-mix(in oklab, var(--w-accent) 40%, #1A1340),
+     3px  0 0 color-mix(in oklab, var(--w-accent) 40%, #1A1340),
+     0 -3px 0 color-mix(in oklab, var(--w-accent) 40%, #1A1340),
+     0  3px 0 color-mix(in oklab, var(--w-accent) 40%, #1A1340),
+     0 5px 0 color-mix(in oklab, var(--w-accent) 35%, #1A1340),
+     0 9px 14px rgba(27, 19, 64, 0.28);
+}
+
+/* ------------ phone shell ------------ */
+.phone {
+  width: 390px;
+  height: 844px;
+  border-radius: 44px;
+  overflow: hidden;
+  position: relative;
+  background: #fff;
+  box-shadow: var(--shadow-z3);
+  isolation: isolate;
+}
+
+.phone-status {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px 0 36px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-primary);
+  z-index: 50;
+  pointer-events: none;
+}
+.phone-status .ind {
+  display: flex; gap: 6px; align-items: center;
+}
+.phone-status .ind svg { display: block; }
+
+.phone-home {
+  position: absolute;
+  bottom: 8px; left: 50%;
+  transform: translateX(-50%);
+  width: 134px; height: 5px;
+  border-radius: 999px;
+  background: rgba(43, 37, 80, 0.22);
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* ------------ sticker primitives ------------ */
+.sticker {
+  border-radius: var(--r-pill);
+  border: var(--stroke-w) solid #fff;
+  box-shadow: var(--shadow-z1);
+  background: #fff;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dp-btn {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+  padding: 16px 32px;
+  border-radius: var(--r-pill);
+  border: var(--stroke-w) solid #fff;
+  outline: var(--ink-stroke) solid color-mix(in oklab, var(--w-accent) 50%, #1A1340);
+  outline-offset: 0px;
+  box-shadow: var(--shadow-z2);
+  cursor: pointer;
+  color: var(--text-inverse);
+  background: var(--w-accent);
+  background-image: linear-gradient(180deg,
+    color-mix(in oklab, var(--w-accent) 60%, white),
+    var(--w-accent) 60%,
+    color-mix(in oklab, var(--w-accent) 80%, #1A1340));
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+  position: relative;
+  text-shadow: 0 2px 0 color-mix(in oklab, var(--w-accent) 50%, #1A1340);
+}
+.dp-btn:hover { transform: translateY(-1px); }
+.dp-btn:active {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: var(--shadow-z1);
+}
+.dp-btn::after {
+  content: "";
+  position: absolute;
+  top: 4px; left: 14px; right: 14px;
+  height: 30%;
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
+  pointer-events: none;
+}
+
+.dp-btn--secondary {
+  color: var(--text-primary);
+  background: #fff;
+  background-image: none;
+  border: var(--stroke-w) solid var(--w-accent);
+  outline: var(--ink-stroke) solid color-mix(in oklab, var(--w-accent) 50%, #1A1340);
+  text-shadow: none;
+}
+.dp-btn--secondary::after { display: none; }
+.dp-btn--yellow {
+  background-image: linear-gradient(180deg, #FFE684, #FFC93A);
+  color: #6B4A00;
+  text-shadow: 0 1px 0 #fff7c8;
+}
+.dp-btn--magic {
+  background-image: linear-gradient(180deg, #C9B3FF, #9C7CFF);
+  color: #fff;
+  text-shadow: 0 1px 0 #5e3aa8;
+}
+.dp-btn--danger {
+  background-image: linear-gradient(180deg, #FF9A9A, #FF6B6B);
+  color: #fff;
+  text-shadow: 0 1px 0 #a83434;
+}
+
+.dp-icon-btn {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: var(--stroke-w) solid #fff;
+  outline: var(--ink-stroke) solid rgba(27, 19, 64, 0.35);
+  background: #fff;
+  box-shadow: var(--shadow-z1);
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  color: var(--text-primary);
+  padding: 0;
+  transition: transform 120ms ease-out;
+}
+.dp-icon-btn:active { transform: scale(0.94); }
+
+.dp-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  background: #fff;
+  border: var(--stroke-w) solid #fff;
+  outline: var(--ink-stroke) solid rgba(27, 19, 64, 0.35);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-z1);
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 18px;
+  white-space: nowrap;
+}
+.dp-chip > * { flex: 0 0 auto; }
+.dp-chip--accent { border-color: var(--w-accent); }
+
+.dp-panel {
+  background: var(--bg-panel);
+  border: var(--stroke-w) solid #fff;
+  outline: var(--ink-stroke) solid rgba(27, 19, 64, 0.30);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-z2);
+}
+
+/* ------------ animations ------------ */
+@keyframes dp-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes dp-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.55; }
+  50% { transform: scale(1.18); opacity: 0.15; }
+}
+@keyframes dp-shine {
+  0%, 100% { opacity: 0.6; transform: translate(0, 0) scale(1); }
+  50% { opacity: 1; transform: translate(1px, -1px) scale(1.05); }
+}
+@keyframes dp-float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+@keyframes dp-spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes dp-star-pop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes dp-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dp-anim-rise { animation: dp-rise 600ms ease-out forwards; }
