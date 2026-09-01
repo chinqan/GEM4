@@ -42,7 +42,9 @@ const BUDGETS = {
   },
   audio: {
     label: 'Core Audio',
-    maxBytes: 1 * 1024 * 1024, // 1MB raw
+    // GDD 07§7.4 全部音訊 ≤ 8MB gzipped；此處保守限制 2MB raw
+    //（目前為 56 個 SFX MP3；正式音樂資產到位後若超限再依 GDD 調整）
+    maxBytes: 2 * 1024 * 1024, // 2MB raw
     extensions: ['.mp3', '.ogg', '.wav', '.m4a'],
     gzipped: false,
   },

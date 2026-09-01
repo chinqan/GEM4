@@ -28,6 +28,8 @@ export interface AudioSettings {
   masterVolume: number;
   musicVolume: number;
   sfxVolume: number;
+  /** 環境音音量（GDD 08§4）；舊存檔可能缺少，讀取端以 ?? 補預設 0.4 */
+  ambienceVolume?: number;
   muted: boolean;
 }
 
@@ -93,6 +95,7 @@ export function defaultSaveState(): SaveState {
         masterVolume: 1.0,
         musicVolume: 0.8,
         sfxVolume: 1.0,
+        ambienceVolume: 0.4,
         muted: false,
       },
       graphicsPreset: 'high',

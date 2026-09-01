@@ -86,9 +86,10 @@ export type SfxCatalogDef = Partial<Record<SfxEvent, SfxEntry>>;
 /** 音效檔案的 base path（相對於 public/） */
 const SFX_BASE = '/assets/audio/sfx/';
 
-/** 建立單一變體的 src 陣列（wav） */
+/** 建立單一變體的 src 陣列。交付來源為 WAV 檔名，實際出貨為 MP3
+ *（GDD 07§7.3；由 build-tools/convert-sfx.mjs 轉檔，原始 WAV 存 assets-src/）。 */
 function sfxSrc(filename: string): string[] {
-  return [SFX_BASE + filename];
+  return [SFX_BASE + filename.replace(/\.wav$/, '.mp3')];
 }
 
 // ─── 預設 SFX 目錄（外包交付音效）─────────────────────────────

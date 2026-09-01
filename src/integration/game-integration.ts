@@ -137,6 +137,10 @@ export class GameIntegration {
   private activeSession: GameSessionController | null = null;
   private activeBoardAnimator: BoardAnimator | null = null;
   private activeBoardInteraction: BoardInteraction | null = null;
+  private audioSystem: import('../audio/audio-system').AudioSystem | null = null;
+  /** 當前 intensity（GDD 06§3.5），swap 結算時更新、render 迴圈緩慢衰減 */
+  private _intensity = 0;
+  private _lastEmittedIntensity = 0;
 
   // ─── Active game session (legacy — kept for GameLoop compatibility)
   private activeRulesEngine: RulesEngine | null = null;
@@ -169,6 +173,15 @@ export class GameIntegration {
       transitionTo: (state) => this.transitionTo(state),
       getCurrentState: () => this.currentState,
       formatObjectiveText,
+      onAudioSettingsChange: (audio) => {
+        // 設定即時生效（GDD 05§4.9：音量類設定 exception 即時套用）
+        this.audioSystem?.buses.restore({
+          master: { volume: audio.masterVolume, muted: audio.muted },
+          music: { volume: audio.musicVolume, muted: false },
+          sfx: { volume: audio.sfxVolume, muted: false },
+          ambience: { volume: audio.ambienceVolume ?? 0.4, muted: false },
+        });
+      },
     });
   }
 
@@ -222,6 +235,38 @@ export class GameIntegration {
         // Update splash screen progress
         this.updateSplashProgress(loaded / total);
       });
+
+      // 3.5 Initialize audio system（橋接存檔音量 → buses，接上 event bus）
+      try {
+        const { AudioSystem } = await import('../audio/audio-system');
+        const { SaveManager } = await import('../state/save-state');
+        const audio = new SaveManager().load().settings.audio;
+        this.audioSystem = new AudioSystem({
+          busSnapshot: {
+            master: { volume: audio.masterVolume, muted: audio.muted },
+            music: { volume: audio.musicVolume, muted: false },
+            sfx: { volume: audio.sfxVolume, muted: false },
+            ambience: { volume: audio.ambienceVolume ?? 0.4, muted: false },
+          },
+        });
+        this.audioSystem.connectEventBus(this.eventBus);
+        this.cleanupFns.push(() => {
+          this.audioSystem?.dispose();
+          this.audioSystem = null;
+        });
+      } catch (err) {
+        console.warn('[GameIntegration] Audio system init failed:', err);
+      }
+
+      // 3.6 Initialize i18n（依存檔語言載入字串）
+      try {
+        const { initTranslator } = await import('../i18n/translator');
+        const { SaveManager } = await import('../state/save-state');
+        const language = new SaveManager().load().settings.language;
+        await initTranslator(language as import('../i18n/translator').SupportedLocale);
+      } catch (err) {
+        console.warn('[GameIntegration] i18n init failed:', err);
+      }
 
       // 4. Initialize debug tools (controlled by settings)
       try {
@@ -334,6 +379,17 @@ export class GameIntegration {
   private onStateChanged(from: AppState, to: AppState): void {
     // Update debug panel
     this.subsystems.debugPanel?.updateMetrics({ appState: to.kind });
+
+    // 音樂路由：選單類畫面播 menu 曲（Ambience off，GDD 07§4.6）；
+    // 世界音樂在 startLevel 依 worldId 啟動。Pause 時暫停音訊（GDD 07§4.5）。
+    if (to.kind === 'menu' || to.kind === 'worldMap' || to.kind === 'levelSelect' || to.kind === 'credits') {
+      void this.playMenuAudio();
+    }
+    if (to.kind === 'pause') {
+      this.audioSystem?.suspend();
+    } else if (from.kind === 'pause') {
+      this.audioSystem?.resume();
+    }
 
     // Tear down game session when leaving game/pause for a non-game screen
     const leavingGame = from.kind === 'game' || from.kind === 'pause' || from.kind === 'endless';
@@ -454,6 +510,26 @@ export class GameIntegration {
     // Draw grid background
     await this.drawGridBackground(appRefs, board, CELL_SIZE);
 
+    // --- 世界音樂 + 環境音（同世界續播不中斷）---
+    void this.playWorldAudio(spec.worldId);
+
+    // --- combo-required 關卡開場提示（GDD 02§7 L63）---
+    const { parseSpecialRules } = await import('../game/level/special-rules');
+    if (parseSpecialRules(spec.specialRules).comboRequired) {
+      const { createToast } = await import('../ui/juice/toast');
+      const { t } = await import('../i18n/translator');
+      const { width: vw, height: vh } = this.getScreenSize();
+      const toast = createToast({
+        message: t('level.comboRequiredHint'),
+        variant: 'info',
+        position: 'top',
+        duration: 4000,
+        viewportWidth: vw,
+        viewportHeight: vh,
+      });
+      appRefs.layers.uiLayer.addChild(toast.container);
+    }
+
     // --- Create Board Animator ---
     const { BoardAnimator } = await import('../rendering/board-animator');
     const animator = new BoardAnimator({
@@ -534,6 +610,12 @@ export class GameIntegration {
         animator.clearHintFlash();
         animatedScore = session.score;
         const result = session.executeSwap(from, to);
+        if (result.valid) {
+          const chainMax = result.cascadeSteps.reduce((m, s) => Math.max(m, s.chain), 1);
+          this.updateIntensity(session, chainMax);
+          // 連鎖讚美（GDD 08§10.3：chain ≥2 頂部浮現）
+          if (chainMax >= 2) hud.showChain(chainMax);
+        }
         await animator.animateSwap(result, from, to, board);
         boardRenderer.sync(board);
         this.updateHud(hud, session, spec);
@@ -554,6 +636,8 @@ export class GameIntegration {
         animatedScore = session.score;
         const result = session.executeActivation(at);
         if (result) {
+          const chainMax = result.cascadeSteps.reduce((m, s) => Math.max(m, s.chain), 1);
+          this.updateIntensity(session, chainMax);
           await animator.animateActivation(result, board);
           boardRenderer.sync(board);
           this.updateHud(hud, session, spec);
@@ -724,14 +808,103 @@ export class GameIntegration {
           if (spec.constraints.timeBudget && session.timeRemaining !== Infinity) {
             hud.setTime(session.timeRemaining);
           }
+          // intensity 緩慢衰減（GDD 07§4.3：chain 結束後 1–2 秒 graceful fade）
+          if (this._intensity > 0.001) {
+            this._intensity *= 0.9985;
+            this.emitIntensityIfChanged();
+          }
         },
       },
-      { update: () => {} },
+      this.audioSystem ?? { update: () => {} },
       { tick: () => {} },
       this.eventBus,
     );
     gameLoop.start();
     this.activeGameLoop = gameLoop;
+  }
+
+  // ─── 音樂路由（GDD 07§4）──────────────────────────────────
+
+  /** 選單類畫面：menu 曲 + 關閉環境音（資產未到位時靜默跳過，見 music-tracks.ts） */
+  private async playMenuAudio(): Promise<void> {
+    const audio = this.audioSystem;
+    if (!audio) return;
+    audio.stopAmbience();
+    const { MUSIC_ASSETS_READY, MENU_MUSIC_BASE } = await import('../audio/music-tracks');
+    if (!MUSIC_ASSETS_READY) return;
+    if (audio.music.getTrackId() !== 'menu') {
+      const { createTrackDef } = await import('../audio/adaptive-music');
+      audio.playMusic(createTrackDef('menu', [MENU_MUSIC_BASE], ['mp3']));
+    }
+  }
+
+  /** 進入關卡：世界音樂（4 stems）+ 世界環境音；同世界續播不中斷（GDD 07§4.1）。
+   *  資產未到位時靜默跳過（見 music-tracks.ts）。 */
+  private async playWorldAudio(worldId: number): Promise<void> {
+    const audio = this.audioSystem;
+    if (!audio) return;
+    const w = worldId >= 1 && worldId <= 4 ? worldId : 1;
+    const { MUSIC_ASSETS_READY, AMBIENCE_ASSETS_READY, worldMusicBasePaths, worldAmbiencePath } =
+      await import('../audio/music-tracks');
+
+    if (MUSIC_ASSETS_READY) {
+      const trackId = `world-${w}`;
+      if (audio.music.getTrackId() !== trackId) {
+        const { createTrackDef } = await import('../audio/adaptive-music');
+        audio.playMusic(createTrackDef(trackId, worldMusicBasePaths(w), ['mp3']));
+      }
+    }
+    if (AMBIENCE_ASSETS_READY) {
+      audio.playAmbience(worldAmbiencePath(w));
+    }
+  }
+
+  /**
+   * 依 GDD 06§3.5 公式計算 intensity 並發送 intensity.updated。
+   * 在每次 swap/activation 結算後呼叫；render 迴圈另做緩慢衰減。
+   */
+  private updateIntensity(session: GameSessionController, currentChain: number): void {
+    const spec = session.spec;
+    const initialMoves = spec.constraints.moveBudget ?? 0;
+    const movesRatio =
+      initialMoves > 0 && session.movesRemaining !== Infinity
+        ? session.movesRemaining / initialMoves
+        : 1;
+    const urgencyKick = movesRatio < 0.3 ? 1 : 0;
+
+    let specialsOnBoard = 0;
+    for (let c = 0; c < session.board.width; c++) {
+      for (let r = 0; r < session.board.height; r++) {
+        if (session.board.cells[c][r].gem?.special) specialsOnBoard++;
+      }
+    }
+
+    const progress = session.getState().objectiveProgress;
+    const objectiveProgress =
+      progress.length > 0
+        ? progress.reduce((s, p) => s + Math.min(1, p.current / Math.max(1, p.total)), 0) / progress.length
+        : 0;
+
+    const intensity = Math.max(
+      0,
+      Math.min(
+        1,
+        0.2 * (currentChain / 6) +
+          0.4 * (1 - movesRatio) * urgencyKick +
+          0.3 * Math.min(specialsOnBoard / 4, 1) +
+          0.1 * objectiveProgress,
+      ),
+    );
+
+    this._intensity = Math.max(this._intensity, intensity);
+    this.emitIntensityIfChanged();
+  }
+
+  private emitIntensityIfChanged(): void {
+    if (Math.abs(this._intensity - this._lastEmittedIntensity) > 0.02) {
+      this._lastEmittedIntensity = this._intensity;
+      this.eventBus.emit({ kind: 'intensity.updated', value: this._intensity });
+    }
   }
 
   /** Update HUD from session state */

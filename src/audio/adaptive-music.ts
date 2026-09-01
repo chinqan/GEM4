@@ -30,6 +30,26 @@ export interface MusicTrackDef {
 /** 預設層門檻值 — 對應 design.md §8.2 */
 const DEFAULT_THRESHOLDS = [0, 0.3, 0.6, 0.85];
 
+/** GDD 07§4.3：各層增益的 smoothstep 區間（L0 恆為 1） */
+const GAIN_BANDS: ReadonlyArray<readonly [number, number]> = [
+  [0, 0],
+  [0.1, 0.3],
+  [0.35, 0.55],
+  [0.6, 0.85],
+];
+
+/** GDD 07§4.4 ducking：-6dB ≈ ×0.5，attack 150ms / release 400ms */
+const DUCK_GAIN = 0.5;
+const DUCK_ATTACK_MS = 150;
+const DUCK_RELEASE_MS = 400;
+
+/** smoothstep(edge0, edge1, x)：GDD 07§4.3 的層增益曲線 */
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  if (edge1 <= edge0) return x >= edge1 ? 1 : 0;
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
 /** lerp 平滑係數 — 每次 update 的插值比例 (0..1)
  *  值越大過渡越快。0.08 ≈ 150ms 到達 90% 目標值 (60fps) */
 const LERP_FACTOR = 0.08;
@@ -70,8 +90,21 @@ export class AdaptiveMusic {
   private playing = false;
   private currentTrackId: string | null = null;
 
+  /** ducking 狀態：目前增益與釋放截止時間（GDD 07§4.4） */
+  private _duckCurrent = 1;
+  private _duckHoldUntil = 0;
+
   constructor(buses: AudioBuses) {
     this.buses = buses;
+  }
+
+  /**
+   * 大 stinger 觸發時壓低音樂（-6dB / 150ms，回復 400ms）。
+   * 多個 stinger 同時觸發時 duck 時長取最長者。
+   */
+  duck(holdMs = 300): void {
+    const until = performance.now() + holdMs;
+    if (until > this._duckHoldUntil) this._duckHoldUntil = until;
   }
 
   // ─── 曲目控制 ─────────────────────────────────────────
@@ -175,7 +208,13 @@ export class AdaptiveMusic {
   update(): void {
     if (!this.playing || this.layers.length === 0) return;
 
-    const musicVolume = this.buses.effectiveMusicVolume;
+    // ducking 增益（60fps 假設下換算 attack/release 的每幀 lerp 步長）
+    const ducking = performance.now() < this._duckHoldUntil;
+    const duckTarget = ducking ? DUCK_GAIN : 1;
+    const duckFactor = ducking ? 16.7 / DUCK_ATTACK_MS : 16.7 / DUCK_RELEASE_MS;
+    this._duckCurrent += (duckTarget - this._duckCurrent) * Math.min(1, duckFactor * 3);
+
+    const musicVolume = this.buses.effectiveMusicVolume * this._duckCurrent;
 
     for (const layer of this.layers) {
       // Lerp 朝目標音量過渡
@@ -197,7 +236,8 @@ export class AdaptiveMusic {
   /**
    * 根據當前 intensity 更新各層的目標音量。
    * Layer 0 永遠為 1（基底層）。
-   * 其他層在 intensity >= threshold 時目標為 1，否則為 0。
+   * 其他層依 GDD 07§4.3 的 smoothstep 區間計算連續增益
+   * （L1: 0.1–0.3、L2: 0.35–0.55、L3: 0.6–0.85）。
    */
   private _updateTargetVolumes(): void {
     for (let i = 0; i < this.layers.length; i++) {
@@ -206,7 +246,8 @@ export class AdaptiveMusic {
         // 基底層永遠播放
         layer.targetVolume = 1;
       } else {
-        layer.targetVolume = this.intensity >= layer.threshold ? 1 : 0;
+        const band = GAIN_BANDS[i] ?? [layer.threshold, layer.threshold];
+        layer.targetVolume = smoothstep(band[0], band[1], this.intensity);
       }
     }
   }

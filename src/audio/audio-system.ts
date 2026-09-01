@@ -46,6 +46,9 @@ export class AudioSystem {
   private intensity = 0;
   private eventBus: EventBus | null = null;
   private unsubscribers: Array<() => void> = [];
+  /** 環境音 loop（GDD 07§4.6：每世界一軌，走 Ambience bus） */
+  private _ambienceHowl: Howl | null = null;
+  private _ambienceSrc: string | null = null;
 
   // autoplay unlock 的事件處理器參照（用於移除）
   private _unlockHandler: (() => void) | null = null;
@@ -146,11 +149,13 @@ export class AudioSystem {
     this.unsubscribers.push(
       bus.on('match.landed', (e) => {
         this.sfx.play('match.base');
-        // 連鎖階層 stinger
+        // 連鎖階層 stinger；大 stinger 觸發 music ducking（GDD 07§4.4）
         if (e.chain >= 8) {
           this.sfx.play('chain.wow');
+          this.music.duck(500);
         } else if (e.chain >= 5) {
           this.sfx.play('chain.tier3');
+          this.music.duck(400);
         } else if (e.chain >= 3) {
           this.sfx.play('chain.tier2');
         } else if (e.chain >= 2) {
@@ -224,6 +229,7 @@ export class AudioSystem {
             break;
           case 'colour.colour':
             this.sfx.play('combo.colour.colour');
+            this.music.duck(600);
             break;
           default:
             this.sfx.play('combo.bomb.bomb');
@@ -252,6 +258,13 @@ export class AudioSystem {
         this.intensity = e.value;
       }),
     );
+
+    // 關卡結算 stinger → music ducking
+    this.unsubscribers.push(
+      bus.on('level.resolved', () => {
+        this.music.duck(600);
+      }),
+    );
   }
 
   // ─── 26.2 直接 SFX 播放 ──────────────────────────────
@@ -276,6 +289,11 @@ export class AudioSystem {
   /** 設定 sfx 音量 (0..1) */
   setSfxVolume(v: number): void {
     this.buses.setSfxVolume(v);
+  }
+
+  /** 設定 ambience 音量 (0..1) */
+  setAmbienceVolume(v: number): void {
+    this.buses.setAmbienceVolume(v);
   }
 
   /** 切換全域靜音（M 鍵） */
@@ -305,6 +323,32 @@ export class AudioSystem {
     this.music.stop();
   }
 
+  // ─── 環境音控制（GDD 07§4.6）─────────────────────────
+
+  /** 播放環境音 loop；重複呼叫同一 src 不重啟 */
+  playAmbience(src: string): void {
+    if (this._ambienceSrc === src && this._ambienceHowl) return;
+    this.stopAmbience();
+    this._ambienceSrc = src;
+    this._ambienceHowl = new Howl({
+      src: [src],
+      loop: true,
+      volume: this.buses.effectiveAmbienceVolume,
+      preload: true,
+    });
+    this._ambienceHowl.play();
+  }
+
+  /** 停止環境音 */
+  stopAmbience(): void {
+    if (this._ambienceHowl) {
+      this._ambienceHowl.stop();
+      this._ambienceHowl.unload();
+      this._ambienceHowl = null;
+    }
+    this._ambienceSrc = null;
+  }
+
   // ─── 26.4 暫停/恢復 ──────────────────────────────────
 
   /**
@@ -316,6 +360,7 @@ export class AudioSystem {
     this.suspended = true;
 
     this.music.pause();
+    this._ambienceHowl?.pause();
 
     // 暫停 Howler AudioContext
     const ctx = Howler.ctx;
@@ -341,6 +386,7 @@ export class AudioSystem {
     }
 
     this.music.resume();
+    this._ambienceHowl?.play();
   }
 
   /** 是否處於暫停狀態 */
@@ -374,6 +420,8 @@ export class AudioSystem {
   update(): void {
     this.music.setIntensity(this.intensity);
     this.music.update();
+    // 環境音音量跟隨 bus（含 master/mute）
+    this._ambienceHowl?.volume(this.buses.effectiveAmbienceVolume);
   }
 
   // ─── 生命週期 ─────────────────────────────────────────
@@ -393,6 +441,7 @@ export class AudioSystem {
       this._visibilityHandler = null;
     }
 
+    this.stopAmbience();
     this.sfx.dispose();
     this.music.dispose();
   }

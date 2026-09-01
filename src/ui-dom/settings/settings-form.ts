@@ -320,6 +320,14 @@ export class SettingsForm {
       }),
     );
 
+    // Ambience Volume（GDD 08§4；舊存檔無此欄位時預設 0.4）
+    section.appendChild(
+      this.createSliderRow('Ambience Volume', this.settings.audio.ambienceVolume ?? 0.4, (v) => {
+        this.settings.audio.ambienceVolume = v;
+        this.callbacks.onAudioChange?.(this.settings.audio);
+      }),
+    );
+
     // Mute
     section.appendChild(
       this.createCheckboxRow('Mute All', this.settings.audio.muted, (v) => {

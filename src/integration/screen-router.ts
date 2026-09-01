@@ -23,6 +23,8 @@ export interface ScreenRouterConfig {
   getCurrentState: () => AppState;
   /** Format objective text for display */
   formatObjectiveText: (objective: Objective) => string;
+  /** 音訊設定變更時即時套用到 AudioSystem（可選） */
+  onAudioSettingsChange?: (audio: import('../state/save-state').AudioSettings) => void;
 }
 
 // ─── Screen Router ──────────────────────────────────────────
@@ -284,6 +286,7 @@ export class ScreenRouter {
       onAudioChange: (audio) => {
         save.settings.audio = audio;
         sm.save(save, true);
+        this.config.onAudioSettingsChange?.(audio);
       },
       onGraphicsPresetChange: (preset) => {
         save.settings.graphicsPreset = preset;

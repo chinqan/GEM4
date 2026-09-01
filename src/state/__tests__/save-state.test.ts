@@ -65,6 +65,7 @@ describe('defaultSaveState', () => {
       masterVolume: 1.0,
       musicVolume: 0.8,
       sfxVolume: 1.0,
+      ambienceVolume: 0.4,
       muted: false,
     });
     expect(state.settings.graphicsPreset).toBe('high');
@@ -76,6 +77,7 @@ describe('defaultSaveState', () => {
     expect(state.settings.gameplay).toEqual({
       hintDelayMs: 5000,
       autoActivateSpecial: false,
+      showDebugPanel: false,
     });
     expect(state.settings.language).toBe('zh-TW');
   });

@@ -20,6 +20,8 @@ export interface BusSnapshot {
   master: BusState;
   music: BusState;
   sfx: BusState;
+  /** 環境音匯流排（GDD 07§5）；舊快照可能缺少此欄位 */
+  ambience?: BusState;
 }
 
 /** 音量變更回呼 */
@@ -30,6 +32,8 @@ export type VolumeChangeCallback = (snapshot: BusSnapshot) => void;
 const DEFAULT_MASTER_VOLUME = 0.8;
 const DEFAULT_MUSIC_VOLUME = 0.8;
 const DEFAULT_SFX_VOLUME = 0.9;
+/** GDD 07§9：Ambience 滑桿預設 40% */
+const DEFAULT_AMBIENCE_VOLUME = 0.4;
 
 // ─── 工具函式 ──────────────────────────────────────────────
 
@@ -53,6 +57,7 @@ export class AudioBuses {
   private _master: BusState;
   private _music: BusState;
   private _sfx: BusState;
+  private _ambience: BusState;
   private _listeners: VolumeChangeCallback[] = [];
 
   constructor(snapshot?: Partial<BusSnapshot>) {
@@ -67,6 +72,10 @@ export class AudioBuses {
     this._sfx = {
       volume: snapshot?.sfx?.volume ?? DEFAULT_SFX_VOLUME,
       muted: snapshot?.sfx?.muted ?? false,
+    };
+    this._ambience = {
+      volume: snapshot?.ambience?.volume ?? DEFAULT_AMBIENCE_VOLUME,
+      muted: snapshot?.ambience?.muted ?? false,
     };
   }
 
@@ -87,6 +96,11 @@ export class AudioBuses {
     return this._sfx;
   }
 
+  /** Ambience 匯流排狀態 */
+  get ambience(): Readonly<BusState> {
+    return this._ambience;
+  }
+
   // ─── 有效音量計算 ─────────────────────────────────────
 
   /** 計算 music 的有效音量（考慮 master 與 mute） */
@@ -99,6 +113,12 @@ export class AudioBuses {
   get effectiveSfxVolume(): Volume {
     if (this._master.muted || this._sfx.muted) return 0;
     return this._master.volume * this._sfx.volume;
+  }
+
+  /** 計算 ambience 的有效音量（考慮 master 與 mute） */
+  get effectiveAmbienceVolume(): Volume {
+    if (this._master.muted || this._ambience.muted) return 0;
+    return this._master.volume * this._ambience.volume;
   }
 
   /** 全域是否靜音（master muted） */
@@ -123,6 +143,12 @@ export class AudioBuses {
   /** 設定 sfx 音量 */
   setSfxVolume(v: number): void {
     this._sfx.volume = clampVolume(v);
+    this._notify();
+  }
+
+  /** 設定 ambience 音量 */
+  setAmbienceVolume(v: number): void {
+    this._ambience.volume = clampVolume(v);
     this._notify();
   }
 
@@ -161,6 +187,7 @@ export class AudioBuses {
       master: { ...this._master },
       music: { ...this._music },
       sfx: { ...this._sfx },
+      ambience: { ...this._ambience },
     };
   }
 
@@ -177,6 +204,10 @@ export class AudioBuses {
     if (snap.sfx) {
       this._sfx.volume = clampVolume(snap.sfx.volume);
       this._sfx.muted = snap.sfx.muted;
+    }
+    if (snap.ambience) {
+      this._ambience.volume = clampVolume(snap.ambience.volume);
+      this._ambience.muted = snap.ambience.muted;
     }
     this._notify();
   }
