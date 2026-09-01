@@ -5,6 +5,7 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { SPACING, WORLD_ACCENTS } from '../theme';
 import { type UIButton } from '../factory';
+import { t } from '../../i18n/translator';
 
 // ─── 世界地圖色彩 Token ────────────────────────────────────
 
@@ -67,10 +68,13 @@ function createCircleIconButton(icon: string, size: number, onClick?: () => void
   container.label = `circle-btn-${icon}`;
   container.hitArea = { contains: (x: number, y: number) => x >= 0 && x <= size && y >= 0 && y <= size };
 
+  // 2× 超取樣繪製，避免圓邊鋸齒
+  const S = 2;
   const bg = new Graphics();
-  bg.circle(size / 2, size / 2, size / 2);
+  bg.circle((size / 2) * S, (size / 2) * S, (size / 2) * S - S);
   bg.fill({ color: WM.surface });
-  bg.stroke({ color: WM.border, width: 2 });
+  bg.stroke({ color: WM.border, width: 2 * S });
+  bg.scale.set(1 / S);
   container.addChild(bg);
   container.bg = bg;
 
@@ -210,6 +214,27 @@ export function createWorldMapScreen(options: CreateWorldMapOptions): WorldMapSc
   progressText.position.set(barX + barW + 8, progressY + barH / 2);
   container.addChild(progressText);
 
+  // ── 世界進場敘事（GDD 08§10.5）────────────────────────
+  const enterText = new Text({
+    text: t(`world.${_worldId}.enter`),
+    style: new TextStyle({
+      fontFamily: 'Nunito, system-ui, sans-serif',
+      fontSize: 13,
+      fontStyle: 'italic',
+      fill: WM.muted,
+      align: 'center',
+    }),
+  });
+  enterText.anchor.set(0.5, 0);
+  const fitEnterText = () => {
+    enterText.scale.set(1);
+    const maxW = width - SPACING.lg * 2;
+    if (enterText.width > maxW) enterText.scale.set(maxW / enterText.width);
+  };
+  fitEnterText();
+  enterText.position.set(width / 2, progressY + barH + 10);
+  container.addChild(enterText);
+
   function updateProgress(data: LevelNodeData[]): void {
     const totalStars = data.reduce((sum, l) => sum + l.stars, 0);
     const maxStars = data.length * 3;
@@ -232,7 +257,8 @@ export function createWorldMapScreen(options: CreateWorldMapOptions): WorldMapSc
 
   const nodeSize = 60;
   const nodeGap = 16;
-  const gridTop = progressY + barH + 24;
+  // 進度條下方依序是世界敘事行（enterText，13px）→ 關卡格線，留足空隙避免重疊
+  const gridTop = progressY + barH + 48;
 
   function renderLevels(data: LevelNodeData[]): void {
     nodesContainer.removeChildren();
@@ -282,6 +308,8 @@ export function createWorldMapScreen(options: CreateWorldMapOptions): WorldMapSc
 
   container.setWorld = (wId: number, wName: string) => {
     titleText.text = wName;
+    enterText.text = t(`world.${wId}.enter`);
+    fitEnterText();
     const _accent = WORLD_ACCENTS[wId] ?? WORLD_ACCENTS[1];
   };
 
@@ -305,43 +333,42 @@ function createLevelNode(
   const node = new Container();
   node.label = `level-node-${data.levelId}`;
 
+  // 以 2× 座標繪製再縮半（超取樣），確保圓邊在任何渲染後端都平滑；
+  // 立體感改用「貼地橢圓陰影 + 扁平圓 + 細外框」，避免舊做法
+  // （同半徑圓下移偏移）在相切處產生的細碎黑邊。
+  const S = 2;
   const bg = new Graphics();
+  const cx = (size / 2) * S;
+  const cy = (size / 2) * S;
+  const radius = (size / 2) * S;
+
+  // 貼地陰影（所有狀態共用）
+  bg.ellipse(cx, size * S - 2 * S, radius * 0.8, 4 * S);
+  bg.fill({ color: 0x2a3a2a, alpha: 0.12 });
 
   switch (data.state) {
     case 'completed':
-      // 底部陰影
-      bg.circle(size / 2, size / 2 + 4, size / 2);
-      bg.fill({ color: WM.accentDark });
-      // 主體
-      bg.circle(size / 2, size / 2, size / 2);
+      bg.circle(cx, cy, radius);
       bg.fill({ color: WM.accent });
+      bg.circle(cx, cy, radius - S);
+      bg.stroke({ color: WM.accentDark, width: 2 * S, alpha: 0.55 });
       break;
     case 'current':
-      // 外圈 ring
-      bg.circle(size / 2, size / 2, size / 2 + 3);
-      bg.fill({ color: WM.accentRing });
-      // 主體淺綠
-      bg.circle(size / 2, size / 2, size / 2);
+      // 外圈 ring（描邊而非疊圓）
+      bg.circle(cx, cy, radius);
       bg.fill({ color: WM.accentLight });
-      // 底部陰影
-      bg.circle(size / 2, size / 2 + 4, size / 2);
-      bg.fill({ color: 0x7ac870, alpha: 0.5 });
-      bg.circle(size / 2, size / 2, size / 2);
-      bg.fill({ color: WM.accentLight });
+      bg.circle(cx, cy, radius + 2 * S);
+      bg.stroke({ color: WM.accentRing, width: 3 * S });
       break;
     case 'unlocked':
-      bg.circle(size / 2, size / 2 + 3, size / 2);
-      bg.fill({ color: 0xbcc8b8 });
-      bg.circle(size / 2, size / 2, size / 2);
-      bg.fill({ color: WM.lockedBg });
-      break;
     case 'locked':
-      bg.circle(size / 2, size / 2 + 3, size / 2);
-      bg.fill({ color: 0xbcc8b8 });
-      bg.circle(size / 2, size / 2, size / 2);
+      bg.circle(cx, cy, radius);
       bg.fill({ color: WM.lockedBg });
+      bg.circle(cx, cy, radius - S);
+      bg.stroke({ color: 0xbcc8b8, width: 2 * S, alpha: 0.8 });
       break;
   }
+  bg.scale.set(1 / S);
   node.addChild(bg);
 
   // 關卡號碼或鎖定圖示
