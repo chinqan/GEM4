@@ -6,7 +6,6 @@
       "Bash(npx tsc *)",
       "Bash(open *)",
       "Bash(curl *)",
-      "Bash(graphify *)",
       "Bash(awk *)",
       "Bash(pkill *)",
       "Bash(lsof -ti:3000,3001)",
