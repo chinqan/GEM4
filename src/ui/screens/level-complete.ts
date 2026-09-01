@@ -3,6 +3,7 @@
 // 風格：淺色卡片（Fredoka + Nunito），綠色調 accent。
 
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { t } from '../../i18n/translator';
 import { BG, SPACING, RADIUS } from '../theme';
 import { createStarDisplay, type UIStarDisplay } from '../factory';
 import type { LevelResult } from '../../types';
@@ -239,10 +240,34 @@ export function createLevelCompleteScreen(options: CreateLevelCompleteOptions): 
   levelText.position.set(width / 2, panelY + 46);
   container.addChild(levelText);
 
+  // ── 讚美文案（GDD 08§10.1 隨機一句；世界完成關卡改用 exit 敘事）──
+  const isWorldFinal = result != null && result.levelId % 20 === 0 && result.levelId >= 20;
+  const praiseKey = isWorldFinal
+    ? `world.${worldId}.exit`
+    : `praise.complete.${1 + Math.floor(Math.random() * 12)}`;
+  const praiseText = new Text({
+    text: t(praiseKey),
+    style: new TextStyle({
+      fontFamily: FONT_BODY,
+      fontSize: 13,
+      fontStyle: 'italic',
+      fill: LC.muted,
+      align: 'center',
+    }),
+  });
+  praiseText.anchor.set(0.5, 0);
+  // 長句（世界 exit 敘事）縮放為單行，避免與星星區重疊
+  const praiseMaxW = panelW - 48;
+  if (praiseText.width > praiseMaxW) {
+    praiseText.scale.set(praiseMaxW / praiseText.width);
+  }
+  praiseText.position.set(width / 2, panelY + 82);
+  container.addChild(praiseText);
+
   // ── 星星 ──────────────────────────────────────────────
   const starDisplay = createStarDisplay({ starSize: 28, gap: 16, initialStars: 0 });
   const starDisplayWidth = 28 * 3 + 16 * 2;
-  starDisplay.position.set(width / 2 - starDisplayWidth / 2, panelY + 90);
+  starDisplay.position.set(width / 2 - starDisplayWidth / 2, panelY + 104);
   container.addChild(starDisplay);
 
   // ── 分數明細 ──────────────────────────────────────────

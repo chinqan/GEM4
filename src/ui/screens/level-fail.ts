@@ -5,6 +5,7 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { SPACING } from '../theme';
 import { type UIButton } from '../factory';
+import { t } from '../../i18n/translator';
 
 // ─── 局部色彩 Token（結算畫面專用） ─────────────────────────
 
@@ -39,14 +40,13 @@ export interface CreateLevelFailOptions {
   onRetry?: () => void;
 }
 
-/** 鼓勵訊息池（隨機選取） */
-const ENCOURAGEMENT_MESSAGES = [
-  '明天的光同樣溫暖',
-  '每次嘗試都是進步',
-  '再試一次，你可以的',
-  '失敗是成功之母',
-  '休息一下再來吧',
-];
+/** 鼓勵訊息池（GDD 08§10.2 定案文案，隨機選取；不嘲諷、不用廉價鼓勵） */
+const ENCOURAGEMENT_KEYS = [1, 2, 3, 4, 5, 6].map((i) => `fail.flavour.${i}`);
+
+function pickEncouragement(): string {
+  const key = ENCOURAGEMENT_KEYS[Math.floor(Math.random() * ENCOURAGEMENT_KEYS.length)];
+  return t(key);
+}
 
 // ─── 局部按鈕工廠 ───────────────────────────────────────────
 
@@ -188,7 +188,7 @@ export function createLevelFailScreen(options: CreateLevelFailOptions): LevelFai
   container.addChild(panel);
 
   // ── 鼓勵訊息 ─────────────────────────────────────────
-  const defaultMsg = message ?? ENCOURAGEMENT_MESSAGES[Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.length)];
+  const defaultMsg = message ?? pickEncouragement();
 
   const msgStyle = new TextStyle({
     fontFamily: FONT_DISPLAY,

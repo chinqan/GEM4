@@ -4,6 +4,12 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { BG, TEXT_COLOURS, FONT_SIZES, SPACING } from '../theme';
 import { createProgressBar, type UIProgressBar } from '../factory';
+import { t } from '../../i18n/translator';
+
+/** Loading 提示總數（GDD 08§10.4，i18n key `tips.1..N`） */
+const TIP_COUNT = 15;
+/** 提示輪換間隔 */
+const TIP_ROTATE_MS = 4000;
 
 // ─── 型別 ──────────────────────────────────────────────────
 
@@ -86,6 +92,29 @@ export function createSplashScreen(options: CreateSplashOptions): SplashScreen {
   progressBar.position.set(width / 2 - 140, height * 0.55);
   container.addChild(progressBar);
   container.progressBar = progressBar;
+
+  // ── Loading 提示（GDD 08§10.4，隨機起點輪換）──────────
+  const tipStyle = new TextStyle({
+    fontFamily: 'Inter, "Noto Sans CJK TC", sans-serif',
+    fontSize: FONT_SIZES.caption,
+    fill: TEXT_COLOURS.muted,
+    align: 'center',
+    fontStyle: 'italic',
+    wordWrap: true,
+    wordWrapWidth: width - SPACING.lg * 2,
+  });
+  let tipIndex = Math.floor(Math.random() * TIP_COUNT);
+  const tipText = new Text({ text: t(`tips.${tipIndex + 1}`), style: tipStyle });
+  tipText.anchor.set(0.5, 0);
+  tipText.position.set(width / 2, height * 0.585);
+  container.addChild(tipText);
+
+  const tipTimer = setInterval(() => {
+    tipIndex = (tipIndex + 1) % TIP_COUNT;
+    tipText.text = t(`tips.${tipIndex + 1}`);
+  }, TIP_ROTATE_MS);
+  // ScreenRouter 以 destroy({children:true}) 拆除畫面 → 清掉輪換計時器
+  container.on('destroyed', () => clearInterval(tipTimer));
 
   // ── Tap to Begin ──────────────────────────────────────
   const tapStyle = new TextStyle({

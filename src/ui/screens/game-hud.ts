@@ -4,6 +4,7 @@
 
 import { Container, Graphics, Sprite, Text, Texture, TextStyle } from 'pixi.js';
 import { SPACING, WORLD_ACCENTS } from '../theme';
+import { t } from '../../i18n/translator';
 import {
   createObjectiveChip,
   objectiveToDisplayInfo,
@@ -397,14 +398,30 @@ export function createGameHUD(options: CreateGameHUDOptions): GameHUD {
     starDisplay.setStars(count);
   };
 
+  // 連鎖讚美文案（GDD 08§10.3）：依 chain 階層顯示，短暫浮現後自動隱藏
+  let chainHideTimer: ReturnType<typeof setTimeout> | null = null;
   container.showChain = (chain: number) => {
-    chainText.text = `Chain ${chain}!`;
+    const tier = Math.max(2, Math.min(8, chain));
+    chainText.text = t(`chain.${tier}`);
     chainText.visible = true;
+    if (chainHideTimer) clearTimeout(chainHideTimer);
+    chainHideTimer = setTimeout(() => {
+      chainText.visible = false;
+      chainHideTimer = null;
+    }, 900);
   };
 
   container.hideChain = () => {
+    if (chainHideTimer) {
+      clearTimeout(chainHideTimer);
+      chainHideTimer = null;
+    }
     chainText.visible = false;
   };
+
+  container.on('destroyed', () => {
+    if (chainHideTimer) clearTimeout(chainHideTimer);
+  });
 
   return container;
 }
