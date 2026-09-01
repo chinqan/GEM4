@@ -8,10 +8,17 @@ import type { Mulberry32 } from './rng';
 /** 可被動觸發的特殊寶石類型（Colour Gem 被動啟動會隨機挑選目標色） */
 export type PassiveSpecialType = 'lineH' | 'lineV' | 'area' | 'colour';
 
+/** 清除過程中被摧毀的 blocker（lock/generator），供目標追蹤計數 */
+export interface DestroyedBlocker {
+  pos: CellPos;
+  kind: 'lock' | 'generator';
+}
+
 /** 清除結果 */
 export interface ClearResult {
   clearedCells: CellPos[];
   triggeredSpecials: CellPos[];
+  destroyedBlockers?: DestroyedBlocker[];
 }
 
 // ─── 內部工具 ───────────────────────────────────────────────
@@ -44,14 +51,14 @@ function snapshotSpecials(
  * 清除單一格子：移除 gem，破壞 lock / generator blocker。
  * 回傳 true 表示該格確實被清除（有 gem 或有可破壞的 blocker）。
  */
-function clearCell(board: Board, pos: CellPos): boolean {
+function clearCell(board: Board, pos: CellPos, destroyed?: DestroyedBlocker[]): boolean {
   const cell = getCell(board, pos);
   if (!cell) return false;
 
   let cleared = false;
 
-  // 清除 gem
-  if (cell.gem) {
+  // 清除 gem（immovableCore 的 locked gem 不可消）
+  if (cell.gem && !cell.gem.locked) {
     cell.gem = null;
     cleared = true;
   }
@@ -59,6 +66,7 @@ function clearCell(board: Board, pos: CellPos): boolean {
   // 破壞 lock 或 generator blocker
   if (cell.blocker) {
     if (cell.blocker.kind === 'lock' || cell.blocker.kind === 'generator') {
+      destroyed?.push({ pos, kind: cell.blocker.kind });
       cell.blocker = null;
       cleared = true;
     }
@@ -70,10 +78,14 @@ function clearCell(board: Board, pos: CellPos): boolean {
 /**
  * 對一組座標執行清除，回傳實際被清除的座標列表。
  */
-function clearPositions(board: Board, positions: CellPos[]): CellPos[] {
+function clearPositions(
+  board: Board,
+  positions: CellPos[],
+  destroyed?: DestroyedBlocker[],
+): CellPos[] {
   const cleared: CellPos[] = [];
   for (const pos of positions) {
-    if (clearCell(board, pos)) {
+    if (clearCell(board, pos, destroyed)) {
       cleared.push(pos);
     }
   }
@@ -133,12 +145,13 @@ export function activateLineBomb(board: Board, pos: CellPos): ClearResult {
   // 在清除前快照：爆炸範圍內哪些格子本身帶有特殊寶石
   const snapshot = snapshotSpecials(board, targets);
 
-  const clearedCells = clearPositions(board, targets);
+  const destroyedBlockers: DestroyedBlocker[] = [];
+  const clearedCells = clearPositions(board, targets, destroyedBlockers);
 
   // 被動觸發 = 被清除的格子中，自身原本帶有 Line/Area Bomb 的
   const triggeredSpecials = findPassiveActivations(clearedCells, snapshot);
 
-  return { clearedCells, triggeredSpecials };
+  return { clearedCells, triggeredSpecials, destroyedBlockers };
 }
 
 // ─── 6.2 Area Bomb 啟動 ────────────────────────────────────
@@ -159,10 +172,11 @@ export function activateAreaBomb(board: Board, pos: CellPos): ClearResult {
   // 在清除前快照
   const snapshot = snapshotSpecials(board, targets);
 
-  const clearedCells = clearPositions(board, targets);
+  const destroyedBlockers: DestroyedBlocker[] = [];
+  const clearedCells = clearPositions(board, targets, destroyedBlockers);
   const triggeredSpecials = findPassiveActivations(clearedCells, snapshot);
 
-  return { clearedCells, triggeredSpecials };
+  return { clearedCells, triggeredSpecials, destroyedBlockers };
 }
 
 // ─── 6.3 Colour Gem 啟動 ───────────────────────────────────
@@ -193,7 +207,7 @@ export function activateColourGem(
       if (c === pos[0] && r === pos[1]) continue;
 
       const scanCell = getCell(board, p);
-      if (scanCell?.gem?.colour === targetColour) {
+      if (scanCell?.gem?.colour === targetColour && !scanCell.gem.locked) {
         targets.push(p);
       }
     }
@@ -202,11 +216,12 @@ export function activateColourGem(
   // 在清除前快照
   const snapshot = snapshotSpecials(board, targets);
 
-  const clearedCells = clearPositions(board, targets);
+  const destroyedBlockers: DestroyedBlocker[] = [];
+  const clearedCells = clearPositions(board, targets, destroyedBlockers);
   // 被清除的格子中若本身帶有特殊寶石也會被動觸發
   const triggeredSpecials = findPassiveActivations(clearedCells, snapshot);
 
-  return { clearedCells, triggeredSpecials };
+  return { clearedCells, triggeredSpecials, destroyedBlockers };
 }
 
 // ─── 6.4 被動啟動判斷 ──────────────────────────────────────
@@ -313,6 +328,7 @@ export function processSpecialActivations(
   const allCleared = new Set<string>(initialCleared.map(posKey));
   const allClearedList: CellPos[] = [...initialCleared];
   const allTriggered: CellPos[] = [];
+  const allDestroyed: DestroyedBlocker[] = [];
   const processed = new Set<string>();
 
   // 合併所有已知的特殊寶石類型（跨輪次累積）
@@ -358,7 +374,7 @@ export function processSpecialActivations(
           for (let c = 0; c < board.width; c++) {
             for (let r = 0; r < board.height; r++) {
               const cell = board.cells[c][r];
-              if (cell.gem && cell.gem.special !== 'colour' && cell.gem.colour === picked) {
+              if (cell.gem && cell.gem.special !== 'colour' && cell.gem.colour === picked && !cell.gem.locked) {
                 targets.push([c, r]);
               }
             }
@@ -376,7 +392,7 @@ export function processSpecialActivations(
       }
 
       // 清除
-      const cleared = clearPositions(board, targets);
+      const cleared = clearPositions(board, targets, allDestroyed);
 
       for (const c of cleared) {
         const ck = posKey(c);
@@ -397,5 +413,6 @@ export function processSpecialActivations(
   return {
     clearedCells: allClearedList,
     triggeredSpecials: allTriggered,
+    destroyedBlockers: allDestroyed,
   };
 }

@@ -117,6 +117,10 @@ export class BoardRenderer {
           col,
           row,
         );
+        // immovableCore（Boss 關）：locked gem 疊加守護框
+        if (gem.locked) {
+          sprite.addChild(this.createLockedFrame());
+        }
         this.sprites.set(key, sprite);
         this.layers.gemLayer.addChild(sprite);
       }
@@ -560,6 +564,19 @@ export class BoardRenderer {
       sprite.texture.source.on('update', onUpdate);
     }
     return sprite;
+  }
+
+  /** 建立 immovableCore 守護框（Boss 關核心區：微暗底 + 亮邊框） */
+  private createLockedFrame(): Graphics {
+    const gfx = new Graphics();
+    const half = (CELL_SIZE * 0.92) / 2;
+    gfx.label = 'lockedFrame';
+    gfx
+      .roundRect(-half, -half, half * 2, half * 2, 8)
+      .fill({ color: 0x000000, alpha: 0.18 })
+      .roundRect(-half, -half, half * 2, half * 2, 8)
+      .stroke({ width: 3, color: 0xffffff, alpha: 0.55 });
+    return gfx;
   }
 
   /** 建立傳送道具 overlay（水滴貼圖） */

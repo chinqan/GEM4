@@ -132,11 +132,19 @@ export function tickGenerators(board: Board, rng: Mulberry32): CellPos[] {
       gen.movesSinceLastSpawn++;
 
       if (gen.movesSinceLastSpawn >= gen.everyNMoves) {
-        // 找 4-鄰空格（gem === null 且 blocker === null 且非永久空格）
+        // 找 4-鄰可生成格：無既有 blocker、非永久空格、非傳送道具、
+        // 非 immovableCore（locked gem）。blocker 與寶石共存（同 jelly 預置），
+        // 因此格上有寶石不阻擋生成。
         const neighbors = getNeighbors(board, [col, row]);
         const emptyNeighbors = neighbors.filter((nPos) => {
           const nCell = getCell(board, nPos);
-          return nCell && !nCell.isEmpty && nCell.gem === null && nCell.blocker === null;
+          return (
+            nCell !== null &&
+            !nCell.isEmpty &&
+            nCell.blocker === null &&
+            nCell.deliveryItem === null &&
+            !nCell.gem?.locked
+          );
         });
 
         if (emptyNeighbors.length > 0) {
@@ -186,8 +194,14 @@ const UNSTABLE_PENALTY = 300;
  * 歸零時：3×3 清除（不計分）+ 300 罰分。
  * 回傳爆炸的位置列表與總罰分。
  */
-export function tickUnstables(board: Board): { exploded: CellPos[]; penalty: number } {
+export function tickUnstables(board: Board): {
+  exploded: CellPos[];
+  penalty: number;
+  /** 爆炸波及而被摧毀的 blocker（含自身 unstable），供目標追蹤計數 */
+  destroyedBlockers: Array<{ pos: CellPos; kind: BlockerKind }>;
+} {
   const exploded: CellPos[] = [];
+  const destroyedBlockers: Array<{ pos: CellPos; kind: BlockerKind }> = [];
   let penalty = 0;
 
   // 先收集所有 unstable 位置，避免遍歷時修改
@@ -212,22 +226,27 @@ export function tickUnstables(board: Board): { exploded: CellPos[]; penalty: num
       exploded.push(pos);
       penalty += UNSTABLE_PENALTY;
 
-      // 清除 3×3 區域
+      // 清除 3×3 區域（immovableCore 的 locked gem 不受波及）
       for (let dc = -1; dc <= 1; dc++) {
         for (let dr = -1; dr <= 1; dr++) {
           const clearPos: CellPos = [col + dc, row + dr];
           if (isValidPos(board, clearPos)) {
             const clearCell = getCell(board, clearPos)!;
-            clearCell.gem = null;
+            if (!clearCell.gem?.locked) {
+              clearCell.gem = null;
+            }
             // 也清除該格的 blocker（包括自身的 unstable）
-            clearCell.blocker = null;
+            if (clearCell.blocker) {
+              destroyedBlockers.push({ pos: clearPos, kind: clearCell.blocker.kind });
+              clearCell.blocker = null;
+            }
           }
         }
       }
     }
   }
 
-  return { exploded, penalty };
+  return { exploded, penalty, destroyedBlockers };
 }
 
 // ─── 12.5 Blocker × Special 交互 ──────────────────────────

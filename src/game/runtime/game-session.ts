@@ -16,9 +16,13 @@ import { applyGravity, fillFromTop, collectDeliveryItems } from '../rules/cascad
 import { matchScore, specialActivationScore, comboScore, remainingMovesBonus, remainingTimeBonus } from '../rules/scoring';
 import { resolveCombo, comboKey } from '../rules/combo-matrix';
 import { activateColourGem, activateLineBomb, activateAreaBomb, processSpecialActivations } from '../rules/special-gems';
+import type { DestroyedBlocker } from '../rules/special-gems';
 import { CollectTracker, ClearTracker, DropTracker, createTracker, calculateStars } from '../level/objective';
 import { findValidSwaps, reshuffle } from './reshuffle';
 import type { ReshuffleMove } from './reshuffle';
+import { parseSpecialRules, isInCore, coreCells } from '../level/special-rules';
+import type { ParsedSpecialRules } from '../level/special-rules';
+import { tickGenerators, tickUnstables } from '../level/blocker';
 
 // ─── Result Types ───────────────────────────────────────────
 
@@ -99,7 +103,7 @@ export interface BoardSnapshotCell {
 }
 
 /** Swap type discriminator */
-export type SwapType = 'normal' | 'combo' | 'colour' | 'directBomb' | 'invalid' | 'jellyBlocked';
+export type SwapType = 'normal' | 'combo' | 'colour' | 'directBomb' | 'invalid' | 'jellyBlocked' | 'immovableBlocked';
 
 /** Result of a swap operation */
 export interface SwapResult {
@@ -217,6 +221,11 @@ export class GameSessionController {
   private _settled = false;
   private _isProcessing = false;
 
+  /** 已解析的關卡特殊規則（GDD 02§2.3.1） */
+  private readonly rules: ParsedSpecialRules;
+  private _movesUsed = 0;
+  private _moveTickPending = false;
+
   constructor(config: GameSessionConfig) {
     this.board = config.board;
     this.spec = config.spec;
@@ -226,6 +235,7 @@ export class GameSessionController {
     this._movesRemaining = config.spec.constraints.moveBudget ?? Infinity;
     this._timeRemaining = config.spec.constraints.timeBudget ?? Infinity;
     this._testMode = config.spec.id === -1;
+    this.rules = parseSpecialRules(config.spec.specialRules);
   }
 
   // ─── Public Accessors ───────────────────────────────────
@@ -572,6 +582,7 @@ export class GameSessionController {
         colours: this.colours,
       },
     );
+    this.countDestroyedBlockers(passiveResult.destroyedBlockers);
 
     // Restore excluded gems
     for (const { pos, gem } of savedGems) {
@@ -597,6 +608,79 @@ export class GameSessionController {
     }
 
     return events;
+  }
+
+  // ─── Private: Per-Move Rules（GDD 02§2.3.1 / 02§4.4–4.5）──
+
+  /**
+   * 消耗一手。所有會扣手數的路徑（normal/directBomb/combo/colour swap）
+   * 都經過這裡；tap-activate 不扣手也不觸發 per-move 規則。
+   */
+  private consumeMove(): void {
+    this._movesRemaining--;
+    this._movesUsed++;
+    this._moveTickPending = true;
+  }
+
+  /**
+   * 每手結束時的規則 tick：核心變色、generator 生成、unstable 倒數爆炸。
+   * 在該手的 cascade 完全結算後、checkEndCondition 之前呼叫。
+   * 盤面變化由呼叫端 swap 完成後的 boardRenderer.sync 呈現。
+   */
+  private endOfMoveTick(): void {
+    if (!this._moveTickPending || this._settled) return;
+    this._moveTickPending = false;
+
+    // 1. immovableCore 每 N 手變色
+    const everyN = this.rules.coreColourShiftEveryN;
+    if (this.rules.immovableCore && everyN && this._movesUsed % everyN === 0) {
+      this.shiftCoreColour();
+    }
+
+    // 2. Generator blocker：每手推進，時間到在鄰格生成新 blocker
+    tickGenerators(this.board, this.rngStreams.misc);
+
+    // 3. Unstable blocker：倒數歸零 3×3 爆炸 + 罰分
+    const unstable = tickUnstables(this.board);
+    if (unstable.exploded.length > 0) {
+      this._score = Math.max(0, this._score - unstable.penalty);
+      for (const db of unstable.destroyedBlockers) {
+        this.addClearedToTracker(db.kind, 1);
+      }
+      // 爆炸留下的空洞：補位 + 結算可能形成的新 match（狀態正確為先，
+      // 視覺由 swap 結束後的全量 sync 呈現）
+      this.runGravity();
+      this.runCascadeLoop(0);
+    }
+  }
+
+  /** 核心區換色：從色池中挑一個與當前不同的顏色（決定性，走 misc 串流） */
+  private shiftCoreColour(): void {
+    const core = this.rules.immovableCore;
+    if (!core) return;
+
+    const cells = coreCells(core);
+    const first = getCell(this.board, cells[0]);
+    const current = first?.gem?.colour ?? null;
+
+    const candidates = this.colours.filter((c) => c !== current);
+    if (candidates.length === 0) return;
+    const next = this.rngStreams.misc.pick(candidates);
+
+    for (const pos of cells) {
+      const cell = getCell(this.board, pos);
+      if (cell?.gem?.locked) {
+        cell.gem.colour = next;
+      }
+    }
+  }
+
+  /** 將 lock/generator 的摧毀計入 clear 目標追蹤 */
+  private countDestroyedBlockers(destroyed?: DestroyedBlocker[]): void {
+    if (!destroyed) return;
+    for (const db of destroyed) {
+      this.addClearedToTracker(db.kind, 1);
+    }
   }
 
   // ─── Private: End Condition Check ───────────────────────
@@ -713,7 +797,7 @@ export class GameSessionController {
         }
 
         // Activate the special
-        let actResult: { clearedCells: CellPos[]; triggeredSpecials: CellPos[] };
+        let actResult: { clearedCells: CellPos[]; triggeredSpecials: CellPos[]; destroyedBlockers?: DestroyedBlocker[] };
         if (sType === 'lineH' || sType === 'lineV') {
           actResult = activateLineBomb(this.board, [c, r]);
         } else if (sType === 'area') {
@@ -731,6 +815,7 @@ export class GameSessionController {
           const target = pool.length > 0 ? pool[this.rngStreams.cascadeFill.int(0, pool.length)] : this.colours[0];
           actResult = activateColourGem(this.board, [c, r], target);
         }
+        this.countDestroyedBlockers(actResult.destroyedBlockers);
 
         // Restore spawn gems
         for (const { pos, gem } of savedGems) {
@@ -760,7 +845,7 @@ export class GameSessionController {
         if (spawnPosSet.has(`${c},${r}`)) continue;
         if (clearedSet.has(`${c},${r}`)) {
           const cl = getCell(this.board, [c, r]);
-          if (cl) cl.gem = null;
+          if (cl && !cl.gem?.locked) cl.gem = null;
         }
       }
 
@@ -811,7 +896,7 @@ export class GameSessionController {
     const specialSnapshot = this.snapshotSpecials();
 
     // Execute activation
-    let activeResult: { clearedCells: CellPos[]; triggeredSpecials: CellPos[] };
+    let activeResult: { clearedCells: CellPos[]; triggeredSpecials: CellPos[]; destroyedBlockers?: DestroyedBlocker[] };
     if (special === 'colour') {
       const present = new Set<GemColour>();
       for (let c = 0; c < this.board.width; c++) {
@@ -831,12 +916,14 @@ export class GameSessionController {
     } else {
       activeResult = activateAreaBomb(this.board, at);
     }
+    this.countDestroyedBlockers(activeResult.destroyedBlockers);
 
     // Process passive activations
     const passiveResult = processSpecialActivations(this.board, activeResult.clearedCells, specialSnapshot, {
       rng: this.rngStreams.cascadeFill,
       colours: this.colours,
     });
+    this.countDestroyedBlockers(passiveResult.destroyedBlockers);
 
     // Merge cleared cells
     const seen = new Set<string>();
@@ -855,7 +942,7 @@ export class GameSessionController {
     // Clear cells
     for (const [c, r] of allCleared) {
       const cl = getCell(this.board, [c, r]);
-      if (cl) cl.gem = null;
+      if (cl && !cl.gem?.locked) cl.gem = null;
     }
 
     // Blocker processing: allCleared already merges direct blast + passive cells
@@ -921,6 +1008,14 @@ export class GameSessionController {
       return { valid: false, type: 'jellyBlocked', movesConsumed: false, cascadeSteps: [], totalScore: 0, endCondition: null };
     }
 
+    // immovableCore（Boss 關）：核心區寶石不可交換
+    if (
+      this.rules.immovableCore &&
+      (isInCore(this.rules.immovableCore, from) || isInCore(this.rules.immovableCore, to))
+    ) {
+      return { valid: false, type: 'immovableBlocked', movesConsumed: false, cascadeSteps: [], totalScore: 0, endCondition: null };
+    }
+
     // Swap gems and delivery items
     const tempGem = cellFrom.gem;
     const tempDelivery = cellFrom.deliveryItem;
@@ -961,7 +1056,7 @@ export class GameSessionController {
       return { valid: false, type: 'invalid', movesConsumed: false, cascadeSteps: [], totalScore: 0, endCondition: null };
     }
 
-    this._movesRemaining--;
+    this.consumeMove();
 
     // Special gem always activates its ability when swapped,
     // regardless of whether normal matches also exist.
@@ -1009,7 +1104,8 @@ export class GameSessionController {
       return { valid: false, type: 'invalid', movesConsumed: false, cascadeSteps: [], totalScore: 0, endCondition: null };
     }
 
-    this._movesRemaining--;
+    this.consumeMove();
+    this.countDestroyedBlockers(comboResult.destroyedBlockers);
     const chain = 1;
 
     const cType = comboKey(comboTypeA, comboTypeB);
@@ -1043,6 +1139,7 @@ export class GameSessionController {
       }
     }
     const clearedInfos = this.toClearedCellInfos(allCleared, colourSnapshot);
+    this.endOfMoveTick();
     const endCondition = this.checkEndCondition();
 
     return {
@@ -1079,7 +1176,7 @@ export class GameSessionController {
     const normalCell = getCell(this.board, normalPos)!;
     const targetColour = normalCell.gem!.colour!;
 
-    this._movesRemaining--;
+    this.consumeMove();
     const chain = 1;
 
     // Snapshots
@@ -1091,6 +1188,7 @@ export class GameSessionController {
     const specialSnapshot = this.snapshotSpecials();
 
     const colourResult = activateColourGem(this.board, colourGemPos, targetColour);
+    this.countDestroyedBlockers(colourResult.destroyedBlockers);
     const colourClearedCells = colourResult.clearedCells.map(([c, r]) => [c, r] as CellPos);
     this.recordCollected(colourClearedCells, colourSnapshot);
 
@@ -1121,6 +1219,7 @@ export class GameSessionController {
       }
     }
     const clearedInfos = this.toClearedCellInfos(allCleared, colourSnapshot);
+    this.endOfMoveTick();
     const endCondition = this.checkEndCondition();
 
     return {
@@ -1169,12 +1268,13 @@ export class GameSessionController {
     const specialSnapshot = this.snapshotSpecials();
 
     // Activate bomb
-    let activationResult: { clearedCells: CellPos[]; triggeredSpecials: CellPos[] };
+    let activationResult: { clearedCells: CellPos[]; triggeredSpecials: CellPos[]; destroyedBlockers?: DestroyedBlocker[] };
     if (specialType === 'lineH' || specialType === 'lineV') {
       activationResult = activateLineBomb(this.board, bombPos);
     } else {
       activationResult = activateAreaBomb(this.board, bombPos);
     }
+    this.countDestroyedBlockers(activationResult.destroyedBlockers);
 
     // Also clear concurrent match cells (color match fires simultaneously)
     const clearedSet = new Set<string>();
@@ -1265,6 +1365,7 @@ export class GameSessionController {
       }
     }
     const clearedInfos = this.toClearedCellInfos(allCleared, colourSnapshot);
+    this.endOfMoveTick();
     const endCondition = this.checkEndCondition();
 
     return {
@@ -1370,7 +1471,7 @@ export class GameSessionController {
         }
 
         // Activate
-        let actResult: { clearedCells: CellPos[]; triggeredSpecials: CellPos[] };
+        let actResult: { clearedCells: CellPos[]; triggeredSpecials: CellPos[]; destroyedBlockers?: DestroyedBlocker[] };
         if (sType === 'lineH' || sType === 'lineV') {
           actResult = activateLineBomb(this.board, [c, r]);
         } else if (sType === 'area') {
@@ -1387,6 +1488,7 @@ export class GameSessionController {
           const target = pool.length > 0 ? pool[this.rngStreams.cascadeFill.int(0, pool.length)] : this.colours[0];
           actResult = activateColourGem(this.board, [c, r], target);
         }
+        this.countDestroyedBlockers(actResult.destroyedBlockers);
 
         // Restore spawn gems
         for (const { pos, gem } of savedGems) {
@@ -1415,7 +1517,7 @@ export class GameSessionController {
         if (spawnPosSet.has(`${c},${r}`)) continue;
         if (clearedSet.has(`${c},${r}`)) {
           const cl = getCell(this.board, [c, r]);
-          if (cl) cl.gem = null;
+          if (cl && !cl.gem?.locked) cl.gem = null;
         }
       }
 
@@ -1450,6 +1552,7 @@ export class GameSessionController {
       matches = detectMatches(this.board);
     }
 
+    this.endOfMoveTick();
     const endCondition = this.checkEndCondition();
 
     return {

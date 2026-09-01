@@ -292,7 +292,8 @@ registerLevel({
     { type: 'jelly', at: [8, 8], layers: 1 },
     { type: 'jelly', at: [0, 4], layers: 1 },
     { type: 'jelly', at: [8, 4], layers: 1 },
-    { type: 'jelly', at: [4, 4], layers: 1 },
+    // 注意：不可放在 immovableCore 區域（cols 3-5 × rows 3-5）內，否則無法清除
+    { type: 'jelly', at: [4, 0], layers: 1 },
   ],
   specialRules: ['immovableCore(3, 3, 3, 3)', 'coreColourShift(5)'],
 });

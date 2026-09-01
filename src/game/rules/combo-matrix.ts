@@ -1,7 +1,7 @@
 import type { SpecialGemType, ComboType, CellPos, GemColour } from '../../types';
 import type { Board } from './board';
 import { getCell, isValidPos } from './board';
-import type { ClearResult } from './special-gems';
+import type { ClearResult, DestroyedBlocker } from './special-gems';
 import type { Mulberry32 } from './rng';
 
 // ─── 內部工具 ───────────────────────────────────────────────
@@ -15,19 +15,21 @@ function posKey(pos: CellPos): string {
  * 清除單一格子：移除 gem，破壞 lock / generator blocker。
  * 回傳 true 表示該格確實被清除（有 gem 或有可破壞的 blocker）。
  */
-function clearCell(board: Board, pos: CellPos): boolean {
+function clearCell(board: Board, pos: CellPos, destroyed?: DestroyedBlocker[]): boolean {
   const cell = getCell(board, pos);
   if (!cell) return false;
 
   let cleared = false;
 
-  if (cell.gem) {
+  // immovableCore 的 locked gem 不可消
+  if (cell.gem && !cell.gem.locked) {
     cell.gem = null;
     cleared = true;
   }
 
   if (cell.blocker) {
     if (cell.blocker.kind === 'lock' || cell.blocker.kind === 'generator') {
+      destroyed?.push({ pos, kind: cell.blocker.kind });
       cell.blocker = null;
       cleared = true;
     }
@@ -39,14 +41,18 @@ function clearCell(board: Board, pos: CellPos): boolean {
 /**
  * 對一組座標執行清除，回傳實際被清除的座標列表（去重）。
  */
-function clearPositions(board: Board, positions: CellPos[]): CellPos[] {
+function clearPositions(
+  board: Board,
+  positions: CellPos[],
+  destroyed?: DestroyedBlocker[],
+): CellPos[] {
   const seen = new Set<string>();
   const cleared: CellPos[] = [];
   for (const pos of positions) {
     const key = posKey(pos);
     if (seen.has(key)) continue;
     seen.add(key);
-    if (clearCell(board, pos)) {
+    if (clearCell(board, pos, destroyed)) {
       cleared.push(pos);
     }
   }
@@ -144,8 +150,9 @@ function crossClear(board: Board, origin: CellPos): ClearResult {
     if (isValidPos(board, p)) targets.push(p);
   }
 
-  const clearedCells = clearPositions(board, targets);
-  return { clearedCells, triggeredSpecials: [] };
+  const destroyedBlockers: DestroyedBlocker[] = [];
+  const clearedCells = clearPositions(board, targets, destroyedBlockers);
+  return { clearedCells, triggeredSpecials: [], destroyedBlockers };
 }
 
 /**
@@ -174,8 +181,9 @@ function wideCrossClear(board: Board, origin: CellPos): ClearResult {
     }
   }
 
-  const clearedCells = clearPositions(board, targets);
-  return { clearedCells, triggeredSpecials: [] };
+  const destroyedBlockers: DestroyedBlocker[] = [];
+  const clearedCells = clearPositions(board, targets, destroyedBlockers);
+  return { clearedCells, triggeredSpecials: [], destroyedBlockers };
 }
 
 /**
@@ -192,8 +200,9 @@ function largeAreaClear(board: Board, origin: CellPos): ClearResult {
     }
   }
 
-  const clearedCells = clearPositions(board, targets);
-  return { clearedCells, triggeredSpecials: [] };
+  const destroyedBlockers: DestroyedBlocker[] = [];
+  const clearedCells = clearPositions(board, targets, destroyedBlockers);
+  return { clearedCells, triggeredSpecials: [], destroyedBlockers };
 }
 
 /**
@@ -258,7 +267,7 @@ function colourTransform(
       if ((c === posA[0] && r === posA[1]) || (c === posB[0] && r === posB[1])) continue;
 
       const cell = getCell(board, p);
-      if (cell?.gem?.colour === targetColour) {
+      if (cell?.gem?.colour === targetColour && !cell.gem.locked) {
         transformedPositions.push(p);
       }
     }
@@ -280,10 +289,11 @@ function colourTransform(
   // 依序啟動轉換後的特殊寶石
   const allCleared = new Set<string>();
   const allClearedList: CellPos[] = [];
+  const destroyedBlockers: DestroyedBlocker[] = [];
 
   // 先清除組合的兩顆寶石
   for (const pos of [posA, posB]) {
-    if (clearCell(board, pos)) {
+    if (clearCell(board, pos, destroyedBlockers)) {
       const key = posKey(pos);
       if (!allCleared.has(key)) {
         allCleared.add(key);
@@ -323,7 +333,7 @@ function colourTransform(
     }
 
     for (const t of targets) {
-      if (clearCell(board, t)) {
+      if (clearCell(board, t, destroyedBlockers)) {
         const key = posKey(t);
         if (!allCleared.has(key)) {
           allCleared.add(key);
@@ -336,6 +346,7 @@ function colourTransform(
   return {
     clearedCells: allClearedList,
     triggeredSpecials: transformedPositions,
+    destroyedBlockers,
   };
 }
 
@@ -352,8 +363,9 @@ function fullBoardClear(board: Board): ClearResult {
     }
   }
 
-  const clearedCells = clearPositions(board, targets);
-  return { clearedCells, triggeredSpecials: [] };
+  const destroyedBlockers: DestroyedBlocker[] = [];
+  const clearedCells = clearPositions(board, targets, destroyedBlockers);
+  return { clearedCells, triggeredSpecials: [], destroyedBlockers };
 }
 
 // ─── 7.2 resolveCombo 主函式 ───────────────────────────────

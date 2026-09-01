@@ -7,6 +7,7 @@ import { createBoard, createGem, getCell } from '../rules/board';
 import { detectMatches } from '../rules/match-detect';
 import type { Mulberry32 } from '../rules/rng';
 import type { LevelSpec } from '../level/level-spec';
+import { parseSpecialRules, coreCells } from '../level/special-rules';
 
 // ─── 常數 ───────────────────────────────────────────────────
 
@@ -209,6 +210,26 @@ function placeBLockers(board: Board, blockers: BlockerPlacement[]): void {
   }
 }
 
+// ─── 輔助：套用 immovableCore（GDD 02§2.3.1）────────────────
+
+/**
+ * 將 specialRules 的 immovableCore 區域套用到棋盤：
+ * 核心格寶石設為 locked（不可換、不可消、不參與 match / 重力 / 重洗），
+ * 並統一為同一顏色（「守護者」圖案；coreColourShift 每 N 手換色）。
+ */
+function applyImmovableCore(board: Board, spec: LevelSpec, rng: Mulberry32): void {
+  const rules = parseSpecialRules(spec.specialRules);
+  if (!rules.immovableCore) return;
+
+  const coreColour = rng.pick(spec.gems.colours);
+  for (const pos of coreCells(rules.immovableCore)) {
+    const cell = getCell(board, pos);
+    if (!cell || cell.isEmpty) continue;
+    cell.gem = createGem(coreColour);
+    cell.gem.locked = true;
+  }
+}
+
 // ─── 13.1 initBoard ─────────────────────────────────────────
 
 /**
@@ -266,6 +287,9 @@ export function initBoard(spec: LevelSpec, rng: Mulberry32): Board {
     //    遍歷順序：從左到右、從上到下，這樣 wouldCreateMatch 只需看左方和上方
     fillBoardNoMatches(board, colours, weights, rng);
 
+    // 4.5 套用 immovableCore（locked gem 不參與 match，統一色安全）
+    applyImmovableCore(board, spec, rng);
+
     // 5. 驗證：用 detectMatches 做最終確認（防禦性）
     const matches = detectMatches(board);
     if (matches.length > 0) {
@@ -303,6 +327,7 @@ export function initBoard(spec: LevelSpec, rng: Mulberry32): Board {
     placeBLockers(fallback, spec.blockers);
   }
   fillBoardNoMatches(fallback, colours, weights, rng);
+  applyImmovableCore(fallback, spec, rng);
   applyFixedGems(fallback, spec.board.fixedGems);
   return fallback;
 }

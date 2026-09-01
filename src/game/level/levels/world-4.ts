@@ -15,17 +15,17 @@ registerLevel({
   objective: { type: 'clear', target: [{ blocker: 'jelly', count: 5 }, { blocker: 'lock', count: 5 }] },
   stars: { one: 0, two: 6, three: 12, basis: 'movesRemaining' },
   blockers: [
-    // Stacked: lock + jelly on same cells
-    { type: 'lock', at: [2, 2] },
+    // 模型為每格單一 blocker：jelly 與 lock 交錯佈置（不可同格疊放）
     { type: 'jelly', at: [2, 2], layers: 1 },
-    { type: 'lock', at: [5, 2] },
     { type: 'jelly', at: [5, 2], layers: 1 },
-    { type: 'lock', at: [2, 5] },
     { type: 'jelly', at: [2, 5], layers: 1 },
-    { type: 'lock', at: [5, 5] },
     { type: 'jelly', at: [5, 5], layers: 1 },
-    { type: 'lock', at: [3, 3] },
     { type: 'jelly', at: [3, 3], layers: 1 },
+    { type: 'lock', at: [3, 2] },
+    { type: 'lock', at: [4, 2] },
+    { type: 'lock', at: [3, 5] },
+    { type: 'lock', at: [4, 5] },
+    { type: 'lock', at: [4, 3] },
   ],
 });
 
@@ -110,7 +110,12 @@ registerLevel({
   id: 66,
   worldId: 4,
   name: { 'zh-TW': '分割星辰', en: 'Split Stars' },
-  board: { width: 6, height: 6, empty: [] },
+  // 分割盤面（GDD 02§5.2）：6×6 + 6×6 兩個半場，中央整列永久空格，寶石不互通
+  board: {
+    width: 13,
+    height: 6,
+    empty: [[6, 0], [6, 1], [6, 2], [6, 3], [6, 4], [6, 5]],
+  },
   gems: { colours: ['R', 'G', 'B', 'Y', 'P', 'W', 'O'] },
   constraints: { moveBudget: 28 },
   objective: {
@@ -176,7 +181,12 @@ registerLevel({
   id: 70,
   worldId: 4,
   name: { 'zh-TW': 'Mid-Boss: 雙塔', en: 'Mid-Boss: Twin Towers' },
-  board: { width: 7, height: 7, empty: [] },
+  // 分割盤面（GDD 02§5.2）：7×7 + 7×7 雙塔，中央整列永久空格，寶石不互通
+  board: {
+    width: 15,
+    height: 7,
+    empty: [[7, 0], [7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6]],
+  },
   gems: { colours: ['R', 'G', 'B', 'Y', 'P', 'W', 'O'] },
   constraints: { moveBudget: 35 },
   objective: {
@@ -293,18 +303,19 @@ registerLevel({
   },
   stars: { one: 0, two: 8, three: 16, basis: 'movesRemaining' },
   blockers: [
-    { type: 'lock', at: [2, 2] },
+    // 模型為每格單一 blocker：jelly 與 lock 分置（不可同格疊放）
     { type: 'jelly', at: [2, 2], layers: 2 },
-    { type: 'lock', at: [6, 2] },
     { type: 'jelly', at: [6, 2], layers: 2 },
-    { type: 'lock', at: [2, 6] },
     { type: 'jelly', at: [2, 6], layers: 2 },
-    { type: 'lock', at: [6, 6] },
     { type: 'jelly', at: [6, 6], layers: 2 },
-    { type: 'lock', at: [4, 2] },
     { type: 'jelly', at: [4, 2], layers: 1 },
-    { type: 'lock', at: [4, 6] },
     { type: 'jelly', at: [4, 6], layers: 1 },
+    { type: 'lock', at: [3, 3] },
+    { type: 'lock', at: [5, 3] },
+    { type: 'lock', at: [3, 5] },
+    { type: 'lock', at: [5, 5] },
+    { type: 'lock', at: [2, 4] },
+    { type: 'lock', at: [6, 4] },
     { type: 'jelly', at: [0, 0], layers: 1 },
     { type: 'jelly', at: [8, 0], layers: 1 },
     { type: 'jelly', at: [0, 8], layers: 1 },
@@ -394,15 +405,15 @@ registerLevel({
     { type: 'generator', at: [8, 0], generatorSpec: { spawnKind: 'jelly', everyNMoves: 3 } },
     { type: 'generator', at: [0, 8], generatorSpec: { spawnKind: 'lock', everyNMoves: 4 } },
     { type: 'generator', at: [8, 8], generatorSpec: { spawnKind: 'lock', everyNMoves: 4 } },
-    // Stacked blockers around the core
-    { type: 'lock', at: [2, 2] },
+    // 厚重 jelly 四角（模型為每格單一 blocker，lock 改置於獨立格位）
     { type: 'jelly', at: [2, 2], layers: 3 },
-    { type: 'lock', at: [6, 2] },
     { type: 'jelly', at: [6, 2], layers: 3 },
-    { type: 'lock', at: [2, 6] },
     { type: 'jelly', at: [2, 6], layers: 3 },
-    { type: 'lock', at: [6, 6] },
     { type: 'jelly', at: [6, 6], layers: 3 },
+    { type: 'lock', at: [4, 2] },
+    { type: 'lock', at: [4, 6] },
+    { type: 'lock', at: [1, 4] },
+    { type: 'lock', at: [7, 4] },
     // Jelly ring
     { type: 'jelly', at: [1, 1], layers: 2 },
     { type: 'jelly', at: [7, 1], layers: 2 },
@@ -411,7 +422,6 @@ registerLevel({
     { type: 'jelly', at: [4, 0], layers: 1 },
     { type: 'jelly', at: [0, 4], layers: 1 },
     { type: 'jelly', at: [8, 4], layers: 1 },
-    { type: 'jelly', at: [4, 7], layers: 1 },
     // Locks around core
     { type: 'lock', at: [3, 2] },
     { type: 'lock', at: [5, 2] },
@@ -420,11 +430,11 @@ registerLevel({
     // Unstable threats
     { type: 'unstable', at: [4, 1], unstableSpec: { countdown: 6 } },
     { type: 'unstable', at: [4, 7], unstableSpec: { countdown: 6 } },
-    // Additional jelly
-    { type: 'jelly', at: [3, 3], layers: 1 },
-    { type: 'jelly', at: [5, 3], layers: 1 },
-    { type: 'jelly', at: [3, 5], layers: 1 },
-    { type: 'jelly', at: [5, 5], layers: 1 },
+    // Additional jelly（不可置於 immovableCore 區域 cols 3-5 × rows 3-5 內）
+    { type: 'jelly', at: [2, 3], layers: 1 },
+    { type: 'jelly', at: [6, 3], layers: 1 },
+    { type: 'jelly', at: [2, 5], layers: 1 },
+    { type: 'jelly', at: [6, 5], layers: 1 },
   ],
   specialRules: ['immovableCore(3, 3, 3, 3)', 'coreColourShift(5)'],
 });

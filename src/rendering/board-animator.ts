@@ -181,7 +181,7 @@ export class BoardAnimator {
   ): Promise<void> {
     if (!result.valid) {
       await this.playSwapSlide(from, to);
-      if (result.type === 'jellyBlocked') {
+      if (result.type === 'jellyBlocked' || result.type === 'immovableBlocked') {
         playBlockerImmovable();
       } else {
         playInvalid();

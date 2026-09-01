@@ -321,7 +321,8 @@ describe('HintTimer', () => {
     expect(bus.events).toHaveLength(1);
     const event = bus.events[0];
     expect(event.kind).toBe('hint.shown');
-    expect(event.cells).toHaveLength(2);
+    // 高亮涵蓋交換兩格 + 模擬交換後會被消除的格子 → 至少 2 格
+    expect(event.cells.length).toBeGreaterThanOrEqual(2);
 
     // cells 應該是有效的棋盤座標
     for (const [col, row] of event.cells) {
@@ -331,10 +332,13 @@ describe('HintTimer', () => {
       expect(row).toBeLessThan(board.height);
     }
 
-    // cells 應該與 findHint 的結果一致
+    // cells 應該包含 findHint 找到的交換兩格
     const expectedHint = findHint(board);
     expect(expectedHint).not.toBeNull();
-    expect(event.cells).toEqual(expectedHint);
+    const cellKeys = new Set(event.cells.map(([c, r]: [number, number]) => `${c},${r}`));
+    for (const [c, r] of expectedHint!) {
+      expect(cellKeys.has(`${c},${r}`)).toBe(true);
+    }
   });
 
   it('hintDelayMs 為 0 時停用暗示', () => {
@@ -362,14 +366,17 @@ describe('HintTimer', () => {
     }
 
     const bus = mockEventBus();
-    const timer = new HintTimer(() => board, bus, 1000);
+    let noHintCalled = 0;
+    const timer = new HintTimer(() => board, bus, 1000, () => { noHintCalled++; });
 
     timer.update(1000);
 
-    // 無有效交換 → 不 emit
+    // 無有效交換 → 不 emit，改通知 onNoHint（呼叫端執行 reshuffle）
     expect(bus.events).toHaveLength(0);
-    // 但已標記為已顯示，不會重複嘗試
-    expect(timer.isHintShown).toBe(true);
+    expect(noHintCalled).toBe(1);
+    // 計時器重置，重洗後可再次提示
+    expect(timer.isHintShown).toBe(false);
+    expect(timer.elapsedMs).toBe(0);
   });
 
   it('elapsedMs 正確追蹤累計時間', () => {

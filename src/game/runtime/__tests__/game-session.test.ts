@@ -238,3 +238,162 @@ describe('GameSessionController', () => {
     });
   });
 });
+
+// ─── Special Rules（GDD 02§2.3.1）───────────────────────────
+
+describe('specialRules', () => {
+  const CORE_RULES = ['immovableCore(3, 3, 3, 3)', 'coreColourShift(2)'];
+
+  function makeCoreSession(rules: string[] = CORE_RULES) {
+    return makeSession({
+      board: { width: 9, height: 9, empty: [] },
+      constraints: { moveBudget: 30 },
+      objective: { type: 'score', target: 999999 },
+      specialRules: rules,
+    });
+  }
+
+  /** 在核心外找一組有效交換並執行（保證消耗一手） */
+  function playOneValidMove(session: GameSessionController): boolean {
+    const swaps = findValidSwaps(session.board);
+    for (const [from, to] of swaps) {
+      const result = session.executeSwap(from, to);
+      if (result.valid) return true;
+    }
+    return false;
+  }
+
+  describe('immovableCore', () => {
+    it('initBoard 將核心區設為 locked 且同色', () => {
+      const session = makeCoreSession();
+      const colours = new Set<string>();
+      for (let c = 3; c <= 5; c++) {
+        for (let r = 3; r <= 5; r++) {
+          const cell = getCell(session.board, [c, r])!;
+          expect(cell.gem?.locked, `(${c},${r}) 應為 locked`).toBe(true);
+          if (cell.gem?.colour) colours.add(cell.gem.colour);
+        }
+      }
+      expect(colours.size).toBe(1);
+    });
+
+    it('核心區的交換被拒絕（immovableBlocked，不扣手）', () => {
+      const session = makeCoreSession();
+      const result = session.executeSwap([4, 4], [4, 3]);
+      expect(result.valid).toBe(false);
+      expect(result.type).toBe('immovableBlocked');
+      expect(session.movesRemaining).toBe(30);
+    });
+
+    it('核心邊界的交換（一格在內）也被拒絕', () => {
+      const session = makeCoreSession();
+      const result = session.executeSwap([2, 3], [3, 3]);
+      expect(result.valid).toBe(false);
+      expect(result.type).toBe('immovableBlocked');
+    });
+  });
+
+  describe('coreColourShift', () => {
+    it('每 N 手核心變色且保持同色、仍為 locked', () => {
+      const session = makeCoreSession();
+      const before = getCell(session.board, [4, 4])!.gem!.colour;
+
+      // 消耗 2 手（everyN = 2）
+      let played = 0;
+      while (played < 2) {
+        expect(playOneValidMove(session), '測試盤面應有有效交換').toBe(true);
+        played++;
+      }
+
+      const after = getCell(session.board, [4, 4])!.gem!.colour;
+      expect(after).not.toBe(before);
+
+      const colours = new Set<string>();
+      for (let c = 3; c <= 5; c++) {
+        for (let r = 3; r <= 5; r++) {
+          const cell = getCell(session.board, [c, r])!;
+          expect(cell.gem?.locked).toBe(true);
+          if (cell.gem?.colour) colours.add(cell.gem.colour);
+        }
+      }
+      expect(colours.size).toBe(1);
+    });
+
+    it('未達 N 手不變色', () => {
+      const session = makeCoreSession(['immovableCore(3, 3, 3, 3)', 'coreColourShift(5)']);
+      const before = getCell(session.board, [4, 4])!.gem!.colour;
+      expect(playOneValidMove(session)).toBe(true);
+      expect(getCell(session.board, [4, 4])!.gem!.colour).toBe(before);
+    });
+  });
+
+  describe('per-move blocker ticks', () => {
+    it('generator 每手推進並在達到 everyNMoves 時生成', () => {
+      const session = makeSession({
+        objective: { type: 'score', target: 999999 },
+        blockers: [
+          { type: 'generator', at: [0, 0], generatorSpec: { spawnKind: 'jelly', everyNMoves: 1 } },
+        ],
+      });
+
+      expect(playOneValidMove(session)).toBe(true);
+
+      // 生成在 (0,0) 的 4-鄰：(1,0) 或 (0,1)
+      const n1 = getCell(session.board, [1, 0])!.blocker;
+      const n2 = getCell(session.board, [0, 1])!.blocker;
+      expect(n1?.kind === 'jelly' || n2?.kind === 'jelly').toBe(true);
+    });
+
+    it('unstable 每手倒數，歸零時爆炸並罰分', () => {
+      const session = makeSession({
+        objective: { type: 'score', target: 999999 },
+        blockers: [{ type: 'unstable', at: [4, 4], unstableSpec: { countdown: 1 } }],
+      });
+
+      expect(playOneValidMove(session)).toBe(true);
+
+      // 爆炸後 blocker 消失
+      expect(getCell(session.board, [4, 4])!.blocker).toBeNull();
+      // 爆炸後盤面被補滿（無空洞）
+      for (let c = 0; c < 8; c++) {
+        for (let r = 0; r < 8; r++) {
+          expect(getCell(session.board, [c, r])!.gem).not.toBeNull();
+        }
+      }
+    });
+
+    it('tap-activate 不觸發 per-move tick（不扣手）', () => {
+      const session = makeSession({
+        objective: { type: 'score', target: 999999 },
+        blockers: [{ type: 'unstable', at: [0, 7], unstableSpec: { countdown: 1 } }],
+      });
+      // 手動放一顆獨立 area bomb 後 tap
+      const cell = getCell(session.board, [7, 0])!;
+      cell.gem = createGem(null, 'area');
+      const result = session.executeActivation([7, 0]);
+      expect(result?.valid).toBe(true);
+      // 未扣手 → unstable 不倒數
+      expect(session.movesRemaining).toBe(20);
+      expect(getCell(session.board, [0, 7])!.blocker?.kind).toBe('unstable');
+    });
+  });
+
+  describe('destroyed blocker tracking', () => {
+    it('line bomb 摧毀 lock 計入 clear 目標', () => {
+      const session = makeSession({
+        objective: { type: 'clear', target: [{ blocker: 'lock', count: 1 }] },
+        blockers: [{ type: 'lock', at: [0, 3] }],
+      });
+
+      // 在 lock 同一列放一顆 lineH 並 tap 啟動
+      const bombCell = getCell(session.board, [5, 3])!;
+      bombCell.gem = createGem(null, 'lineH');
+      const result = session.executeActivation([5, 3]);
+      expect(result?.valid).toBe(true);
+
+      // lock 被摧毀且目標完成
+      expect(getCell(session.board, [0, 3])!.blocker).toBeNull();
+      expect(result?.endCondition?.cleared).toBe(true);
+    });
+  });
+});

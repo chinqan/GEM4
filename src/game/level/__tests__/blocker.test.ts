@@ -269,9 +269,10 @@ describe('tickGenerators：生成 blocker', () => {
   });
 });
 
-// 7. tickGenerators：4-鄰無空格時略過
-describe('tickGenerators：4-鄰無空格時略過', () => {
-  it('所有鄰格都有寶石時不生成', () => {
+// 7. tickGenerators：4-鄰無可生成格時略過
+describe('tickGenerators：4-鄰無可生成格時略過', () => {
+  it('鄰格有寶石仍可生成（blocker 與寶石共存，同 jelly 預置）', () => {
+    // 結算後盤面恆為滿格；若寶石阻擋生成，generator 永遠不會動作
     const board = createBoardWithGems(6, 6);
     board.cells[2][2].blocker = {
       kind: 'generator',
@@ -279,6 +280,27 @@ describe('tickGenerators：4-鄰無空格時略過', () => {
       everyNMoves: 1,
       movesSinceLastSpawn: 0,
     };
+
+    const rng = new Mulberry32(42);
+    const spawned = tickGenerators(board, rng);
+    expect(spawned.length).toBe(1);
+    const spawnedCell = getCell(board, spawned[0])!;
+    expect(spawnedCell.blocker).toEqual({ kind: 'jelly', layers: 1 });
+    // 原有寶石保留
+    expect(spawnedCell.gem).not.toBeNull();
+  });
+
+  it('鄰格為 immovableCore（locked gem）時不生成', () => {
+    const board = createBoardWithGems(6, 6);
+    board.cells[2][2].blocker = {
+      kind: 'generator',
+      spawnKind: 'jelly',
+      everyNMoves: 1,
+      movesSinceLastSpawn: 0,
+    };
+    for (const [c, r] of [[2, 1], [2, 3], [1, 2], [3, 2]] as const) {
+      board.cells[c][r].gem!.locked = true;
+    }
 
     const rng = new Mulberry32(42);
     const spawned = tickGenerators(board, rng);
